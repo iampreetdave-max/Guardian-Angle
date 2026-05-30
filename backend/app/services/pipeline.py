@@ -17,12 +17,18 @@ from pathlib import Path
 import cv2
 from PIL import Image
 
+import numpy as np
+
 from ..config import get_settings
 from ..core import detection, embedding, ingestion, preprocessing
-from ..core.index import get_clip_index, get_face_index
+from ..core.index import get_clip_index, get_face_index, get_object_index
 from ..database import get_conn
 
 log = logging.getLogger("visionscan.pipeline")
+
+# Skip embedding crops smaller than this (px on the longest edge) — tiny
+# detections are too low-detail to embed meaningfully.
+_MIN_CROP_EDGE = 24
 
 
 def _save_thumbnail(frame_bgr, dest: Path, max_size: int) -> None:
@@ -31,6 +37,24 @@ def _save_thumbnail(frame_bgr, dest: Path, max_size: int) -> None:
     if scale < 1.0:
         frame_bgr = cv2.resize(frame_bgr, (int(w * scale), int(h * scale)))
     cv2.imwrite(str(dest), frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+
+
+def _embed_object_crop(frame_bgr, bbox, object_index) -> int | None:
+    """Crop the detected object, CLIP-embed it, add to the object index.
+    Returns the assigned faiss id, or None if the crop is unusable."""
+    h, w = frame_bgr.shape[:2]
+    x1, y1, x2, y2 = bbox
+    # clamp + pad a little for context
+    x1 = max(0, int(x1)); y1 = max(0, int(y1))
+    x2 = min(w, int(x2)); y2 = min(h, int(y2))
+    if x2 - x1 < _MIN_CROP_EDGE or y2 - y1 < _MIN_CROP_EDGE:
+        return None
+    crop = frame_bgr[y1:y2, x1:x2]
+    if crop.size == 0:
+        return None
+    rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+    vec = embedding.embed_images(Image.fromarray(rgb))
+    return object_index.add(vec)[0]
 
 
 def _set_status(video_id: int, status: str, error: str | None = None) -> None:
@@ -68,12 +92,16 @@ def process_keyframe(video_id: int, kf, thumb_dir: Path) -> int:
         )
         frame_id = cur.lastrowid
 
+    object_index = get_object_index()
     for det in detection.detect_objects(enhanced):
+        # Embed the object's crop in CLIP space so it can be found individually
+        # by a text/image query (e.g. each of five red cars), not just the frame.
+        obj_faiss_id = _embed_object_crop(enhanced, det.bbox, object_index)
         with get_conn() as conn:
             conn.execute(
                 "INSERT INTO detections (frame_id, label, confidence, "
-                "x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (frame_id, det.label, det.confidence, *det.bbox),
+                "x1, y1, x2, y2, obj_faiss_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (frame_id, det.label, det.confidence, *det.bbox, obj_faiss_id),
             )
 
     for face in detection.detect_faces(enhanced):
@@ -103,6 +131,7 @@ def process_video(
     settings = get_settings()
     clip_index = get_clip_index()
     face_index = get_face_index()
+    object_index = get_object_index()
     is_stream = max_duration_sec is not None or max_frames is not None
 
     with get_conn() as conn:
@@ -141,6 +170,7 @@ def process_video(
             if kept % 25 == 0:
                 clip_index.save()
                 face_index.save()
+                object_index.save()
                 with get_conn() as conn:
                     conn.execute(
                         "UPDATE videos SET keyframe_count = ? WHERE id = ?",
@@ -149,6 +179,7 @@ def process_video(
 
         clip_index.save()
         face_index.save()
+        object_index.save()
         with get_conn() as conn:
             if is_stream:
                 conn.execute(
@@ -168,3 +199,27 @@ def process_video(
     except Exception as e:  # pragma: no cover
         log.exception("Failed to process video %s", video_id)
         _set_status(video_id, "error", str(e))
+
+
+def reindex_video(video_id: int) -> None:
+    """Clear a file-based video's existing frames + index entries, then re-run
+    the full pipeline so it gains object-crop (region) embeddings."""
+    clip_index, face_index, object_index = (
+        get_clip_index(), get_face_index(), get_object_index()
+    )
+    with get_conn() as conn:
+        clip_ids = [r["clip_faiss_id"] for r in conn.execute(
+            "SELECT clip_faiss_id FROM frames WHERE video_id=? AND clip_faiss_id "
+            "IS NOT NULL", (video_id,))]
+        face_ids = [r["face_faiss_id"] for r in conn.execute(
+            "SELECT fa.face_faiss_id FROM faces fa JOIN frames f ON f.id=fa.frame_id "
+            "WHERE f.video_id=? AND fa.face_faiss_id IS NOT NULL", (video_id,))]
+        obj_ids = [r["obj_faiss_id"] for r in conn.execute(
+            "SELECT d.obj_faiss_id FROM detections d JOIN frames f ON f.id=d.frame_id "
+            "WHERE f.video_id=? AND d.obj_faiss_id IS NOT NULL", (video_id,))]
+        conn.execute("DELETE FROM frames WHERE video_id=?", (video_id,))
+    clip_index.remove(clip_ids)
+    face_index.remove(face_ids)
+    object_index.remove(obj_ids)
+    log.info("Reindexing video %s (cleared %d frames' vectors)", video_id, len(clip_ids))
+    process_video(video_id)

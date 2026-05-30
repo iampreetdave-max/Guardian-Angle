@@ -51,10 +51,13 @@ CREATE TABLE IF NOT EXISTS detections (
     frame_id    INTEGER NOT NULL REFERENCES frames(id) ON DELETE CASCADE,
     label       TEXT NOT NULL,
     confidence  REAL NOT NULL,
-    x1 REAL, y1 REAL, x2 REAL, y2 REAL
+    x1 REAL, y1 REAL, x2 REAL, y2 REAL,
+    obj_faiss_id INTEGER                        -- row in the object-crop CLIP index
 );
 CREATE INDEX IF NOT EXISTS idx_det_frame ON detections(frame_id);
 CREATE INDEX IF NOT EXISTS idx_det_label ON detections(label);
+-- idx_det_obj is created in _migrate(), after the column is guaranteed to exist
+-- (older DBs created the table without obj_faiss_id).
 
 CREATE TABLE IF NOT EXISTS faces (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +83,17 @@ def _connect() -> sqlite3.Connection:
 def init_db() -> None:
     with _connect() as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
+        conn.commit()
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Lightweight, idempotent migrations for DBs created by older versions."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(detections)")}
+    if "obj_faiss_id" not in cols:
+        conn.execute("ALTER TABLE detections ADD COLUMN obj_faiss_id INTEGER")
+    # Safe now that the column is guaranteed to exist (fresh + migrated DBs).
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_det_obj ON detections(obj_faiss_id)")
 
 
 @contextmanager

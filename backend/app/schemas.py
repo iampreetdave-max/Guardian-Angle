@@ -68,6 +68,15 @@ class TextQueryIn(BaseModel):
     group_events: bool = Field(True, description="Collapse nearby frames into events")
 
 
+class RegionQueryIn(BaseModel):
+    """Instance-level search over individual detected-object crops."""
+    query: str = Field(..., description="e.g. 'red car', 'person in white shirt'")
+    top_k: int = Field(40, ge=1, le=300)
+    camera_id: Optional[str] = None
+    video_id: Optional[int] = None
+    label: Optional[str] = Field(None, description="Optional YOLO label filter")
+
+
 class ObjectQueryIn(BaseModel):
     label: str = Field(..., description="YOLO class name, e.g. 'car', 'person'")
     top_k: int = Field(30, ge=1, le=200)
@@ -92,6 +101,9 @@ class SearchHit(BaseModel):
     event_count: int = Field(1, description="Frames collapsed into this event")
     event_start_hms: Optional[str] = None
     event_end_hms: Optional[str] = None
+    # Region-level (instance) search: the specific detected object that matched.
+    match_label: Optional[str] = None
+    match_bbox: Optional[BBox] = None
 
 
 class SearchResponse(BaseModel):

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, Trash2, Video, Camera, Radio, Info, Loader2, Globe } from "lucide-react";
+import { Upload, Trash2, Video, Camera, Radio, Info, Loader2, Globe, Boxes } from "lucide-react";
 import { statusBadge, fmtDuration } from "../utils";
 
 export default function VideoManager({
@@ -10,8 +10,10 @@ export default function VideoManager({
   onUpload,
   onIngestStream,
   onStartLive,
+  onReindex,
   onDelete,
 }) {
+  const [reindexing, setReindexing] = useState(false);
   const fileRef = useRef(null);
   const [mode, setMode] = useState("upload"); // upload | live
   const [cameraId, setCameraId] = useState("CAM-1");
@@ -78,7 +80,21 @@ export default function VideoManager({
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
         <Video size={16} className="text-accent" />
         Camera Feeds
-        <span className="ml-auto rounded bg-ink-700 px-2 py-0.5 text-xs text-slate-400">
+        {onReindex && videos.length > 0 && (
+          <button
+            onClick={async () => {
+              setReindexing(true);
+              try { await onReindex(); } finally { setReindexing(false); }
+            }}
+            disabled={reindexing}
+            className="ml-auto inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:bg-ink-600 disabled:opacity-50"
+            title="Re-process existing footage to enable 'Find every object' instance search on it"
+          >
+            {reindexing ? <Loader2 size={11} className="animate-spin" /> : <Boxes size={11} />}
+            Re-index
+          </button>
+        )}
+        <span className="rounded bg-ink-700 px-2 py-0.5 text-xs text-slate-400">
           {videos.length}
         </span>
       </div>

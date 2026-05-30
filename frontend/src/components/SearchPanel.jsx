@@ -17,6 +17,9 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
   // Group nearby frames into events. Default ON, except Object search where
   // you usually want every individual instance (e.g. count all the cars).
   const [group, setGroup] = useState(true);
+  // Region (instance) search: match individual detected objects, not whole
+  // frames — so "red car" returns every car, not just the most prominent.
+  const [perObject, setPerObject] = useState(false);
   const fileRef = useRef(null);
 
   const current = MODES.find((m) => m.key === mode);
@@ -32,7 +35,8 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
     if (isImageMode) {
       if (file) onSearch({ mode, file, group });
     } else if (text.trim()) {
-      onSearch({ mode, query: text.trim(), group });
+      const m = mode === "text" && perObject ? "region" : mode;
+      onSearch({ mode: m, query: text.trim(), group });
     }
   };
 
@@ -149,24 +153,42 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
         </div>
       )}
 
-      {/* Group-moments toggle */}
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          onClick={() => setGroup((g) => !g)}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
-            group
-              ? "bg-accent/15 text-accent"
-              : "bg-ink-700 text-slate-400 hover:bg-ink-600"
-          }`}
-          title="When on, frames from the same camera within a few seconds are collapsed into one event. Turn off to see every matching frame/instance."
-        >
-          <Layers size={13} />
-          {group ? "Grouping moments: ON" : "Grouping moments: OFF"}
-        </button>
+      {/* Toggles */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {mode === "text" && (
+          <button
+            onClick={() => setPerObject((p) => !p)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+              perObject
+                ? "bg-signal-green/15 text-signal-green"
+                : "bg-ink-700 text-slate-400 hover:bg-ink-600"
+            }`}
+            title="Match individual detected objects instead of whole frames — finds EVERY instance (e.g. all 5 red cars), each with its own box."
+          >
+            <Boxes size={13} />
+            {perObject ? "Find every object: ON" : "Find every object: OFF"}
+          </button>
+        )}
+        {!perObject && (
+          <button
+            onClick={() => setGroup((g) => !g)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+              group
+                ? "bg-accent/15 text-accent"
+                : "bg-ink-700 text-slate-400 hover:bg-ink-600"
+            }`}
+            title="When on, frames from the same camera within a few seconds are collapsed into one event. Turn off to see every matching frame."
+          >
+            <Layers size={13} />
+            {group ? "Grouping moments: ON" : "Grouping moments: OFF"}
+          </button>
+        )}
         <span className="text-[10px] text-slate-500">
-          {group
+          {perObject
+            ? "instance search — every matching object, with its box"
+            : group
             ? "collapses near-duplicate frames into events"
-            : "shows every matching frame (find all instances)"}
+            : "shows every matching frame"}
         </span>
       </div>
     </div>

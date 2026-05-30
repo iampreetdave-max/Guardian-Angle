@@ -106,7 +106,7 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
     """Daemon loop: resolve the feed, then continuously extract + index
     keyframes until stop_event is set."""
     from ..core import ingestion
-    from ..core.index import get_clip_index, get_face_index
+    from ..core.index import get_clip_index, get_face_index, get_object_index
     from .pipeline import process_keyframe
 
     settings = get_settings()
@@ -123,6 +123,7 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
     thumb_dir = settings.thumbnails_dir / str(video_id)
     thumb_dir.mkdir(parents=True, exist_ok=True)
     clip_index, face_index = get_clip_index(), get_face_index()
+    object_index = get_object_index()
     kept = 0
     try:
         for kf in ingestion.extract_keyframes(resolved, stop_event=stop_event):
@@ -137,11 +138,13 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
             if kept % 5 == 0:
                 clip_index.save()
                 face_index.save()
+                object_index.save()
     except Exception:
         log.exception("Live capture error for video %s", video_id)
     finally:
         clip_index.save()
         face_index.save()
+        object_index.save()
         with get_conn() as conn:
             conn.execute(
                 "UPDATE videos SET status='ready', keyframe_count=? WHERE id=?",

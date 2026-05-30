@@ -28,12 +28,14 @@ from ..schemas import (
     HealthOut,
     ObjectQueryIn,
     PublicFeed,
+    RegionQueryIn,
     ReportRequest,
     SearchResponse,
     StreamIn,
     TextQueryIn,
     VideoOut,
 )
+from ..core.index import get_object_index
 from ..services import report as report_svc
 from ..services import stream as stream_svc
 from ..services.pipeline import process_video
@@ -178,12 +180,23 @@ def delete_video(video_id: int) -> dict:
                 (video_id,),
             ).fetchall()
         ]
+        obj_ids = [
+            r["obj_faiss_id"]
+            for r in conn.execute(
+                "SELECT d.obj_faiss_id FROM detections d "
+                "JOIN frames f ON f.id = d.frame_id "
+                "WHERE f.video_id = ? AND d.obj_faiss_id IS NOT NULL",
+                (video_id,),
+            ).fetchall()
+        ]
         conn.execute("DELETE FROM videos WHERE id = ?", (video_id,))
 
     get_clip_index().remove(clip_ids)
     get_clip_index().save()
     get_face_index().remove(face_ids)
     get_face_index().save()
+    get_object_index().remove(obj_ids)
+    get_object_index().save()
 
     # remove stored files (videos.path is stored as an absolute path)
     try:
@@ -194,6 +207,28 @@ def delete_video(video_id: int) -> dict:
     return {"deleted": video_id}
 
 
+@router.post("/reindex", tags=["videos"])
+def reindex_objects(background: BackgroundTasks) -> dict:
+    """Backfill region-level (object-crop) embeddings for footage processed
+    before this feature existed, by re-running the pipeline on file-based
+    videos. Live/stream feeds (no re-readable source) are skipped."""
+    from ..services.pipeline import reindex_video
+
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, path FROM videos WHERE status = 'ready'"
+        ).fetchall()
+    targets = [
+        r["id"] for r in rows
+        if isinstance(r["path"], str)
+        and r["path"].split("://", 1)[0] not in ("http", "https", "rtsp", "rtmp")
+        and Path(r["path"]).exists()
+    ]
+    for vid in targets:
+        background.add_task(reindex_video, vid)
+    return {"reindexing": targets, "count": len(targets)}
+
+
 # ------------------------------------------------------------------ search
 @router.post("/search/text", response_model=SearchResponse, tags=["search"])
 def search_text(body: TextQueryIn) -> SearchResponse:
@@ -202,6 +237,18 @@ def search_text(body: TextQueryIn) -> SearchResponse:
     )
     return SearchResponse(
         query=body.query, query_type="text", count=len(hits), hits=hits
+    )
+
+
+@router.post("/search/region", response_model=SearchResponse, tags=["search"])
+def search_region(body: RegionQueryIn) -> SearchResponse:
+    """Instance-level search: returns every matching detected object (e.g. all
+    five red cars) as its own hit with its bounding box."""
+    hits = qr.search_regions(
+        body.query, body.top_k, body.camera_id, body.video_id, body.label
+    )
+    return SearchResponse(
+        query=body.query, query_type="object", count=len(hits), hits=hits
     )
 
 

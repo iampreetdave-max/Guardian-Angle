@@ -23,6 +23,12 @@ export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
         >
           {scorePct(hit.score)}
         </span>
+        {/* matched-object badge (region/instance search) */}
+        {hit.match_label && (
+          <span className="absolute bottom-1.5 right-1.5 rounded bg-signal-green/85 px-1.5 py-0.5 text-[10px] font-semibold text-ink-900">
+            {hit.match_label}
+          </span>
+        )}
         {/* select checkbox */}
         <button
           onClick={(e) => {

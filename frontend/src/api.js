@@ -39,6 +39,11 @@ export const searchText = (payload) =>
 export const searchObject = (payload) =>
   api.post("/search/object", payload).then((r) => r.data);
 
+export const searchRegion = (payload) =>
+  api.post("/search/region", payload).then((r) => r.data);
+
+export const reindexObjects = () => api.post("/reindex").then((r) => r.data);
+
 const searchWithImage = (endpoint, file, { top_k, camera_id, video_id, group_events }) => {
   const form = new FormData();
   form.append("file", file);

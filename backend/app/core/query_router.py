@@ -22,7 +22,7 @@ from ..config import get_settings
 from ..database import get_conn
 from ..schemas import BBox, DetectionOut, SearchHit
 from . import detection, embedding
-from .index import get_clip_index, get_face_index
+from .index import get_clip_index, get_face_index, get_object_index
 from .ingestion import format_timestamp
 
 
@@ -217,6 +217,57 @@ def search_face(
             best_per_frame[fid] = _frame_row_to_hit(conn, r, score, "face")
     hits = sorted(best_per_frame.values(), key=lambda h: h.score, reverse=True)
     return _finalize(hits, top_k, group)
+
+
+def search_regions(
+    query: str,
+    top_k: int,
+    camera_id: Optional[str] = None,
+    video_id: Optional[int] = None,
+    label: Optional[str] = None,
+) -> list[SearchHit]:
+    """Instance-level search: match the query against individual detected-object
+    crops (not whole frames), so 'red car' returns every matching car as its own
+    hit with the specific bounding box. This is what makes 'find all 5 red cars'
+    work where whole-frame CLIP would surface only the most prominent one."""
+    vec = embedding.embed_text(query)[0]
+    faiss_hits = get_object_index().search(vec, top_k * _OVERFETCH)
+    if not faiss_hits:
+        return []
+    id_to_score = {fid: score for fid, score in faiss_hits}
+    placeholders = ",".join("?" for _ in id_to_score)
+    sql = (
+        "SELECT d.obj_faiss_id, d.label, d.x1, d.y1, d.x2, d.y2, "
+        "f.id AS frame_id, f.video_id, f.timestamp_sec, f.thumbnail_path, "
+        "v.camera_id, v.filename "
+        "FROM detections d JOIN frames f ON f.id = d.frame_id "
+        "JOIN videos v ON v.id = f.video_id "
+        f"WHERE d.obj_faiss_id IN ({placeholders})"
+    )
+    params: list = list(id_to_score.keys())
+    if camera_id:
+        sql += " AND v.camera_id = ?"
+        params.append(camera_id)
+    if video_id:
+        sql += " AND f.video_id = ?"
+        params.append(video_id)
+    if label:
+        sql += " AND d.label = ?"
+        params.append(label.lower())
+
+    hits: list[SearchHit] = []
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+        for r in rows:
+            score = id_to_score.get(r["obj_faiss_id"], 0.0)
+            hit = _frame_row_to_hit(conn, r, score, "object")
+            hit.match_label = r["label"]
+            hit.match_bbox = BBox(x1=r["x1"], y1=r["y1"], x2=r["x2"], y2=r["y2"])
+            hits.append(hit)
+    # one hit per object instance, ranked by similarity (no temporal grouping —
+    # the whole point is to surface every instance)
+    hits.sort(key=lambda h: h.score, reverse=True)
+    return hits[:top_k]
 
 
 def search_object(

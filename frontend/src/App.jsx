@@ -70,8 +70,8 @@ export default function App() {
   const runSearch = async ({ mode, query, file, group = true }, silent = false) => {
     if (!silent) setSearching(true);
     setError(null);
-    // remember text/object searches so a live feed can auto-refresh them
-    if (mode === "text" || mode === "object") {
+    // remember text/object/region searches so a live feed can auto-refresh them
+    if (mode === "text" || mode === "object" || mode === "region") {
       lastSearchArgs.current = { mode, query, group };
     }
     try {
@@ -84,6 +84,13 @@ export default function App() {
       if (mode === "text") {
         res = await API.searchText({ query, ...opts });
         lastQuery.current = { query, type: "text" };
+      } else if (mode === "region") {
+        res = await API.searchRegion({
+          query,
+          top_k: 60,
+          video_id: selectedVideo || undefined,
+        });
+        lastQuery.current = { query, type: "object" };
       } else if (mode === "object") {
         res = await API.searchObject({ label: query, min_confidence: 0.35, ...opts });
         lastQuery.current = { query, type: "object" };
@@ -131,6 +138,11 @@ export default function App() {
       setStopping(false);
     }
   };
+  const handleReindex = async () => {
+    const r = await API.reindexObjects();
+    await refresh();
+    return r;
+  };
   const handleDelete = async (id) => {
     await API.deleteVideo(id);
     if (selectedVideo === id) setSelectedVideo(null);
@@ -166,16 +178,18 @@ export default function App() {
     <div className="flex h-screen flex-col">
       {/* Header */}
       <header className="flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-5 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600">
-            <ScanSearch size={20} className="text-white" />
-          </div>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.jpeg"
+            alt="Cyber Crime Branch, Ahmedabad City Police"
+            className="h-11 w-11 rounded-lg object-contain bg-white/5 p-0.5 ring-1 ring-ink-600"
+          />
           <div>
             <h1 className="text-lg font-bold leading-tight text-white">
               Vision<span className="text-accent">Scan</span>
             </h1>
             <p className="text-[10px] uppercase tracking-wider text-slate-500">
-              Smart CCTV Analysis for Investigation
+              Smart CCTV Analysis · Cyber Crime Branch, Ahmedabad City Police
             </p>
           </div>
         </div>
@@ -195,6 +209,7 @@ export default function App() {
             onUpload={handleUpload}
             onIngestStream={handleIngestStream}
             onStartLive={handleStartLive}
+            onReindex={handleReindex}
             onDelete={handleDelete}
           />
         </aside>

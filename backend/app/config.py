@@ -95,6 +95,10 @@ class Settings(BaseSettings):
     def face_index_path(self) -> Path:
         return self.index_dir / "face.faiss"
 
+    @property
+    def object_index_path(self) -> Path:
+        return self.index_dir / "object_clip.faiss"
+
     def ensure_dirs(self) -> None:
         for p in (self.videos_dir, self.thumbnails_dir, self.index_dir):
             p.mkdir(parents=True, exist_ok=True)

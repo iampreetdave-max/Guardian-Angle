@@ -91,6 +91,7 @@ class IndexManager:
 # ---- Process-wide singletons ----
 _clip_index: Optional[IndexManager] = None
 _face_index: Optional[IndexManager] = None
+_object_index: Optional[IndexManager] = None
 _init_lock = threading.Lock()
 
 
@@ -116,3 +117,17 @@ def get_face_index() -> IndexManager:
                 s = get_settings()
                 _face_index = IndexManager(s.face_index_path, s.face_embed_dim)
     return _face_index
+
+
+def get_object_index() -> IndexManager:
+    """CLIP-space index of individual detected-object crops — enables
+    instance-level search ('find every red car'), not just whole-frame."""
+    global _object_index
+    if _object_index is None:
+        with _init_lock:
+            if _object_index is None:
+                from ..config import get_settings
+
+                s = get_settings()
+                _object_index = IndexManager(s.object_index_path, s.clip_embed_dim)
+    return _object_index
