@@ -1,0 +1,16 @@
+# Keep the Hugging Face / Docker build context small and clean
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+frontend/dist
+data/
+*.faiss
+*.counter
+*.db
+*.db-wal
+*.db-shm
+**/*.log
+.git
+.idea
+.vscode

@@ -1,0 +1,33 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ---- VisionScan data (videos, thumbnails, indexes, db) ----
+data/
+*.faiss
+*.counter
+*.db
+*.db-wal
+*.db-shm
+
+# ---- Models / weights ----
+*.pt
+~/.insightface/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- Logs ----
+*.log
+
+# ---- Env / editors ----
+.env
+.DS_Store
+.idea/
+.vscode/

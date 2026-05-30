@@ -1,0 +1,30 @@
+# VisionScan — full offline-capable stack.
+#   docker compose up --build
+# Then open http://localhost:8080
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - visionscan-data:/data
+      # Persist downloaded model weights so subsequent runs are fully offline:
+      - model-cache:/root/.cache
+      - insightface-cache:/root/.insightface
+    environment:
+      VISIONSCAN_DEVICE: cpu
+      VISIONSCAN_DATA_DIR: /data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  visionscan-data:
+  model-cache:
+  insightface-cache:

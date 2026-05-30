@@ -1,0 +1,31 @@
+# Core stack — installs with prebuilt wheels on Windows/macOS/Linux, no compiler.
+# This powers text, reference-image, and object search (CLIP + YOLOv8 + FAISS).
+# Face matching (InsightFace/ArcFace) is an optional extra — see requirements.txt
+# / README; it builds cleanly in Docker (Linux) but needs C++ build tools on
+# Windows. The app degrades gracefully when InsightFace is absent.
+
+# ---- Core API ----
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# ---- Computer Vision / ML ----
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+Pillow==11.0.0
+torch==2.5.1
+torchvision==0.20.1
+transformers==4.47.1
+faiss-cpu==1.9.0.post1
+ultralytics==8.3.55
+
+# ---- Reports ----
+reportlab==4.2.5
+
+# ---- Live public stream ingestion (YouTube-live / HLS resolve) ----
+yt-dlp==2024.12.13
+
+# ---- Utils ----
+tqdm==4.67.1
