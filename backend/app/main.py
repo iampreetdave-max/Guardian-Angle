@@ -82,6 +82,16 @@ app.include_router(router, prefix="/api")
 from .arbiter.routes import router as legal_router  # noqa: E402
 app.include_router(legal_router, prefix="/api/legal")
 
+# CityShield platform: auth, users/teams, complaints, cases, notifications
+from .platform.routes import (  # noqa: E402
+    admin_router, auth_router, cases_router, complaints_router, notif_router,
+)
+app.include_router(auth_router, prefix="/api/auth")
+app.include_router(admin_router, prefix="/api")
+app.include_router(complaints_router, prefix="/api/complaints")
+app.include_router(cases_router, prefix="/api/cases")
+app.include_router(notif_router, prefix="/api/notifications")
+
 
 # ---- Optional: serve the built React frontend from the same container ----
 # In single-container deployments (Hugging Face Spaces, `docker run` of the

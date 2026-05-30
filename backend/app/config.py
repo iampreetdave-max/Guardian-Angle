@@ -74,6 +74,19 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
+    # ---- Platform auth ----
+    # CHANGE in production via VISIONSCAN_JWT_SECRET. Default is dev-only.
+    jwt_secret: str = "cityshield-dev-secret-change-me"
+    jwt_expire_hours: int = 12
+    seed_demo_users: bool = True   # seed admin/officer/citizen accounts on first run
+
+    # ---- Email (hybrid: SMTP if configured, else offline outbox) ----
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "no-reply@cityshield.local"
+
     # ---- Server ----
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 

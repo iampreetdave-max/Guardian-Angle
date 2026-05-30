@@ -83,8 +83,22 @@ def _connect() -> sqlite3.Connection:
 def init_db() -> None:
     with _connect() as conn:
         conn.executescript(SCHEMA)
+        # CityShield platform tables (auth, cases, complaints, …)
+        from .platform.schema import PLATFORM_SCHEMA
+
+        conn.executescript(PLATFORM_SCHEMA)
         _migrate(conn)
         conn.commit()
+    # seed demo accounts on first run (after tables exist)
+    try:
+        from .config import get_settings
+        from .platform.seed import seed_demo
+
+        if get_settings().seed_demo_users:
+            seed_demo()
+    except Exception:  # pragma: no cover - never block startup on seeding
+        import logging
+        logging.getLogger("visionscan").warning("demo seeding skipped", exc_info=True)
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
