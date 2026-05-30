@@ -11,7 +11,10 @@ numpy==1.26.4
 Pillow==11.0.0
 torch==2.5.1
 torchvision==0.20.1
-transformers==4.47.1
+# transformers pinned to 4.46.x so tokenizers stays <=0.20.3, compatible with
+# chromadb 0.5.23 (which caps tokenizers). CLIP ViT-B/32 works fine on 4.46.
+transformers==4.46.3
+tokenizers==0.20.3
 faiss-cpu==1.9.0.post1
 ultralytics==8.3.55
 
