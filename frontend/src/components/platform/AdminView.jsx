@@ -1,0 +1,133 @@
+import { useEffect, useState } from "react";
+import { Users, Plus, Loader2, Shield } from "lucide-react";
+import * as API from "../../api";
+
+export default function AdminView() {
+  const [users, setUsers] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [tab, setTab] = useState("users");
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+
+  const refresh = () => {
+    API.listUsers().then(setUsers).catch(() => {});
+    API.listTeams().then(setTeams).catch(() => {});
+  };
+  useEffect(() => { refresh(); }, []);
+
+  return (
+    <div className="mx-auto max-w-5xl p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <Shield size={20} className="text-accent" />
+        <h2 className="text-lg font-bold text-white">Administration</h2>
+        <div className="ml-auto flex items-center gap-1 rounded-lg bg-ink-900/60 p-1 text-xs">
+          {["users", "teams"].map((t) => (
+            <button key={t} onClick={() => setTab(t)} className={`rounded px-3 py-1 ${tab === t ? "bg-accent-600 text-white" : "text-slate-400"}`}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "users" && (
+        <>
+          <button onClick={() => setCreatingUser(true)} className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={14} /> Add staff user</button>
+          <div className="space-y-1.5">
+            {users.map((u) => (
+              <div key={u.id} className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-800/50 p-3 text-sm">
+                <div>
+                  <span className="font-semibold text-slate-100">{u.name}</span>
+                  <span className="ml-2 text-xs text-slate-500">{u.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  {u.badge_no && <span className="text-slate-500">{u.badge_no}</span>}
+                  <span className={`rounded px-2 py-0.5 ${u.role === "admin" ? "bg-signal-red/15 text-signal-red" : u.role === "lead" ? "bg-accent/15 text-accent" : u.role === "officer" ? "bg-signal-green/15 text-signal-green" : "bg-ink-700 text-slate-400"}`}>{u.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === "teams" && (
+        <>
+          <button onClick={() => setCreatingTeam(true)} className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={14} /> Add team</button>
+          <div className="space-y-1.5">
+            {teams.map((t) => (
+              <div key={t.id} className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-800/50 p-3 text-sm">
+                <div><span className="font-semibold text-slate-100">{t.name}</span><span className="ml-2 text-xs text-slate-500">{t.station}</span></div>
+                <span className="inline-flex items-center gap-1 text-xs text-slate-400"><Users size={12} /> {t.members}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {creatingUser && <CreateUserModal teams={teams} onClose={() => setCreatingUser(false)} onDone={() => { setCreatingUser(false); refresh(); }} />}
+      {creatingTeam && <CreateTeamModal onClose={() => setCreatingTeam(false)} onDone={() => { setCreatingTeam(false); refresh(); }} />}
+    </div>
+  );
+}
+
+function CreateUserModal({ teams, onClose, onDone }) {
+  const [f, setF] = useState({ name: "", email: "", password: "", role: "officer", team_id: "", badge_no: "" });
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(null);
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try { await API.createUser({ ...f, team_id: f.team_id || null }); onDone(); }
+    catch (e) { setErr(e?.response?.data?.detail || "Failed"); } finally { setBusy(false); }
+  };
+  return (
+    <Modal onClose={onClose} title="Add staff user">
+      <input placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp + " mb-2"} />
+      <input placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={inp + " mb-2"} />
+      <input type="password" placeholder="Temp password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} className={inp + " mb-2"} />
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} className={inp}>
+          {["officer", "lead", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={f.team_id} onChange={(e) => setF({ ...f, team_id: e.target.value })} className={inp}>
+          <option value="">No team</option>
+          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+      <input placeholder="Badge no (optional)" value={f.badge_no} onChange={(e) => setF({ ...f, badge_no: e.target.value })} className={inp} />
+      {err && <div className="mt-2 text-[11px] text-signal-red">{err}</div>}
+      <ModalActions busy={busy} onClose={onClose} onSubmit={submit} />
+    </Modal>
+  );
+}
+
+function CreateTeamModal({ onClose, onDone }) {
+  const [f, setF] = useState({ name: "", station: "Ahmedabad Cyber Crime Branch" });
+  const [busy, setBusy] = useState(false);
+  const submit = async () => { setBusy(true); try { await API.createTeam(f); onDone(); } finally { setBusy(false); } };
+  return (
+    <Modal onClose={onClose} title="Add team">
+      <input placeholder="Team name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp + " mb-2"} />
+      <input placeholder="Station" value={f.station} onChange={(e) => setF({ ...f, station: e.target.value })} className={inp} />
+      <ModalActions busy={busy} onClose={onClose} onSubmit={submit} />
+    </Modal>
+  );
+}
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl border border-ink-500 bg-ink-800 p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-3 text-base font-semibold text-slate-100">{title}</h3>
+        {children}
+      </div>
+    </div>
+  );
+}
+function ModalActions({ busy, onClose, onSubmit }) {
+  return (
+    <div className="mt-4 flex justify-end gap-2">
+      <button onClick={onClose} className="rounded-lg bg-ink-700 px-4 py-2 text-sm text-slate-300">Cancel</button>
+      <button onClick={onSubmit} disabled={busy} className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        {busy && <Loader2 size={14} className="animate-spin" />} Save
+      </button>
+    </div>
+  );
+}
+
+const inp = "w-full rounded-lg bg-ink-900/60 px-3 py-2 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent";

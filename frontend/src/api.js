@@ -3,6 +3,61 @@ import axios from "axios";
 // Same-origin: Vite proxies /api -> backend in dev; in Docker they share origin.
 const api = axios.create({ baseURL: "/api" });
 
+// ---- auth token injection ----
+const TOKEN_KEY = "cityshield_token";
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (t) =>
+  t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
+
+api.interceptors.request.use((config) => {
+  const t = getToken();
+  if (t) config.headers.Authorization = `Bearer ${t}`;
+  return config;
+});
+
+// ---- auth / platform ----
+export const authRegister = (p) => api.post("/auth/register", p).then((r) => r.data);
+export const authLogin = (p) => api.post("/auth/login", p).then((r) => r.data);
+export const authMe = () => api.get("/auth/me").then((r) => r.data);
+export const authLogout = () => api.post("/auth/logout").then((r) => r.data);
+export const changePassword = (p) =>
+  api.post("/auth/change-password", p).then((r) => r.data);
+export const forgotPassword = (p) =>
+  api.post("/auth/forgot-password", p).then((r) => r.data);
+export const resetPassword = (p) =>
+  api.post("/auth/reset-password", p).then((r) => r.data);
+
+export const listComplaints = () => api.get("/complaints").then((r) => r.data);
+export const fileComplaint = (p) => api.post("/complaints", p).then((r) => r.data);
+export const triageComplaint = (id, p) =>
+  api.post(`/complaints/${id}/triage`, p).then((r) => r.data);
+
+export const listCases = (statusFilter) =>
+  api.get("/cases", { params: statusFilter ? { status_filter: statusFilter } : {} }).then((r) => r.data);
+export const createCase = (p) => api.post("/cases", p).then((r) => r.data);
+export const getCase = (id) => api.get(`/cases/${id}`).then((r) => r.data);
+export const assignCase = (id, p) => api.post(`/cases/${id}/assign`, p).then((r) => r.data);
+export const listEvidence = (id) => api.get(`/cases/${id}/evidence`).then((r) => r.data);
+export const addEvidence = (id, p) => api.post(`/cases/${id}/evidence`, p).then((r) => r.data);
+export const listDocuments = (id) => api.get(`/cases/${id}/documents`).then((r) => r.data);
+export const addDocument = (id, p) => api.post(`/cases/${id}/documents`, p).then((r) => r.data);
+export const listMessages = (id) => api.get(`/cases/${id}/messages`).then((r) => r.data);
+export const postMessage = (id, p) => api.post(`/cases/${id}/messages`, p).then((r) => r.data);
+export const setCitizenVisibility = (id, p) =>
+  api.post(`/cases/${id}/citizen-visibility`, p).then((r) => r.data);
+export const closeCase = (id, p) => api.post(`/cases/${id}/close`, p).then((r) => r.data);
+export const rateCase = (id, p) => api.post(`/cases/${id}/rate`, p).then((r) => r.data);
+export const caseTimeline = (id) => api.get(`/cases/${id}/timeline`).then((r) => r.data);
+
+export const listUsers = () => api.get("/users").then((r) => r.data);
+export const createUser = (p) => api.post("/users", p).then((r) => r.data);
+export const listTeams = () => api.get("/teams").then((r) => r.data);
+export const createTeam = (p) => api.post("/teams", p).then((r) => r.data);
+
+export const getNotifications = () => api.get("/notifications").then((r) => r.data);
+export const markNotificationsRead = () =>
+  api.post("/notifications/read-all").then((r) => r.data);
+
 export const getHealth = () => api.get("/health").then((r) => r.data);
 
 export const listVideos = () => api.get("/videos").then((r) => r.data);

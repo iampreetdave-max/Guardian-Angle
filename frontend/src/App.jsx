@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2 } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut } from "lucide-react";
 import * as API from "./api";
+import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
 import VideoManager from "./components/VideoManager";
 import SearchPanel from "./components/SearchPanel";
@@ -9,9 +10,27 @@ import FrameDetail from "./components/FrameDetail";
 import ReportTray from "./components/ReportTray";
 import LivePlayer from "./components/LivePlayer";
 import ArbiterPanel from "./components/Arbiter/ArbiterPanel";
-import { Scale } from "lucide-react";
+import LoginView from "./components/platform/LoginView";
+import NotificationBell from "./components/platform/NotificationBell";
+import ComplaintsView from "./components/platform/ComplaintsView";
+import CasesView from "./components/platform/CasesView";
+import AdminView from "./components/platform/AdminView";
 
+// Top-level gate: show the login screen until authenticated, then the app shell.
 export default function App() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-accent" size={28} />
+      </div>
+    );
+  }
+  if (!user) return <LoginView />;
+  return <Workbench />;
+}
+
+function Workbench() {
   const [health, setHealth] = useState(null);
   const [videos, setVideos] = useState([]);
   const [feeds, setFeeds] = useState([]);
@@ -27,8 +46,12 @@ export default function App() {
   const [liveId, setLiveId] = useState(null); // video_id of the active live feed
   const [stopping, setStopping] = useState(false);
 
-  const [module, setModule] = useState("vision"); // vision | arbiter
+  const { user, logout } = useAuth();
+  const staff = isStaff(user);
+  // citizens land on complaints; staff land on the VisionScan workbench
+  const [module, setModule] = useState(staff ? "vision" : "complaints");
   const [arbiterSeed, setArbiterSeed] = useState(""); // cross-module: prefill incident
+  const [openCaseId, setOpenCaseId] = useState(null); // deep-link from complaint -> case
 
   const lastQuery = useRef({ query: "", type: "text" });
   const lastSearchArgs = useRef(null); // for live auto-refresh
@@ -199,32 +222,50 @@ export default function App() {
           </div>
         </div>
 
-        {/* module switcher */}
-        <div className="ml-4 flex items-center gap-1 rounded-lg bg-ink-900/60 p-1">
-          <button
-            onClick={() => setModule("vision")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              module === "vision" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <ScanSearch size={14} /> VisionScan
-          </button>
-          <button
-            onClick={() => setModule("arbiter")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              module === "arbiter" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Scale size={14} /> Arbiter
-          </button>
-        </div>
+        {/* role-based module nav */}
+        <nav className="ml-4 flex items-center gap-1 rounded-lg bg-ink-900/60 p-1">
+          {[
+            staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
+            staff && { key: "arbiter", label: "Arbiter", icon: Scale },
+            { key: "cases", label: "Cases", icon: FolderOpen },
+            { key: "complaints", label: "Complaints", icon: Megaphone },
+            isAdmin(user) && { key: "admin", label: "Admin", icon: Shield },
+          ].filter(Boolean).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setModule(m.key)}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                module === m.key ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <m.icon size={14} /> {m.label}
+            </button>
+          ))}
+        </nav>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
           {module === "vision" && <StatusBar health={health} />}
+          <NotificationBell />
+          <div className="flex items-center gap-2 border-l border-ink-700 pl-3">
+            <div className="text-right">
+              <div className="text-xs font-semibold text-slate-200">{user.name}</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">{user.role}</div>
+            </div>
+            <button onClick={logout} title="Sign out"
+              className="rounded-lg bg-ink-700 p-2 text-slate-300 hover:bg-signal-red/20 hover:text-signal-red">
+              <LogOut size={15} />
+            </button>
+          </div>
         </div>
       </header>
 
-      {module === "arbiter" ? (
+      {module === "complaints" ? (
+        <ComplaintsView onOpenCase={(id) => { setOpenCaseId(id); setModule("cases"); }} />
+      ) : module === "cases" ? (
+        <CasesView openCaseId={openCaseId} onClearOpen={() => setOpenCaseId(null)} />
+      ) : module === "admin" ? (
+        <AdminView />
+      ) : module === "arbiter" ? (
         <ArbiterPanel seedText={arbiterSeed} />
       ) : (
       <div className="flex min-h-0 flex-1">
