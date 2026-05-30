@@ -4,21 +4,27 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Deep navy — the emblem's shield
         ink: {
-          900: "#0a0f1a",
-          800: "#0f1626",
-          700: "#161f33",
-          600: "#1f2b45",
-          500: "#2c3a5a",
+          900: "#0a1124",
+          800: "#0f1a33",
+          700: "#172544",
+          600: "#223354",
+          500: "#324468",
         },
+        // Gold — the phoenix. Primary brand accent.
         accent: {
-          DEFAULT: "#38bdf8",
-          600: "#0ea5e9",
-          700: "#0284c7",
+          DEFAULT: "#f4b23c", // bright gold: text/icons on dark
+          600: "#c9821a", // button surface (white bold text ≥3:1)
+          700: "#a4630c", // hover
         },
+        // Indian tricolor — national identity accents
+        flag: { saffron: "#ff9933", white: "#ffffff", green: "#138808" },
         signal: { green: "#22c55e", amber: "#f59e0b", red: "#ef4444" },
       },
       fontFamily: {
+        serif: ['"EB Garamond"', "Georgia", "serif"],
+        sans: ['"Lato"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
     },

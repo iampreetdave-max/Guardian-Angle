@@ -15,6 +15,7 @@ import NotificationBell from "./components/platform/NotificationBell";
 import ComplaintsView from "./components/platform/ComplaintsView";
 import CasesView from "./components/platform/CasesView";
 import AdminView from "./components/platform/AdminView";
+import Footer from "./components/platform/Footer";
 
 // Top-level gate: show the login screen until authenticated, then the app shell.
 export default function App() {
@@ -213,7 +214,7 @@ function Workbench() {
             className="h-11 w-11 rounded-lg object-contain bg-white/5 p-0.5 ring-1 ring-ink-600"
           />
           <div>
-            <h1 className="text-lg font-bold leading-tight text-white">
+            <h1 className="font-serif text-xl font-bold leading-tight text-white">
               City<span className="text-accent">Shield</span>
             </h1>
             <p className="text-[10px] uppercase tracking-wider text-slate-500">
@@ -259,14 +260,23 @@ function Workbench() {
         </div>
       </header>
 
-      {module === "complaints" ? (
-        <ComplaintsView onOpenCase={(id) => { setOpenCaseId(id); setModule("cases"); }} />
-      ) : module === "cases" ? (
-        <CasesView openCaseId={openCaseId} onClearOpen={() => setOpenCaseId(null)} />
-      ) : module === "admin" ? (
-        <AdminView />
-      ) : module === "arbiter" ? (
+      <div className="tricolor-bar" />
+
+      {module === "arbiter" ? (
         <ArbiterPanel seedText={arbiterSeed} />
+      ) : module === "complaints" || module === "cases" || module === "admin" ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex-1">
+            {module === "complaints" && (
+              <ComplaintsView onOpenCase={(id) => { setOpenCaseId(id); setModule("cases"); }} />
+            )}
+            {module === "cases" && (
+              <CasesView openCaseId={openCaseId} onClearOpen={() => setOpenCaseId(null)} />
+            )}
+            {module === "admin" && <AdminView />}
+          </div>
+          <Footer />
+        </div>
       ) : (
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}

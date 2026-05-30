@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600;700&family=Lato:wght@300;400;700;900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,13 +11,36 @@ body,
 }
 
 body {
-  @apply bg-ink-900 text-slate-200 antialiased;
+  @apply bg-ink-900 text-slate-200 antialiased font-sans;
+  /* subtle gold glow echoing the emblem, on deep navy */
   background-image: radial-gradient(
-      circle at 20% -10%,
-      rgba(56, 189, 248, 0.08),
-      transparent 40%
+      circle at 18% -10%,
+      rgba(244, 178, 60, 0.08),
+      transparent 42%
     ),
-    radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.06), transparent 35%);
+    radial-gradient(circle at 92% 0%, rgba(255, 153, 51, 0.05), transparent 38%);
+}
+
+/* Indian tricolor rule — national-identity motif for headers/footers */
+.tricolor-bar {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    #ff9933 0%,
+    #ff9933 33.3%,
+    #ffffff 33.3%,
+    #ffffff 66.6%,
+    #138808 66.6%,
+    #138808 100%
+  );
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Custom scrollbar — fits the dark command-center theme */
