@@ -17,9 +17,11 @@ RUN npm run build
 # ---- Stage 2: backend + static frontend ----
 FROM python:3.11-slim
 
-# OpenCV / video decode runtime libs
+# OpenCV / video decode runtime libs + build toolchain (chromadb's
+# chroma-hnswlib compiles from source if no wheel is available)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 libgl1 libgomp1 ffmpeg \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # HF Spaces runs containers as UID 1000 — set up a writable home for caches/data

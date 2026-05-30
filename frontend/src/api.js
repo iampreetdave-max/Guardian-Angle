@@ -65,4 +65,13 @@ export const generateReport = (payload) =>
     .post("/report", payload, { responseType: "blob" })
     .then((r) => r.data);
 
+// ---- Arbiter (legal intelligence) ----
+export const legalHealth = () => api.get("/legal/health").then((r) => r.data);
+export const legalSections = (payload) =>
+  api.post("/legal/sections", payload).then((r) => r.data);
+export const legalFir = (payload) =>
+  api.post("/legal/fir", payload).then((r) => r.data);
+export const legalQuery = (payload) =>
+  api.post("/legal/query", payload).then((r) => r.data);
+
 export default api;

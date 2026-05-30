@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     # frames of someone standing still).
     event_gap_sec: float = 6.0
 
+    # ---- Arbiter legal AI ----
+    # If set, Arbiter uses Gemini for polished generation; otherwise it falls
+    # back to offline, citation-grounded templates. Reads VISIONSCAN_GEMINI_API_KEY
+    # or a plain GEMINI_API_KEY (resolved in arbiter/llm.py).
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+
     # ---- Server ----
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 

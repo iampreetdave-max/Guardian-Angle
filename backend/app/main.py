@@ -78,6 +78,10 @@ app.mount(
 
 app.include_router(router, prefix="/api")
 
+# Arbiter legal-intelligence module (CityShield) — modular, under /api/legal/*
+from .arbiter.routes import router as legal_router  # noqa: E402
+app.include_router(legal_router, prefix="/api/legal")
+
 
 # ---- Optional: serve the built React frontend from the same container ----
 # In single-container deployments (Hugging Face Spaces, `docker run` of the

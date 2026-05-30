@@ -8,6 +8,8 @@ import FrameCard from "./components/FrameCard";
 import FrameDetail from "./components/FrameDetail";
 import ReportTray from "./components/ReportTray";
 import LivePlayer from "./components/LivePlayer";
+import ArbiterPanel from "./components/Arbiter/ArbiterPanel";
+import { Scale } from "lucide-react";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -24,6 +26,9 @@ export default function App() {
 
   const [liveId, setLiveId] = useState(null); // video_id of the active live feed
   const [stopping, setStopping] = useState(false);
+
+  const [module, setModule] = useState("vision"); // vision | arbiter
+  const [arbiterSeed, setArbiterSeed] = useState(""); // cross-module: prefill incident
 
   const lastQuery = useRef({ query: "", type: "text" });
   const lastSearchArgs = useRef(null); // for live auto-refresh
@@ -186,18 +191,42 @@ export default function App() {
           />
           <div>
             <h1 className="text-lg font-bold leading-tight text-white">
-              Vision<span className="text-accent">Scan</span>
+              City<span className="text-accent">Shield</span>
             </h1>
             <p className="text-[10px] uppercase tracking-wider text-slate-500">
-              Smart CCTV Analysis · Cyber Crime Branch, Ahmedabad City Police
+              Unified AI Policing · Cyber Crime Branch, Ahmedabad City Police
             </p>
           </div>
         </div>
+
+        {/* module switcher */}
+        <div className="ml-4 flex items-center gap-1 rounded-lg bg-ink-900/60 p-1">
+          <button
+            onClick={() => setModule("vision")}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+              module === "vision" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <ScanSearch size={14} /> VisionScan
+          </button>
+          <button
+            onClick={() => setModule("arbiter")}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+              module === "arbiter" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Scale size={14} /> Arbiter
+          </button>
+        </div>
+
         <div className="ml-auto">
-          <StatusBar health={health} />
+          {module === "vision" && <StatusBar health={health} />}
         </div>
       </header>
 
+      {module === "arbiter" ? (
+        <ArbiterPanel seedText={arbiterSeed} />
+      ) : (
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <aside className="w-72 shrink-0 border-r border-ink-700 bg-ink-800/40 p-4">
@@ -267,6 +296,24 @@ export default function App() {
                     matches for{" "}
                     <span className="text-accent">{results.query}</span>
                   </p>
+                  {results.count > 0 && (
+                    <button
+                      onClick={() => {
+                        const top = results.hits[0];
+                        setArbiterSeed(
+                          `CCTV evidence: "${results.query}" observed on camera ` +
+                          `${top?.camera_id || ""} at ${top?.timestamp_hms || ""}. ` +
+                          `Investigated via VisionScan; ${results.count} matching ` +
+                          `frame(s) found. Draft an FIR for this incident.`
+                        );
+                        setModule("arbiter");
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-accent-600 hover:text-white"
+                      title="Send this evidence to Arbiter to draft an FIR"
+                    >
+                      <Scale size={14} /> Draft FIR in Arbiter
+                    </button>
+                  )}
                 </div>
                 {results.count === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -302,6 +349,7 @@ export default function App() {
           </div>
         </main>
       </div>
+      )}
 
       <FrameDetail
         hit={detailHit}
