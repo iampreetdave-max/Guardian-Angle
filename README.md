@@ -1,5 +1,3 @@
-<!-- The YAML block below configures Hugging Face Spaces (Docker SDK). It is
-     harmless on GitHub. See deploy/HOSTING.md for deployment steps. -->
 ---
 title: VisionScan
 emoji: 🎥
