@@ -45,6 +45,11 @@ def is_loaded() -> bool:
     return _model is not None
 
 
+def warmup() -> None:
+    """Eagerly load CLIP so the first real query/ingest isn't blocked on it."""
+    _ensure_loaded()
+
+
 def _normalize(vecs: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     norms[norms == 0] = 1e-12

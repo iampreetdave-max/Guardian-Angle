@@ -41,6 +41,52 @@ def _set_status(video_id: int, status: str, error: str | None = None) -> None:
         )
 
 
+def process_keyframe(video_id: int, kf, thumb_dir: Path) -> int:
+    """Run layers 2-3 on a single keyframe: enhance, thumbnail, CLIP-embed +
+    index, persist the frame row, and run object/face detection. Returns the
+    new frame_id. Shared by both the batch (process_video) and continuous
+    (process_stream_live) paths so they stay identical."""
+    settings = get_settings()
+    clip_index = get_clip_index()
+    face_index = get_face_index()
+
+    enhanced = preprocessing.maybe_enhance(kf.image_bgr)
+
+    thumb_name = f"{kf.frame_number:08d}.jpg"
+    _save_thumbnail(enhanced, thumb_dir / thumb_name, settings.thumbnail_max_size)
+    rel_thumb = f"{video_id}/{thumb_name}"
+
+    rgb = cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
+    vec = embedding.embed_images(Image.fromarray(rgb))
+    clip_faiss_id = clip_index.add(vec)[0]
+
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO frames (video_id, frame_number, timestamp_sec, "
+            "thumbnail_path, clip_faiss_id) VALUES (?, ?, ?, ?, ?)",
+            (video_id, kf.frame_number, kf.timestamp_sec, rel_thumb, clip_faiss_id),
+        )
+        frame_id = cur.lastrowid
+
+    for det in detection.detect_objects(enhanced):
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO detections (frame_id, label, confidence, "
+                "x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (frame_id, det.label, det.confidence, *det.bbox),
+            )
+
+    for face in detection.detect_faces(enhanced):
+        face_faiss_id = face_index.add(face.embedding.reshape(1, -1))[0]
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO faces (frame_id, face_faiss_id, det_score, "
+                "x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (frame_id, face_faiss_id, face.det_score, *face.bbox),
+            )
+    return frame_id
+
+
 def process_video(
     video_id: int,
     source_path: str | None = None,
@@ -89,47 +135,7 @@ def process_video(
             video_path, max_duration_sec=max_duration_sec, max_frames=max_frames
         ):
             last_ts = kf.timestamp_sec
-            enhanced = preprocessing.maybe_enhance(kf.image_bgr)
-
-            # --- thumbnail ---
-            thumb_name = f"{kf.frame_number:08d}.jpg"
-            thumb_path = thumb_dir / thumb_name
-            _save_thumbnail(enhanced, thumb_path, settings.thumbnail_max_size)
-            rel_thumb = f"{video_id}/{thumb_name}"
-
-            # --- CLIP embedding (layer 2) ---
-            rgb = cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
-            pil = Image.fromarray(rgb)
-            vec = embedding.embed_images(pil)  # (1, 512)
-            clip_faiss_id = clip_index.add(vec)[0]
-
-            # --- persist frame ---
-            with get_conn() as conn:
-                cur = conn.execute(
-                    "INSERT INTO frames (video_id, frame_number, timestamp_sec, "
-                    "thumbnail_path, clip_faiss_id) VALUES (?, ?, ?, ?, ?)",
-                    (video_id, kf.frame_number, kf.timestamp_sec, rel_thumb,
-                     clip_faiss_id),
-                )
-                frame_id = cur.lastrowid
-
-            # --- detection (layer 3) ---
-            for det in detection.detect_objects(enhanced):
-                with get_conn() as conn:
-                    conn.execute(
-                        "INSERT INTO detections (frame_id, label, confidence, "
-                        "x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (frame_id, det.label, det.confidence, *det.bbox),
-                    )
-
-            for face in detection.detect_faces(enhanced):
-                face_faiss_id = face_index.add(face.embedding.reshape(1, -1))[0]
-                with get_conn() as conn:
-                    conn.execute(
-                        "INSERT INTO faces (frame_id, face_faiss_id, det_score, "
-                        "x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (frame_id, face_faiss_id, face.det_score, *face.bbox),
-                    )
+            process_keyframe(video_id, kf, thumb_dir)
 
             kept += 1
             if kept % 25 == 0:

@@ -26,6 +26,9 @@ frontend/.vite/
 # ---- Logs ----
 *.log
 
+# ---- Spec docs (kept locally; HF Spaces rejects binaries in git) ----
+*.pdf
+
 # ---- Env / editors ----
 .env
 .DS_Store

@@ -47,10 +47,26 @@ app.add_middleware(
 def _startup() -> None:
     settings.ensure_dirs()
     init_db()
-    logging.getLogger("visionscan").info(
-        "VisionScan ready · device=%s · data=%s",
-        settings.resolve_device(), settings.data_dir,
-    )
+    log = logging.getLogger("visionscan")
+    log.info("VisionScan ready · device=%s · data=%s",
+             settings.resolve_device(), settings.data_dir)
+
+    # Warm models in the background so the first search / live frame is fast
+    # rather than stalling ~30s on lazy load.
+    def _warm() -> None:
+        from .core import detection, embedding
+        try:
+            embedding.warmup()
+        except Exception:
+            log.warning("CLIP warmup failed", exc_info=True)
+        try:
+            detection.warmup()
+        except Exception:
+            log.warning("detector warmup failed", exc_info=True)
+        log.info("Model warmup complete")
+
+    import threading
+    threading.Thread(target=_warm, daemon=True).start()
 
 
 # Serve keyframe thumbnails as static files (referenced by SearchHit.thumbnail_url)

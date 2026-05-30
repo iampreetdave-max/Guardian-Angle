@@ -18,6 +18,9 @@ class VideoOut(BaseModel):
     status: str
     error: Optional[str] = None
     created_at: str
+    # For live/stream feeds: the source URL so the UI can show a live preview.
+    stream_url: Optional[str] = None
+    is_live: bool = False
 
 
 class PublicFeed(BaseModel):

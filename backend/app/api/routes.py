@@ -35,8 +35,9 @@ from ..schemas import (
     VideoOut,
 )
 from ..services import report as report_svc
+from ..services import stream as stream_svc
 from ..services.pipeline import process_video
-from ..services.stream import process_stream
+from ..services.stream import process_stream, start_live, stop_live
 
 router = APIRouter()
 
@@ -117,6 +118,22 @@ def ingest_stream(body: StreamIn, background: BackgroundTasks) -> VideoOut:
     background.add_task(
         process_stream, video_id, body.url, body.duration_sec, body.max_frames
     )
+    return _video_out(video_id)
+
+
+@router.post("/streams/live", response_model=VideoOut, tags=["videos"])
+def start_live_feed(body: StreamIn) -> VideoOut:
+    """Start a continuous LIVE monitoring session on a public feed: the stream
+    is watched and indexed in real time until stopped, so it can be viewed and
+    searched live. Use only with intentionally-public feeds."""
+    video_id = start_live(body.url, body.camera_id)
+    return _video_out(video_id)
+
+
+@router.post("/videos/{video_id}/stop", response_model=VideoOut, tags=["videos"])
+def stop_live_feed(video_id: int) -> VideoOut:
+    """Stop a running live session (finalizes the feed as a searchable video)."""
+    stop_live(video_id)
     return _video_out(video_id)
 
 
@@ -259,11 +276,17 @@ def _decode_upload(data: bytes) -> np.ndarray:
 
 
 def _row_to_video(r) -> VideoOut:
+    path = r["path"]
+    is_stream = isinstance(path, str) and path.split("://", 1)[0] in (
+        "http", "https", "rtsp", "rtmp"
+    )
     return VideoOut(
         id=r["id"], filename=r["filename"], camera_id=r["camera_id"],
         fps=r["fps"], duration_sec=r["duration_sec"], frame_count=r["frame_count"],
         keyframe_count=r["keyframe_count"], status=r["status"], error=r["error"],
         created_at=r["created_at"],
+        stream_url=path if is_stream else None,
+        is_live=stream_svc.is_live(r["id"]),
     )
 
 

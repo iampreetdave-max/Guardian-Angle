@@ -156,6 +156,16 @@ def detect_faces(frame_bgr: np.ndarray) -> list[Face]:
     return out
 
 
+def warmup() -> None:
+    """Eagerly load the detectors so the first live frame / search isn't stalled
+    by lazy model loading (which can take ~30s for all models on CPU)."""
+    s = get_settings()
+    if s.enable_detection:
+        _ensure_yolo()
+    if s.enable_face:
+        _ensure_face()
+
+
 def embed_reference_face(frame_bgr: np.ndarray) -> Optional[np.ndarray]:
     """Embed the most prominent face in a reference image (suspect photo).
     Returns a normalized (512,) vector, or None if no face found."""

@@ -60,13 +60,16 @@ def extract_keyframes(
     video_path: str,
     max_duration_sec: float | None = None,
     max_frames: int | None = None,
+    stop_event=None,
 ) -> Iterator[Keyframe]:
     """Yield adaptively-sampled keyframes from a video or live stream.
 
     For finite files, iteration ends naturally at EOF. For live streams (which
-    never end), pass max_duration_sec and/or max_frames to bound capture — the
-    timestamp is then taken from wall-clock elapsed time, since a stream's
-    reported frame index is not meaningful.
+    never end), pass max_duration_sec and/or max_frames to bound capture, or a
+    threading.Event as stop_event for an open-ended continuous (live monitor)
+    capture that runs until the event is set. For streams the timestamp is taken
+    from wall-clock elapsed time, since a stream's reported frame index is not
+    meaningful.
     """
     import time
 
@@ -78,7 +81,7 @@ def extract_keyframes(
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     min_gap = int(max(1, s.min_frame_interval_sec * fps))
     max_gap = int(max(min_gap, s.max_frame_interval_sec * fps))
-    is_stream = max_duration_sec is not None
+    is_stream = max_duration_sec is not None or stop_event is not None
     start_wall = time.time()
 
     prev_hist: np.ndarray | None = None
@@ -88,8 +91,18 @@ def extract_keyframes(
     idx = -1
 
     while True:
+        if stop_event is not None and stop_event.is_set():
+            break
         ok, frame = cap.read()
         if not ok:
+            # A live stream can hiccup; if we're in continuous mode, try to
+            # reopen rather than ending the session.
+            if stop_event is not None and not stop_event.is_set():
+                cap.release()
+                cap = cv2.VideoCapture(video_path)
+                if not cap.isOpened():
+                    break
+                continue
             break
         idx += 1
 

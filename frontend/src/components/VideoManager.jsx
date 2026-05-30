@@ -9,6 +9,7 @@ export default function VideoManager({
   onSelectVideo,
   onUpload,
   onIngestStream,
+  onStartLive,
   onDelete,
 }) {
   const fileRef = useRef(null);
@@ -56,6 +57,17 @@ export default function VideoManager({
         camera_id: feed.name,
         duration_sec: Number(duration),
       });
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  // Start a continuous LIVE session (watch + index in real time).
+  const goLive = async (url, camera_id) => {
+    if (!url?.trim()) return;
+    setStreaming(true);
+    try {
+      await onStartLive({ url: url.trim(), camera_id });
     } finally {
       setStreaming(false);
     }
@@ -142,30 +154,37 @@ export default function VideoManager({
               placeholder="Public stream URL (RTSP / HLS / YouTube-live)"
               className="mb-2 w-full rounded bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
             />
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Capture</span>
-              <input
-                type="number"
-                min={5}
-                max={600}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-16 rounded bg-ink-700 px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
-              />
-              <span className="text-[11px] text-slate-400">seconds</span>
-            </div>
             <button
-              onClick={handleStream}
+              onClick={() => goLive(streamUrl, "LIVE")}
               disabled={streaming || !streamUrl.trim()}
-              className="flex w-full items-center justify-center gap-2 rounded bg-accent-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent-700 disabled:opacity-40"
+              className="mb-2 flex w-full items-center justify-center gap-2 rounded bg-signal-red/80 px-3 py-2 text-xs font-semibold text-white transition hover:bg-signal-red disabled:opacity-40"
             >
               {streaming ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
                 <Radio size={14} />
               )}
-              Capture Live Feed
+              Go Live (watch &amp; search)
             </button>
+            <div className="mb-2 flex items-center gap-2">
+              <button
+                onClick={handleStream}
+                disabled={streaming || !streamUrl.trim()}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded bg-ink-700 px-2 py-1.5 text-[11px] font-medium text-slate-200 transition hover:bg-ink-600 disabled:opacity-40"
+                title="Capture a fixed window then stop"
+              >
+                Capture once
+              </button>
+              <input
+                type="number"
+                min={5}
+                max={600}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-14 rounded bg-ink-700 px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
+              />
+              <span className="text-[11px] text-slate-400">sec</span>
+            </div>
             <div className="mt-2 flex gap-1.5 rounded bg-signal-amber/10 p-2 text-[10px] leading-snug text-signal-amber/90">
               <Info size={20} className="shrink-0" />
               <span>
@@ -179,15 +198,15 @@ export default function VideoManager({
               <div className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-300">
                   <Globe size={12} className="text-accent" />
-                  Public feeds — one-click load
+                  Public feeds — click to go live
                 </div>
                 <div className="space-y-1.5">
                   {feeds.map((f) => (
                     <button
                       key={f.id}
-                      onClick={() => loadFeed(f)}
+                      onClick={() => goLive(f.url, f.name)}
                       disabled={streaming}
-                      className="group w-full rounded-lg border border-ink-600 bg-ink-900/40 p-2 text-left transition hover:border-accent disabled:opacity-50"
+                      className="group w-full rounded-lg border border-ink-600 bg-ink-900/40 p-2 text-left transition hover:border-signal-red disabled:opacity-50"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-xs font-medium text-slate-200">

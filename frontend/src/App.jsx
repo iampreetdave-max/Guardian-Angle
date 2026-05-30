@@ -7,6 +7,7 @@ import SearchPanel from "./components/SearchPanel";
 import FrameCard from "./components/FrameCard";
 import FrameDetail from "./components/FrameDetail";
 import ReportTray from "./components/ReportTray";
+import LivePlayer from "./components/LivePlayer";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -21,7 +22,11 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [detailHit, setDetailHit] = useState(null);
 
+  const [liveId, setLiveId] = useState(null); // video_id of the active live feed
+  const [stopping, setStopping] = useState(false);
+
   const lastQuery = useRef({ query: "", type: "text" });
+  const lastSearchArgs = useRef(null); // for live auto-refresh
 
   // ---- polling: health + videos (keeps processing status live) ----
   const refresh = useCallback(async () => {
@@ -45,12 +50,36 @@ export default function App() {
     API.getFeeds().then(setFeeds).catch(() => {});
   }, []);
 
+  const liveVideo = useMemo(
+    () => videos.find((v) => v.id === liveId) || null,
+    [videos, liveId]
+  );
+
+  // While a live feed runs, re-run the last text/object search periodically so
+  // results reflect newly-indexed frames in near real time.
+  useEffect(() => {
+    if (!liveId || !lastSearchArgs.current) return;
+    const id = setInterval(() => {
+      runSearch(lastSearchArgs.current, true);
+    }, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveId, results]);
+
   // ---- search ----
-  const runSearch = async ({ mode, query, file }) => {
-    setSearching(true);
+  const runSearch = async ({ mode, query, file, group = true }, silent = false) => {
+    if (!silent) setSearching(true);
     setError(null);
+    // remember text/object searches so a live feed can auto-refresh them
+    if (mode === "text" || mode === "object") {
+      lastSearchArgs.current = { mode, query, group };
+    }
     try {
-      const opts = { top_k: 40, video_id: selectedVideo || undefined };
+      const opts = {
+        top_k: 40,
+        video_id: selectedVideo || undefined,
+        group_events: group,
+      };
       let res;
       if (mode === "text") {
         res = await API.searchText({ query, ...opts });
@@ -67,14 +96,16 @@ export default function App() {
       }
       setResults(res);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Search failed. Is footage processed?");
-      setResults(null);
+      if (!silent) {
+        setError(e?.response?.data?.detail || "Search failed. Is footage processed?");
+        setResults(null);
+      }
     } finally {
-      setSearching(false);
+      if (!silent) setSearching(false);
     }
   };
 
-  // ---- upload / delete ----
+  // ---- upload / delete / live ----
   const handleUpload = async (file, cameraId, onProgress) => {
     await API.uploadVideo(file, cameraId, onProgress);
     await refresh();
@@ -82,6 +113,23 @@ export default function App() {
   const handleIngestStream = async (payload) => {
     await API.ingestStream(payload);
     await refresh();
+  };
+  const handleStartLive = async (payload) => {
+    const v = await API.startLive(payload);
+    setLiveId(v.id);
+    setSelectedVideo(v.id); // scope searches to the live feed
+    await refresh();
+  };
+  const handleStopLive = async () => {
+    if (!liveId) return;
+    setStopping(true);
+    try {
+      await API.stopLive(liveId);
+      setLiveId(null);
+      await refresh();
+    } finally {
+      setStopping(false);
+    }
   };
   const handleDelete = async (id) => {
     await API.deleteVideo(id);
@@ -146,12 +194,22 @@ export default function App() {
             onSelectVideo={setSelectedVideo}
             onUpload={handleUpload}
             onIngestStream={handleIngestStream}
+            onStartLive={handleStartLive}
             onDelete={handleDelete}
           />
         </aside>
 
         {/* Main */}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden p-5">
+          {liveVideo && (
+            <LivePlayer
+              video={liveVideo}
+              indexedCount={liveVideo.keyframe_count}
+              onStop={handleStopLive}
+              stopping={stopping}
+            />
+          )}
+
           <SearchPanel
             onSearch={runSearch}
             searching={searching}

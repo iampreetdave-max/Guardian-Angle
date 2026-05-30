@@ -24,6 +24,12 @@ export const getFeeds = () => api.get("/feeds").then((r) => r.data);
 export const ingestStream = (payload) =>
   api.post("/streams", payload).then((r) => r.data);
 
+export const startLive = (payload) =>
+  api.post("/streams/live", payload).then((r) => r.data);
+
+export const stopLive = (id) =>
+  api.post(`/videos/${id}/stop`).then((r) => r.data);
+
 export const deleteVideo = (id) =>
   api.delete(`/videos/${id}`).then((r) => r.data);
 
@@ -33,12 +39,13 @@ export const searchText = (payload) =>
 export const searchObject = (payload) =>
   api.post("/search/object", payload).then((r) => r.data);
 
-const searchWithImage = (endpoint, file, { top_k, camera_id, video_id }) => {
+const searchWithImage = (endpoint, file, { top_k, camera_id, video_id, group_events }) => {
   const form = new FormData();
   form.append("file", file);
   form.append("top_k", top_k ?? 30);
   if (camera_id) form.append("camera_id", camera_id);
   if (video_id) form.append("video_id", video_id);
+  if (group_events !== undefined) form.append("group_events", group_events);
   return api.post(endpoint, form).then((r) => r.data);
 };
 

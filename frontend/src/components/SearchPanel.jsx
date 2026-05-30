@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Search, Type, Boxes, Image as ImageIcon, ScanFace, Loader2 } from "lucide-react";
+import { Search, Type, Boxes, Image as ImageIcon, ScanFace, Loader2, Layers } from "lucide-react";
 
 const MODES = [
   { key: "text", label: "Text", icon: Type, ph: 'e.g. "person in red jacket near the gate"' },
@@ -14,16 +14,25 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
+  // Group nearby frames into events. Default ON, except Object search where
+  // you usually want every individual instance (e.g. count all the cars).
+  const [group, setGroup] = useState(true);
   const fileRef = useRef(null);
 
   const current = MODES.find((m) => m.key === mode);
   const isImageMode = mode === "image" || mode === "face";
 
+  const switchMode = (key) => {
+    setMode(key);
+    setFile(null);
+    setGroup(key !== "object"); // object: show all instances by default
+  };
+
   const submit = () => {
     if (isImageMode) {
-      if (file) onSearch({ mode, file });
+      if (file) onSearch({ mode, file, group });
     } else if (text.trim()) {
-      onSearch({ mode, query: text.trim() });
+      onSearch({ mode, query: text.trim(), group });
     }
   };
 
@@ -38,10 +47,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
             <button
               key={m.key}
               disabled={disabled}
-              onClick={() => {
-                setMode(m.key);
-                setFile(null);
-              }}
+              onClick={() => switchMode(m.key)}
               title={disabled ? "ArcFace model not available" : ""}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                 active
@@ -133,7 +139,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
               key={o}
               onClick={() => {
                 setText(o);
-                onSearch({ mode: "object", query: o });
+                onSearch({ mode: "object", query: o, group });
               }}
               className="rounded-full bg-ink-700 px-2.5 py-1 text-[11px] text-slate-300 transition hover:bg-ink-600"
             >
@@ -142,6 +148,27 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
           ))}
         </div>
       )}
+
+      {/* Group-moments toggle */}
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={() => setGroup((g) => !g)}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+            group
+              ? "bg-accent/15 text-accent"
+              : "bg-ink-700 text-slate-400 hover:bg-ink-600"
+          }`}
+          title="When on, frames from the same camera within a few seconds are collapsed into one event. Turn off to see every matching frame/instance."
+        >
+          <Layers size={13} />
+          {group ? "Grouping moments: ON" : "Grouping moments: OFF"}
+        </button>
+        <span className="text-[10px] text-slate-500">
+          {group
+            ? "collapses near-duplicate frames into events"
+            : "shows every matching frame (find all instances)"}
+        </span>
+      </div>
     </div>
   );
 }
