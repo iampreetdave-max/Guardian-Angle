@@ -23,8 +23,10 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
-# ---- Logs ----
+# ---- Logs / temp ----
 *.log
+*.tmp
+.gitmsg.tmp
 
 # ---- Spec docs (kept locally; HF Spaces rejects binaries in git) ----
 *.pdf
