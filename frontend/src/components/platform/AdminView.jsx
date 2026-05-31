@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Plus, Loader2, Shield, ChevronDown, ChevronRight, Star, Mail, UserPlus, X } from "lucide-react";
+import { Users, Plus, Loader2, Shield, ChevronDown, ChevronRight, Star, Mail, UserPlus, X, Check } from "lucide-react";
 import * as API from "../../api";
 
 const STAFF_ROLES = ["officer", "lead", "admin"];
@@ -47,15 +47,7 @@ export default function AdminView() {
                 <div className="flex items-center gap-2 text-xs">
                   {u.badge_no && <span className="text-slate-500">{u.badge_no}</span>}
                   {STAFF_ROLES.includes(u.role) && (
-                    <select
-                      value={u.team_id ?? ""}
-                      onChange={(e) => assignUserTeam(u.id, e.target.value)}
-                      title="Assign to team"
-                      className="rounded-md bg-ink-900/60 px-2 py-1 text-[11px] text-slate-200 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
-                    >
-                      <option value="">No team</option>
-                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
+                    <UserTeamSelect user={u} teams={teams} onAssign={assignUserTeam} />
                   )}
                   <span className={`rounded px-2 py-0.5 ${u.role === "admin" ? "bg-signal-red/15 text-signal-red" : u.role === "lead" ? "bg-accent/15 text-accent" : u.role === "officer" ? "bg-signal-green/15 text-signal-green" : "bg-ink-700 text-slate-400"}`}>{u.role}</span>
                 </div>
@@ -76,6 +68,51 @@ export default function AdminView() {
 
       {creatingUser && <CreateUserModal teams={teams} onClose={() => setCreatingUser(false)} onDone={() => { setCreatingUser(false); refresh(); }} />}
       {creatingTeam && <CreateTeamModal onClose={() => setCreatingTeam(false)} onDone={() => { setCreatingTeam(false); refresh(); }} />}
+    </div>
+  );
+}
+
+function UserTeamSelect({ user, teams, onAssign }) {
+  const current = user.team_id ?? "";
+  const [pending, setPending] = useState(null); // null = no pending change
+  const [busy, setBusy] = useState(false);
+  const value = pending === null ? current : pending;
+  const dirty = pending !== null && pending !== current;
+  const teamName = (id) =>
+    id === "" || id === null ? "No team" : (teams.find((t) => String(t.id) === String(id))?.name || "team");
+
+  const confirm = async () => {
+    setBusy(true);
+    try { await onAssign(user.id, pending); setPending(null); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <select
+        value={value}
+        disabled={busy}
+        onChange={(e) => setPending(e.target.value)}
+        title="Assign to team"
+        className={`rounded-md bg-ink-900/60 px-2 py-1 text-[11px] text-slate-200 outline-none ring-1 focus:ring-2 focus:ring-accent ${dirty ? "ring-accent" : "ring-ink-600"}`}
+      >
+        <option value="">No team</option>
+        {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+      {dirty && (
+        <>
+          <button onClick={confirm} disabled={busy}
+            title={`Confirm move to ${teamName(pending)}`}
+            className="rounded p-1 text-signal-green hover:bg-signal-green/15 disabled:opacity-40">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
+          </button>
+          <button onClick={() => setPending(null)} disabled={busy}
+            title="Cancel"
+            className="rounded p-1 text-slate-500 hover:bg-signal-red/20 hover:text-signal-red disabled:opacity-40">
+            <X size={13} />
+          </button>
+        </>
+      )}
     </div>
   );
 }
