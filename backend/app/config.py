@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
+    # ---- GovIntel (Unified Legal & Government Intelligence) ----
+    # Bundled curated corpus works fully offline. The optional live layer polls
+    # free, keyless government RSS feeds; disable it or tune the timeout here.
+    govintel_enable: bool = True            # allow the live RSS feed layer
+    govintel_feed_timeout: int = 6          # seconds per feed fetch (best-effort)
+    govintel_auto_refresh: bool = False     # opt-in hourly background feed poll
+
     # ---- Platform auth ----
     # CHANGE in production via VISIONSCAN_JWT_SECRET. Default is dev-only.
     jwt_secret: str = "cityshield-dev-secret-change-me"

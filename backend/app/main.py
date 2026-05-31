@@ -68,6 +68,22 @@ def _startup() -> None:
     import threading
     threading.Thread(target=_warm, daemon=True).start()
 
+    # Opt-in: poll the free government RSS feeds hourly so subscribers get
+    # fresh GR/notification alerts without a manual refresh. Off by default
+    # (no surprise network calls); the admin "Refresh feeds" button always works.
+    if getattr(settings, "govintel_auto_refresh", False):
+        def _gov_poll() -> None:
+            import time
+            from .govintel import service as gov_service
+            while True:
+                try:
+                    gov_service.refresh()
+                except Exception:
+                    log.warning("GovIntel auto-refresh failed", exc_info=True)
+                time.sleep(3600)
+        threading.Thread(target=_gov_poll, daemon=True).start()
+        log.info("GovIntel hourly auto-refresh enabled")
+
 
 # Serve keyframe thumbnails as static files (referenced by SearchHit.thumbnail_url)
 app.mount(
@@ -81,6 +97,10 @@ app.include_router(router, prefix="/api")
 # Arbiter legal-intelligence module (CityShield) — modular, under /api/legal/*
 from .arbiter.routes import router as legal_router  # noqa: E402
 app.include_router(legal_router, prefix="/api/legal")
+
+# GovIntel — Unified Legal & Government Intelligence, modular, under /api/gov/*
+from .govintel.routes import router as gov_router  # noqa: E402
+app.include_router(gov_router, prefix="/api/gov")
 
 # CityShield platform: auth, users/teams, complaints, cases, notifications
 from .platform.routes import (  # noqa: E402

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark } from "lucide-react";
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
@@ -10,6 +10,7 @@ import FrameDetail from "./components/FrameDetail";
 import ReportTray from "./components/ReportTray";
 import LivePlayer from "./components/LivePlayer";
 import ArbiterPanel from "./components/Arbiter/ArbiterPanel";
+import GovIntelPanel from "./components/GovIntel/GovIntelPanel";
 import LoginView from "./components/platform/LoginView";
 import NotificationBell from "./components/platform/NotificationBell";
 import ComplaintsView from "./components/platform/ComplaintsView";
@@ -61,6 +62,7 @@ function Workbench() {
     staff && { key: "dashboard", label: "Dashboard", icon: BarChart3 },
     staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
     staff && { key: "arbiter", label: "Arbiter", icon: Scale },
+    { key: "govintel", label: "Legal Feed", icon: Landmark },
     { key: "cases", label: "Cases", icon: FolderOpen },
     { key: "complaints", label: "Complaints", icon: Megaphone },
     isAdmin(user) && { key: "admin", label: "Admin", icon: Shield },
@@ -295,6 +297,10 @@ function Workbench() {
       {module === "arbiter" ? (
         <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
           <ArbiterPanel seedText={arbiterSeed} />
+        </div>
+      ) : module === "govintel" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
+          <GovIntelPanel />
         </div>
       ) : module === "dashboard" || module === "complaints" || module === "cases" || module === "admin" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-16 md:pb-0">

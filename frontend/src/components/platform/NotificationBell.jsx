@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, ExternalLink } from "lucide-react";
 import * as API from "../../api";
 
 export default function NotificationBell() {
@@ -40,7 +40,15 @@ export default function NotificationBell() {
           {data.items.map((n) => (
             <div key={n.id} className={`rounded-lg p-2 text-xs ${n.read ? "text-slate-400" : "bg-ink-700/50 text-slate-200"}`}>
               <div className="font-medium">{n.message}</div>
-              <div className="mt-0.5 text-[10px] text-slate-500">{n.type} · {n.created_at}</div>
+              <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-500">
+                <span>{n.type} · {n.created_at}</span>
+                {n.link && (
+                  <a href={n.link} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 text-accent hover:underline">
+                    <ExternalLink size={10} /> source
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>

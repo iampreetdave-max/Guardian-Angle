@@ -87,6 +87,10 @@ def init_db() -> None:
         from .platform.schema import PLATFORM_SCHEMA
 
         conn.executescript(PLATFORM_SCHEMA)
+        # GovIntel tables (gov document cache, bookmarks, subscriptions)
+        from .govintel.schema import GOVINTEL_SCHEMA
+
+        conn.executescript(GOVINTEL_SCHEMA)
         _migrate(conn)
         conn.commit()
     # seed demo accounts on first run (after tables exist)
@@ -108,6 +112,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE detections ADD COLUMN obj_faiss_id INTEGER")
     # Safe now that the column is guaranteed to exist (fresh + migrated DBs).
     conn.execute("CREATE INDEX IF NOT EXISTS idx_det_obj ON detections(obj_faiss_id)")
+
+    # GovIntel alerts carry a source link; older notifications tables lack it.
+    ncols = {r["name"] for r in conn.execute("PRAGMA table_info(notifications)")}
+    if ncols and "link" not in ncols:
+        conn.execute("ALTER TABLE notifications ADD COLUMN link TEXT")
 
 
 @contextmanager

@@ -147,6 +147,32 @@ export const generateReport = (payload) =>
     .post("/report", payload, { responseType: "blob" })
     .then((r) => r.data);
 
+// ---- GovIntel (Unified Legal & Government Intelligence) ----
+export const govHealth = () => api.get("/gov/health").then((r) => r.data);
+export const govSearch = (params) =>
+  api.get("/gov/search", { params }).then((r) => r.data);
+export const govDocument = (id) => api.get(`/gov/document/${id}`).then((r) => r.data);
+export const govRelated = (id) =>
+  api.get(`/gov/document/${id}/related`).then((r) => r.data);
+export const govSummarize = (payload) =>
+  api.post("/gov/summarize", payload).then((r) => r.data);
+export const govSuggest = (q) =>
+  api.get("/gov/suggest", { params: { q } }).then((r) => r.data);
+export const govTrending = () => api.get("/gov/trending").then((r) => r.data);
+export const govDepartments = () => api.get("/gov/departments").then((r) => r.data);
+export const govBookmarks = () => api.get("/gov/bookmarks").then((r) => r.data);
+export const govAddBookmark = (doc_id) =>
+  api.post("/gov/bookmarks", { doc_id }).then((r) => r.data);
+export const govRemoveBookmark = (doc_id) =>
+  api.delete(`/gov/bookmarks/${doc_id}`).then((r) => r.data);
+export const govSubscriptions = () =>
+  api.get("/gov/subscriptions").then((r) => r.data);
+export const govAddSubscription = (payload) =>
+  api.post("/gov/subscriptions", payload).then((r) => r.data);
+export const govRemoveSubscription = (id) =>
+  api.delete(`/gov/subscriptions/${id}`).then((r) => r.data);
+export const govRefresh = () => api.post("/gov/refresh").then((r) => r.data);
+
 // ---- Arbiter (legal intelligence) ----
 export const legalHealth = () => api.get("/legal/health").then((r) => r.data);
 export const legalSections = (payload) =>
