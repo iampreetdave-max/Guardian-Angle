@@ -73,6 +73,7 @@ export const cancelMeeting = (id, mid) =>
 
 export const listUsers = () => api.get("/users").then((r) => r.data);
 export const createUser = (p) => api.post("/users", p).then((r) => r.data);
+export const updateUser = (id, p) => api.patch(`/users/${id}`, p).then((r) => r.data);
 export const listTeams = () => api.get("/teams").then((r) => r.data);
 export const createTeam = (p) => api.post("/teams", p).then((r) => r.data);
 export const listTeamMembers = (id) =>

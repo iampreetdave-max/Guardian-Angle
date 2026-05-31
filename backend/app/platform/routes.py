@@ -13,7 +13,8 @@ from . import service as svc
 from .models import (
     AssignIn, CaseIn, ChangePasswordIn, CloseCaseIn, ComplaintIn, CreateUserIn,
     DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn, MessageIn,
-    RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn, VisibilityIn,
+    RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn, UpdateUserIn,
+    VisibilityIn,
 )
 from .security import (
     create_token, get_current_user, hash_password, require_role, role_rank,
@@ -155,6 +156,37 @@ def create_user(body: CreateUserIn, user: dict = Depends(require_role("admin")))
     svc.notify(uid, "account_created",
                f"Your CityShield {body.role} account was created.", email=True)
     return {"id": uid}
+
+
+@admin_router.patch("/users/{user_id}", tags=["admin"])
+def update_user(user_id: int, body: UpdateUserIn,
+                user: dict = Depends(require_role("admin"))) -> dict:
+    """Assign/move a user to a team and/or change their role. Only the fields
+    sent in the body are touched; team_id=null removes them from any team."""
+    fields = body.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(400, "Nothing to update")
+    if "role" in fields and fields["role"] not in ("officer", "lead", "admin"):
+        raise HTTPException(400, "role must be officer|lead|admin")
+    with get_conn() as conn:
+        target = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+        if target is None:
+            raise HTTPException(404, "User not found")
+        if "team_id" in fields and fields["team_id"] is not None:
+            if conn.execute("SELECT 1 FROM teams WHERE id = ?",
+                            (fields["team_id"],)).fetchone() is None:
+                raise HTTPException(404, "Team not found")
+        sets, params = [], []
+        if "team_id" in fields:
+            sets.append("team_id = ?"); params.append(fields["team_id"])
+        if "role" in fields:
+            sets.append("role = ?"); params.append(fields["role"])
+        params.append(user_id)
+        conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
+    svc.audit(user["id"], "update_user", "user", user_id, str(fields))
+    if "team_id" in fields and fields["team_id"]:
+        svc.notify(user_id, "team_assigned", "You have been added to a team.")
+    return {"ok": True}
 
 
 @admin_router.get("/teams", tags=["admin"])

@@ -1,13 +1,42 @@
-import { useState } from "react";
-import { FileText, X, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, X, Loader2, FolderOpen } from "lucide-react";
+import { useAuth } from "../auth";
+import * as API from "../api";
 
 export default function ReportTray({ selectedHits, query, queryType, onClear, onGenerate }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [caseTitle, setCaseTitle] = useState("VisionScan Investigation Report");
   const [investigator, setInvestigator] = useState("");
+  const [cases, setCases] = useState([]);
+  const [caseId, setCaseId] = useState("");
+
+  // Prefill the investigator from the signed-in account — convenience only,
+  // the field stays fully editable.
+  useEffect(() => {
+    if (!user?.name) return;
+    const label = user.badge_no ? `${user.name} (${user.badge_no})` : user.name;
+    setInvestigator((prev) => prev || label);
+  }, [user]);
+
+  // When the dialog opens, offer the user's own active cases as quick-fill
+  // options for the report title (not forced — "— none —" keeps the default).
+  useEffect(() => {
+    if (open && cases.length === 0) {
+      API.listCases()
+        .then((cs) => setCases((cs || []).filter((c) => c.status !== "closed")))
+        .catch(() => {});
+    }
+  }, [open]);
 
   if (selectedHits.length === 0) return null;
+
+  const pickCase = (id) => {
+    setCaseId(id);
+    const c = cases.find((x) => String(x.id) === String(id));
+    if (c) setCaseTitle(`Case #${c.id} · ${c.title}`);
+  };
 
   const generate = async () => {
     setBusy(true);
@@ -57,6 +86,28 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
               <FileText size={18} className="text-accent" />
               Forensic PDF Report
             </div>
+            {cases.length > 0 && (
+              <>
+                <label className="mb-1 block text-xs text-slate-400">
+                  Link to one of your cases <span className="text-slate-600">(optional)</span>
+                </label>
+                <div className="relative mb-3">
+                  <FolderOpen size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <select
+                    value={caseId}
+                    onChange={(e) => pickCase(e.target.value)}
+                    className="w-full appearance-none rounded-lg bg-ink-900/60 py-2 pl-9 pr-3 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
+                  >
+                    <option value="">— none —</option>
+                    {cases.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.id} · {c.title} ({c.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             <label className="mb-1 block text-xs text-slate-400">Case title</label>
             <input
               value={caseTitle}

@@ -245,9 +245,9 @@ function Workbench() {
       <header className="flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-3 py-3 backdrop-blur sm:px-5">
         <div className="flex items-center gap-2 sm:gap-3">
           <img
-            src="/logo.jpeg"
+            src="/logo.png"
             alt="Cyber Crime Branch, Ahmedabad City Police"
-            className="h-12 w-12 rounded-lg object-contain bg-white/5 p-0.5 ring-1 ring-ink-600 sm:h-16 sm:w-16"
+            className="h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
           />
           <div>
             <h1 className="font-serif text-lg font-bold leading-tight text-white sm:text-xl">

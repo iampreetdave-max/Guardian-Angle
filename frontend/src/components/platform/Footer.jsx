@@ -135,7 +135,7 @@ export default function Footer() {
       {/* links + credit */}
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-500 sm:flex-row">
         <div className="flex items-center gap-2">
-          <img src="/logo.jpeg" alt="Ahmedabad City Police" className="h-6 w-6 rounded object-contain" />
+          <img src="/logo.png" alt="Ahmedabad City Police" className="h-7 w-7 object-contain" />
           <span>© {new Date().getFullYear()} Cyber Crime Branch, Ahmedabad City Police · CityShield</span>
         </div>
         <nav className="flex flex-wrap items-center gap-x-3 gap-y-1">

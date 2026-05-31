@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Users, Plus, Loader2, Shield, ChevronDown, ChevronRight, Star, Mail } from "lucide-react";
+import { Users, Plus, Loader2, Shield, ChevronDown, ChevronRight, Star, Mail, UserPlus, X } from "lucide-react";
 import * as API from "../../api";
+
+const STAFF_ROLES = ["officer", "lead", "admin"];
 
 export default function AdminView() {
   const [users, setUsers] = useState([]);
@@ -14,6 +16,11 @@ export default function AdminView() {
     API.listTeams().then(setTeams).catch(() => {});
   };
   useEffect(() => { refresh(); }, []);
+
+  const assignUserTeam = (uid, val) =>
+    API.updateUser(uid, { team_id: val === "" ? null : Number(val) })
+      .then(refresh)
+      .catch(() => {});
 
   return (
     <div className="mx-auto max-w-5xl p-5">
@@ -39,6 +46,17 @@ export default function AdminView() {
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   {u.badge_no && <span className="text-slate-500">{u.badge_no}</span>}
+                  {STAFF_ROLES.includes(u.role) && (
+                    <select
+                      value={u.team_id ?? ""}
+                      onChange={(e) => assignUserTeam(u.id, e.target.value)}
+                      title="Assign to team"
+                      className="rounded-md bg-ink-900/60 px-2 py-1 text-[11px] text-slate-200 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
+                    >
+                      <option value="">No team</option>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  )}
                   <span className={`rounded px-2 py-0.5 ${u.role === "admin" ? "bg-signal-red/15 text-signal-red" : u.role === "lead" ? "bg-accent/15 text-accent" : u.role === "officer" ? "bg-signal-green/15 text-signal-green" : "bg-ink-700 text-slate-400"}`}>{u.role}</span>
                 </div>
               </div>
@@ -51,7 +69,7 @@ export default function AdminView() {
         <>
           <button onClick={() => setCreatingTeam(true)} className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={14} /> Add team</button>
           <div className="space-y-1.5">
-            {teams.map((t) => <TeamRow key={t.id} team={t} />)}
+            {teams.map((t) => <TeamRow key={t.id} team={t} allUsers={users} onChanged={refresh} />)}
           </div>
         </>
       )}
@@ -62,21 +80,39 @@ export default function AdminView() {
   );
 }
 
-function TeamRow({ team }) {
+function TeamRow({ team, allUsers, onChanged }) {
   const [open, setOpen] = useState(false);
   const [members, setMembers] = useState(null);
+  const [adding, setAdding] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = () => API.listTeamMembers(team.id).then(setMembers).catch(() => setMembers([]));
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next && members === null) {
-      API.listTeamMembers(team.id).then(setMembers).catch(() => setMembers([]));
-    }
+    if (next && members === null) load();
   };
   const roleClass = (r) =>
     r === "admin" ? "bg-signal-red/15 text-signal-red"
     : r === "lead" ? "bg-accent/15 text-accent"
     : r === "officer" ? "bg-signal-green/15 text-signal-green"
     : "bg-ink-700 text-slate-400";
+
+  // staff not already on this team
+  const candidates = (allUsers || []).filter(
+    (u) => STAFF_ROLES.includes(u.role) && u.team_id !== team.id
+  );
+  const change = async (uid, team_id) => {
+    setBusy(true);
+    try { await API.updateUser(uid, { team_id }); await load(); onChanged && onChanged(); }
+    finally { setBusy(false); }
+  };
+  const addMember = async () => {
+    if (!adding) return;
+    await change(Number(adding), team.id);
+    setAdding("");
+  };
+
   return (
     <div className="rounded-lg border border-ink-600 bg-ink-800/50 text-sm">
       <button onClick={toggle} className="flex w-full items-center justify-between gap-2 p-3 text-left">
@@ -105,9 +141,33 @@ function TeamRow({ team }) {
                   <div className="flex items-center gap-2 text-[11px]">
                     {m.badge_no && <span className="text-slate-500">{m.badge_no}</span>}
                     <span className={`rounded px-2 py-0.5 ${roleClass(m.role)}`}>{m.role}</span>
+                    <button onClick={() => change(m.id, null)} disabled={busy}
+                      title="Remove from team"
+                      className="rounded p-0.5 text-slate-500 hover:bg-signal-red/20 hover:text-signal-red disabled:opacity-40">
+                      <X size={13} />
+                    </button>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* add an existing officer to this team */}
+          {members !== null && (
+            <div className="mt-2 flex items-center gap-2 border-t border-ink-700 pt-2">
+              <select value={adding} onChange={(e) => setAdding(e.target.value)}
+                className="flex-1 rounded-md bg-ink-900/60 px-2 py-1 text-[11px] text-slate-200 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent">
+                <option value="">{candidates.length ? "Add an officer to this team…" : "No available officers"}</option>
+                {candidates.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role}){u.team_id ? " · in another team" : ""}
+                  </option>
+                ))}
+              </select>
+              <button onClick={addMember} disabled={!adding || busy}
+                className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-accent-700 disabled:opacity-40">
+                {busy ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Add
+              </button>
             </div>
           )}
         </div>

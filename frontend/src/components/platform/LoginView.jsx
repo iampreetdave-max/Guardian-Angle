@@ -43,7 +43,7 @@ export default function LoginView() {
       <div className="flex flex-1 items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/logo.jpeg" alt="Ahmedabad City Police" className="h-20 w-20 rounded-xl object-contain bg-white/5 p-1 ring-1 ring-ink-600" />
+          <img src="/logo.png" alt="Ahmedabad City Police" className="h-24 w-24 object-contain" />
           <h1 className="mt-3 font-serif text-3xl font-bold text-white">City<span className="text-accent">Shield</span></h1>
           <p className="text-[11px] uppercase tracking-wider text-slate-500">
             Unified AI Policing · Cyber Crime Branch, Ahmedabad City Police
