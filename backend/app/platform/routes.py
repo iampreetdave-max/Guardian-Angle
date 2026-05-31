@@ -12,8 +12,8 @@ from ..database import get_conn
 from . import service as svc
 from .models import (
     AssignIn, CaseIn, ChangePasswordIn, CloseCaseIn, ComplaintIn, CreateUserIn,
-    DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MessageIn, RatingIn,
-    RegisterIn, ResetPasswordIn, TeamIn, TriageIn, VisibilityIn,
+    DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn, MessageIn,
+    RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn, VisibilityIn,
 )
 from .security import (
     create_token, get_current_user, hash_password, require_role, role_rank,
@@ -165,6 +165,22 @@ def list_teams(user: dict = Depends(get_current_user)) -> list[dict]:
             "FROM teams t ORDER BY t.name"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@admin_router.get("/teams/{team_id}/members", tags=["admin"])
+def list_team_members(team_id: int, user: dict = Depends(get_current_user)) -> list[dict]:
+    """Members of a team, with a flag marking the team lead. Visible to any
+    authenticated staff member (the Admin UI gates the view to admins itself)."""
+    with get_conn() as conn:
+        team = conn.execute("SELECT lead_user_id FROM teams WHERE id = ?", (team_id,)).fetchone()
+        if team is None:
+            raise HTTPException(404, "Team not found")
+        rows = conn.execute(
+            "SELECT id, name, email, role, badge_no FROM users "
+            "WHERE team_id = ? ORDER BY role DESC, name", (team_id,)
+        ).fetchall()
+    lead_id = team["lead_user_id"]
+    return [{**dict(r), "is_lead": r["id"] == lead_id} for r in rows]
 
 
 @admin_router.post("/teams", tags=["admin"])
@@ -464,6 +480,59 @@ def rate_case(case_id: int, body: RatingIn,
         conn.execute("INSERT OR REPLACE INTO ratings (case_id, citizen_id, stars, comment) "
                      "VALUES (?, ?, ?, ?)", (case_id, user["id"], body.stars, body.comment))
     svc.audit(user["id"], "rate_case", "case", case_id, f"{body.stars} stars")
+    return {"ok": True}
+
+
+@cases_router.get("/{case_id}/meetings", tags=["cases"])
+def list_meetings(case_id: int, user: dict = Depends(get_current_user)) -> list[dict]:
+    svc.get_case_or_403(user, case_id)
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT m.*, u.name AS created_by_name FROM case_meetings m "
+            "JOIN users u ON u.id = m.created_by WHERE m.case_id = ? "
+            "ORDER BY m.scheduled_at", (case_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+@cases_router.post("/{case_id}/meetings", tags=["cases"])
+def create_meeting(case_id: int, body: MeetingIn,
+                   user: dict = Depends(require_role("officer"))) -> dict:
+    svc.get_case_or_403(user, case_id)
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO case_meetings (case_id, title, scheduled_at, duration_min, "
+            "location, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (case_id, body.title, body.scheduled_at, body.duration_min,
+             body.location, body.notes, user["id"]),
+        )
+        mid = cur.lastrowid
+    svc.audit(user["id"], "schedule_meeting", "case", case_id,
+              f"{body.title} @ {body.scheduled_at}")
+    svc.notify_case_members(
+        case_id, "meeting_scheduled",
+        f"Meeting scheduled for case #{case_id}: '{body.title}' on "
+        f"{body.scheduled_at} at {body.location}.", exclude=user["id"])
+    return {"id": mid}
+
+
+@cases_router.delete("/{case_id}/meetings/{meeting_id}", tags=["cases"])
+def cancel_meeting(case_id: int, meeting_id: int,
+                   user: dict = Depends(require_role("officer"))) -> dict:
+    svc.get_case_or_403(user, case_id)
+    with get_conn() as conn:
+        m = conn.execute("SELECT * FROM case_meetings WHERE id = ? AND case_id = ?",
+                         (meeting_id, case_id)).fetchone()
+        if m is None:
+            raise HTTPException(404, "Meeting not found")
+        # only the organiser or a lead+ may cancel
+        if m["created_by"] != user["id"] and role_rank(user["role"]) < role_rank("lead"):
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                "Only the organiser or a team lead can cancel")
+        conn.execute("DELETE FROM case_meetings WHERE id = ?", (meeting_id,))
+    svc.audit(user["id"], "cancel_meeting", "case", case_id, m["title"])
+    svc.notify_case_members(case_id, "meeting_cancelled",
+                            f"Meeting '{m['title']}' for case #{case_id} was cancelled.",
+                            exclude=user["id"])
     return {"ok": True}
 
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Plus, Loader2, Shield } from "lucide-react";
+import { Users, Plus, Loader2, Shield, ChevronDown, ChevronRight, Star, Mail } from "lucide-react";
 import * as API from "../../api";
 
 export default function AdminView() {
@@ -51,18 +51,67 @@ export default function AdminView() {
         <>
           <button onClick={() => setCreatingTeam(true)} className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={14} /> Add team</button>
           <div className="space-y-1.5">
-            {teams.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-800/50 p-3 text-sm">
-                <div><span className="font-semibold text-slate-100">{t.name}</span><span className="ml-2 text-xs text-slate-500">{t.station}</span></div>
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400"><Users size={12} /> {t.members}</span>
-              </div>
-            ))}
+            {teams.map((t) => <TeamRow key={t.id} team={t} />)}
           </div>
         </>
       )}
 
       {creatingUser && <CreateUserModal teams={teams} onClose={() => setCreatingUser(false)} onDone={() => { setCreatingUser(false); refresh(); }} />}
       {creatingTeam && <CreateTeamModal onClose={() => setCreatingTeam(false)} onDone={() => { setCreatingTeam(false); refresh(); }} />}
+    </div>
+  );
+}
+
+function TeamRow({ team }) {
+  const [open, setOpen] = useState(false);
+  const [members, setMembers] = useState(null);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && members === null) {
+      API.listTeamMembers(team.id).then(setMembers).catch(() => setMembers([]));
+    }
+  };
+  const roleClass = (r) =>
+    r === "admin" ? "bg-signal-red/15 text-signal-red"
+    : r === "lead" ? "bg-accent/15 text-accent"
+    : r === "officer" ? "bg-signal-green/15 text-signal-green"
+    : "bg-ink-700 text-slate-400";
+  return (
+    <div className="rounded-lg border border-ink-600 bg-ink-800/50 text-sm">
+      <button onClick={toggle} className="flex w-full items-center justify-between gap-2 p-3 text-left">
+        <div className="flex items-center gap-2">
+          {open ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
+          <span className="font-semibold text-slate-100">{team.name}</span>
+          <span className="text-xs text-slate-500">{team.station}</span>
+        </div>
+        <span className="inline-flex items-center gap-1 text-xs text-slate-400"><Users size={12} /> {team.members}</span>
+      </button>
+      {open && (
+        <div className="border-t border-ink-700 px-3 py-2">
+          {members === null ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-slate-500"><Loader2 size={13} className="animate-spin" /> Loading members…</div>
+          ) : members.length === 0 ? (
+            <p className="py-2 text-xs text-slate-500">No members assigned to this team yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between rounded-md bg-ink-900/40 px-2.5 py-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-200">{m.name}</span>
+                    {m.is_lead && <span className="inline-flex items-center gap-0.5 text-[10px] text-signal-amber"><Star size={10} className="fill-signal-amber" /> lead</span>}
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500"><Mail size={10} /> {m.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    {m.badge_no && <span className="text-slate-500">{m.badge_no}</span>}
+                    <span className={`rounded px-2 py-0.5 ${roleClass(m.role)}`}>{m.role}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

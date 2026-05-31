@@ -86,11 +86,13 @@ app.include_router(legal_router, prefix="/api/legal")
 from .platform.routes import (  # noqa: E402
     admin_router, auth_router, cases_router, complaints_router, notif_router,
 )
+from .platform.analytics import analytics_router  # noqa: E402
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(admin_router, prefix="/api")
 app.include_router(complaints_router, prefix="/api/complaints")
 app.include_router(cases_router, prefix="/api/cases")
 app.include_router(notif_router, prefix="/api/notifications")
+app.include_router(analytics_router, prefix="/api/analytics")
 
 
 # ---- Optional: serve the built React frontend from the same container ----

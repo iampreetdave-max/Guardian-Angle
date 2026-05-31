@@ -5,10 +5,11 @@ touching the VisionScan routes.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from . import llm, service, store
+from ..platform.security import auth_gate
 
 router = APIRouter()
 
@@ -44,12 +45,12 @@ def legal_health() -> dict:
 
 
 @router.post("/sections", tags=["legal"])
-def section_lookup(body: SectionRequest) -> dict:
+def section_lookup(body: SectionRequest, _user: dict | None = Depends(auth_gate)) -> dict:
     return service.suggest_sections(body.description, k=body.top_k)
 
 
 @router.post("/fir", tags=["legal"])
-def fir_draft(body: FIRRequest) -> dict:
+def fir_draft(body: FIRRequest, _user: dict | None = Depends(auth_gate)) -> dict:
     return service.draft_fir(
         incident=body.incident,
         complainant=body.complainant,
@@ -61,5 +62,5 @@ def fir_draft(body: FIRRequest) -> dict:
 
 
 @router.post("/query", tags=["legal"])
-def citizen_query(body: QueryRequest) -> dict:
+def citizen_query(body: QueryRequest, _user: dict | None = Depends(auth_gate)) -> dict:
     return service.answer_query(body.question, language=body.language)

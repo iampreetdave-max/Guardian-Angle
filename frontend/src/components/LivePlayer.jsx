@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-import { Radio, Square, AlertTriangle } from "lucide-react";
+import { Radio, Square, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
 
 /**
  * Live preview of a feed using hls.js (for .m3u8 streams). While this plays,
@@ -9,6 +9,9 @@ import { Radio, Square, AlertTriangle } from "lucide-react";
 export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
   const videoRef = useRef(null);
   const [err, setErr] = useState(null);
+  // Collapsing the preview frees the screen for search + results — the player
+  // keeps indexing in the background, so collapse loses nothing.
+  const [collapsed, setCollapsed] = useState(false);
 
   const url = video?.stream_url;
   const isHls = url && /\.m3u8(\?|$)/i.test(url);
@@ -57,16 +60,26 @@ export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
             indexing in real time · {indexedCount ?? video.keyframe_count} frames captured
           </span>
         </div>
-        <button
-          onClick={onStop}
-          disabled={stopping}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-signal-red/20 hover:text-signal-red disabled:opacity-50"
-        >
-          <Square size={13} /> Stop
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-ink-600"
+            title={collapsed ? "Show preview" : "Hide preview (keeps indexing)"}
+          >
+            {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            {collapsed ? "Show" : "Hide"}
+          </button>
+          <button
+            onClick={onStop}
+            disabled={stopping}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-signal-red/20 hover:text-signal-red disabled:opacity-50"
+          >
+            <Square size={13} /> Stop
+          </button>
+        </div>
       </div>
 
-      <div className="relative bg-black">
+      <div className={`relative bg-black ${collapsed ? "hidden" : ""}`}>
         {err ? (
           <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-slate-400">
             <AlertTriangle size={22} className="text-signal-amber" />
@@ -88,7 +101,7 @@ export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
             muted
             playsInline
             controls
-            className="max-h-[42vh] w-full bg-black"
+            className="mx-auto max-h-[34vh] w-full bg-black object-contain"
           />
         )}
       </div>

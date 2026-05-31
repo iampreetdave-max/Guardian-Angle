@@ -20,7 +20,7 @@ from PIL import Image
 
 from ..config import get_settings
 from ..database import get_conn
-from ..schemas import BBox, DetectionOut, SearchHit
+from ..schemas import BBox, DetectionOut, EventFrame, SearchHit
 from . import detection, embedding
 from .index import get_clip_index, get_face_index, get_object_index
 from .ingestion import format_timestamp
@@ -70,6 +70,19 @@ def _event_from_cluster(cluster: list[SearchHit]) -> SearchHit:
     best.event_count = len(cluster)
     best.event_start_hms = format_timestamp(start)
     best.event_end_hms = format_timestamp(end)
+    # Carry every frame of the event (chronological) so the UI can show all the
+    # instances behind the count, not just the representative frame.
+    if len(cluster) > 1:
+        best.event_frames = [
+            EventFrame(
+                frame_id=h.frame_id,
+                timestamp_sec=h.timestamp_sec,
+                timestamp_hms=h.timestamp_hms,
+                thumbnail_url=h.thumbnail_url,
+                score=h.score,
+            )
+            for h in sorted(cluster, key=lambda h: h.timestamp_sec)
+        ]
     return best
 
 
@@ -140,8 +153,31 @@ def _resolve_clip_hits(
     return hits
 
 
-def _finalize(hits: list[SearchHit], top_k: int, group: bool) -> list[SearchHit]:
-    """Either group into events (default) or return the top_k raw frames."""
+def _filter_relevance(
+    hits: list[SearchHit], min_score: float, rel_ratio: float = 0.0
+) -> list[SearchHit]:
+    """Drop frames that aren't real matches. Two complementary cutoffs:
+      * absolute floor (min_score) — kills CLIP's noise floor for image/face;
+      * relative floor (rel_ratio * best_score) — for compressed CLIP text
+        scores, trims the long tail that drops well below the top match while
+        keeping a cluster of similarly-strong hits.
+    The effective floor is the max of the two, so an all-noise query (low top
+    score) still returns nothing rather than a wall of near-ties.
+    """
+    if not hits or (min_score <= 0 and rel_ratio <= 0):
+        return hits
+    top = max(h.score for h in hits)
+    floor = max(min_score, top * rel_ratio)
+    return [h for h in hits if h.score >= floor]
+
+
+def _finalize(
+    hits: list[SearchHit], top_k: int, group: bool,
+    min_score: float = 0.0, rel_ratio: float = 0.0,
+) -> list[SearchHit]:
+    """Apply the relevance floor, then either group into events (default) or
+    return the top_k raw frames."""
+    hits = _filter_relevance(hits, min_score, rel_ratio)
     if group:
         return _group_into_events(hits, top_k)
     return hits[:top_k]
@@ -157,7 +193,8 @@ def search_text(
     vec = embedding.embed_text(query)[0]
     faiss_hits = get_clip_index().search(vec, top_k * _OVERFETCH)
     hits = _resolve_clip_hits(faiss_hits, "text", camera_id, video_id)
-    return _finalize(hits, top_k, group)
+    s = get_settings()
+    return _finalize(hits, top_k, group, s.text_min_score, s.text_rel_ratio)
 
 
 def search_image(
@@ -171,7 +208,7 @@ def search_image(
     vec = embedding.embed_images(Image.fromarray(rgb))[0]
     faiss_hits = get_clip_index().search(vec, top_k * _OVERFETCH)
     hits = _resolve_clip_hits(faiss_hits, "image", camera_id, video_id)
-    return _finalize(hits, top_k, group)
+    return _finalize(hits, top_k, group, get_settings().image_min_score)
 
 
 def search_face(
@@ -216,7 +253,7 @@ def search_face(
                 continue
             best_per_frame[fid] = _frame_row_to_hit(conn, r, score, "face")
     hits = sorted(best_per_frame.values(), key=lambda h: h.score, reverse=True)
-    return _finalize(hits, top_k, group)
+    return _finalize(hits, top_k, group, get_settings().face_min_score)
 
 
 def search_regions(
@@ -265,8 +302,11 @@ def search_regions(
             hit.match_bbox = BBox(x1=r["x1"], y1=r["y1"], x2=r["x2"], y2=r["y2"])
             hits.append(hit)
     # one hit per object instance, ranked by similarity (no temporal grouping —
-    # the whole point is to surface every instance)
+    # the whole point is to surface every instance). Apply the relevance floor
+    # so weak crops don't pad the list.
     hits.sort(key=lambda h: h.score, reverse=True)
+    s = get_settings()
+    hits = _filter_relevance(hits, s.region_min_score, s.region_rel_ratio)
     return hits[:top_k]
 
 

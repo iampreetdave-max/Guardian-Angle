@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, Loader2, FileText, Boxes, MessagesSquare, History, Eye, EyeOff,
-  Lock, CheckCircle2, Star, Send, Plus,
+  Lock, CheckCircle2, Star, Send, Plus, CalendarClock, MapPin, Trash2,
 } from "lucide-react";
 import * as API from "../../api";
 import { useAuth, isStaff, isLead } from "../../auth";
 
 const TABS = [
   { key: "evidence", label: "Evidence", icon: Boxes },
-  { key: "documents", label: "Documents", icon: FileText },
+  { key: "documents", label: "Documents", icon: FileText, staffOnly: true },
   { key: "messages", label: "Messages", icon: MessagesSquare },
-  { key: "timeline", label: "Timeline", icon: History },
+  { key: "schedule", label: "Schedule", icon: CalendarClock, staffOnly: true },
+  { key: "timeline", label: "Timeline", icon: History, staffOnly: true },
 ];
 
 export default function CaseWorkspace({ caseId, onBack }) {
@@ -22,6 +23,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
   const [documents, setDocuments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [timeline, setTimeline] = useState([]);
+  const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -30,6 +32,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
     if (t === "evidence") setEvidence(await API.listEvidence(caseId));
     else if (t === "documents") setDocuments(await API.listDocuments(caseId).catch(() => []));
     else if (t === "messages") setMessages(await API.listMessages(caseId));
+    else if (t === "schedule") setMeetings(await API.listMeetings(caseId).catch(() => []));
     else if (t === "timeline") setTimeline(await API.caseTimeline(caseId).catch(() => []));
   };
 
@@ -84,7 +87,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
 
       {/* tabs */}
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {TABS.filter((t) => staff || t.key !== "timeline").filter((t) => staff || t.key !== "documents").map((t) => (
+        {TABS.filter((t) => staff || !t.staffOnly).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${tab === t.key ? "bg-accent-600 text-white" : "bg-ink-700 text-slate-300 hover:bg-ink-600"}`}>
             <t.icon size={14} /> {t.label}
@@ -95,6 +98,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
       {tab === "evidence" && <EvidenceTab caseId={caseId} items={evidence} staff={staff} reload={() => loadTab("evidence")} />}
       {tab === "documents" && staff && <DocumentsTab caseId={caseId} items={documents} reload={() => loadTab("documents")} />}
       {tab === "messages" && <MessagesTab caseId={caseId} items={messages} user={user} reload={() => loadTab("messages")} />}
+      {tab === "schedule" && staff && <ScheduleTab caseId={caseId} items={meetings} user={user} reload={() => loadTab("schedule")} />}
       {tab === "timeline" && staff && <TimelineTab items={timeline} />}
     </div>
   );
@@ -185,6 +189,104 @@ function MessagesTab({ caseId, items, user, reload }) {
         <input value={body} onChange={(e) => setBody(e.target.value)} placeholder={user.role === "citizen" ? "One message allowed…" : "Message…"} className={inp} />
         <button onClick={send} className="inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 text-xs font-semibold text-white hover:bg-accent-700"><Send size={13} /></button>
       </div>
+    </div>
+  );
+}
+
+function ScheduleTab({ caseId, items, user, reload }) {
+  const blank = { title: "", scheduled_at: "", duration_min: 60, location: "Ahmedabad Cyber Crime Branch", notes: "" };
+  const [f, setF] = useState(blank);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const add = async () => {
+    if (!f.title.trim() || !f.scheduled_at) { setErr("Add a title and a date/time."); return; }
+    setBusy(true); setErr(null);
+    try { await API.createMeeting(caseId, f); setF(blank); reload(); }
+    catch (e) { setErr(e?.response?.data?.detail || "Failed to schedule"); }
+    finally { setBusy(false); }
+  };
+  const cancel = async (m) => {
+    if (!confirm(`Cancel meeting "${m.title}"?`)) return;
+    await API.cancelMeeting(caseId, m.id).catch(() => {});
+    reload();
+  };
+
+  const now = Date.now();
+  const fmt = (s) => {
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
+  const upcoming = items.filter((m) => new Date(m.scheduled_at).getTime() >= now);
+  const past = items.filter((m) => new Date(m.scheduled_at).getTime() < now);
+  const canManage = (m) => m.created_by === user.id || isLead(user);
+
+  const Card = ({ m, dim }) => (
+    <div className={`rounded-lg border border-ink-600 bg-ink-800/50 p-3 ${dim ? "opacity-60" : ""}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+            <CalendarClock size={14} className="text-accent" /> {m.title}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+            <span className="font-medium text-slate-300">{fmt(m.scheduled_at)}</span>
+            <span>· {m.duration_min} min</span>
+            <span className="inline-flex items-center gap-1"><MapPin size={11} /> {m.location}</span>
+          </div>
+          {m.notes && <p className="mt-1 text-xs text-slate-400">{m.notes}</p>}
+          <p className="mt-1 text-[10px] text-slate-500">organised by {m.created_by_name}</p>
+        </div>
+        {canManage(m) && (
+          <button onClick={() => cancel(m)} title="Cancel meeting"
+            className="rounded-lg bg-ink-700 p-1.5 text-slate-400 hover:bg-signal-red/20 hover:text-signal-red">
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* booking form */}
+      <div className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
+        <div className="mb-2 text-xs font-semibold text-slate-300">Book a meeting for this case</div>
+        <input placeholder="Meeting title (e.g. Evidence review)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inp} />
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
+            <label className="mb-0.5 block text-[10px] text-slate-500">Date &amp; time</label>
+            <input type="datetime-local" value={f.scheduled_at} onChange={(e) => setF({ ...f, scheduled_at: e.target.value })} className={inp} />
+          </div>
+          <div>
+            <label className="mb-0.5 block text-[10px] text-slate-500">Duration (min)</label>
+            <input type="number" min={5} max={600} step={5} value={f.duration_min} onChange={(e) => setF({ ...f, duration_min: Number(e.target.value) })} className={inp} />
+          </div>
+          <div>
+            <label className="mb-0.5 block text-[10px] text-slate-500">Location</label>
+            <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inp} />
+          </div>
+        </div>
+        <input placeholder="Notes / agenda (optional)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} className={inp + " mt-2"} />
+        {err && <div className="mt-2 text-[11px] text-signal-red">{err}</div>}
+        <button onClick={add} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700 disabled:opacity-50">
+          {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Schedule meeting
+        </button>
+        <p className="mt-1.5 text-[10px] text-slate-500">All assigned case members get a notification so they know when to be at the station.</p>
+      </div>
+
+      {items.length === 0 && <p className="py-4 text-center text-xs text-slate-500">No meetings scheduled yet.</p>}
+      {upcoming.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Upcoming</div>
+          {upcoming.map((m) => <Card key={m.id} m={m} />)}
+        </div>
+      )}
+      {past.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Past</div>
+          {past.map((m) => <Card key={m.id} m={m} dim />)}
+        </div>
+      )}
     </div>
   );
 }

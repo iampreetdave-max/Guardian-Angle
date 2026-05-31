@@ -66,6 +66,23 @@ class Settings(BaseSettings):
     # "event" (so an investigator sees distinct moments, not 50 near-identical
     # frames of someone standing still).
     event_gap_sec: float = 6.0
+    # Minimum relevance (cosine similarity) a frame must clear to be returned,
+    # per modality. Without these the search pads to top_k with whatever ranks
+    # highest — surfacing CLIP's noise floor (~0.65 for unrelated frames in
+    # image-to-image) as bogus "matches". Ranges differ by modality: CLIP
+    # image-to-image sits high (~0.6-0.85), CLIP text-to-image much lower
+    # (~0.18-0.32), ArcFace face cosine ~0.2-0.7. Tunable via env.
+    image_min_score: float = 0.72     # reference-image (CLIP) search
+    text_min_score: float = 0.22      # natural-language (CLIP) search
+    region_min_score: float = 0.22    # instance / "find every object" search
+    face_min_score: float = 0.30      # suspect-face (ArcFace) search
+    # CLIP text->image scores are compressed (genuine matches ~0.27, noise
+    # ~0.23), so a flat floor can't separate them. For text/region we ALSO drop
+    # anything that falls below this fraction of the best score — an adaptive
+    # cutoff that trims the long noise tail while keeping a genuine cluster of
+    # similar-scoring matches. Image/face keep their absolute floor only.
+    text_rel_ratio: float = 0.88
+    region_rel_ratio: float = 0.88
 
     # ---- Arbiter legal AI ----
     # If set, Arbiter uses Gemini for polished generation; otherwise it falls
@@ -79,6 +96,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "cityshield-dev-secret-change-me"
     jwt_expire_hours: int = 12
     seed_demo_users: bool = True   # seed admin/officer/citizen accounts on first run
+    # When True, the VisionScan + Arbiter API routes also require a valid login
+    # token (production). Default False keeps the public, login-less demo working.
+    require_auth: bool = False
 
     # ---- Email (hybrid: SMTP if configured, else offline outbox) ----
     smtp_host: str = ""

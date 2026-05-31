@@ -1,6 +1,10 @@
-# VisionScan — full offline-capable stack.
-#   docker compose up --build
-# Then open http://localhost:8080
+# CityShield / VisionScan — full offline-capable stack.
+#
+#   Easiest:   .\start.ps1   (Windows)   |   ./start.sh   (Linux/macOS)
+#   Manual:    docker compose up -d --build   then open http://localhost:8080
+#
+# Configuration is read from a local .env file (copy .env.example -> .env).
+# Every value has a safe default below, so the stack also runs with no .env.
 services:
   backend:
     build: ./backend
@@ -10,18 +14,39 @@ services:
       - model-cache:/root/.cache
       - insightface-cache:/root/.insightface
     environment:
-      VISIONSCAN_DEVICE: cpu
+      VISIONSCAN_DEVICE: ${VISIONSCAN_DEVICE:-cpu}
       VISIONSCAN_DATA_DIR: /data
+      # Auth — CHANGE the secret for any real deployment (start.ps1 auto-generates one).
+      VISIONSCAN_JWT_SECRET: ${VISIONSCAN_JWT_SECRET:-cityshield-dev-secret-change-me}
+      VISIONSCAN_SEED_DEMO_USERS: ${VISIONSCAN_SEED_DEMO_USERS:-true}
+      VISIONSCAN_REQUIRE_AUTH: ${VISIONSCAN_REQUIRE_AUTH:-false}
+      # Arbiter legal AI — optional; without a key it runs fully offline.
+      VISIONSCAN_GEMINI_API_KEY: ${VISIONSCAN_GEMINI_API_KEY:-}
+      # Email — optional; without SMTP it uses the offline outbox table.
+      VISIONSCAN_SMTP_HOST: ${VISIONSCAN_SMTP_HOST:-}
+      VISIONSCAN_SMTP_PORT: ${VISIONSCAN_SMTP_PORT:-587}
+      VISIONSCAN_SMTP_USER: ${VISIONSCAN_SMTP_USER:-}
+      VISIONSCAN_SMTP_PASSWORD: ${VISIONSCAN_SMTP_PASSWORD:-}
+      VISIONSCAN_SMTP_FROM: ${VISIONSCAN_SMTP_FROM:-no-reply@cityshield.local}
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      # Uses the in-image python (no curl needed). The API answers /api/health as
+      # soon as the server is up; models keep warming in the background.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=5).status==200 else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 180s   # first boot compiles ArcFace + downloads weights
     restart: unless-stopped
 
   frontend:
     build: ./frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     restart: unless-stopped
 
 volumes:

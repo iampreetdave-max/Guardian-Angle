@@ -80,13 +80,40 @@ VisionScan/
 
 ## Quick start
 
-### Option A — Docker (recommended, offline-capable)
+### Option A — One command (recommended)
+
+Starts Docker, generates secrets, builds + launches everything, waits until it's
+healthy, then opens the app in your browser.
+
+```powershell
+# Windows
+.\start.ps1
+```
 ```bash
-docker compose up --build
+# Linux / macOS
+./start.sh          # or:  make up
+```
+First run downloads model weights (CLIP/YOLO/ArcFace) and compiles the face
+engine — allow ~10–15 min. Subsequent runs take seconds and are fully offline.
+Stop with `.\stop.ps1` (Windows) or `docker compose down`.
+
+Then open **http://localhost:8080** and sign in with a demo account:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@city.gov` | `admin123` |
+| Lead | `lead@city.gov` | `lead123` |
+| Officer | `officer@city.gov` | `officer123` |
+| Citizen | `citizen@example.com` | `citizen123` |
+
+Configuration (ports, JWT secret, optional Gemini key / SMTP) lives in `.env`
+— copy `.env.example` to `.env` to customize; the launcher does this for you.
+
+### Option B — Plain Docker Compose
+```bash
+docker compose up -d --build
 # open http://localhost:8080
 ```
-First run downloads model weights (CLIP/YOLO/ArcFace) and caches them in named
-volumes; subsequent runs are fully offline.
 
 ### Option B — Local dev
 

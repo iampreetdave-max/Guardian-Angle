@@ -15,6 +15,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// If the server starts rejecting our token (expired, or VISIONSCAN_REQUIRE_AUTH
+// was switched on), drop it and bounce back to the login screen — but not for the
+// login call itself, where a 401 just means wrong credentials.
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    const url = err?.config?.url || "";
+    const isLogin = url.includes("/auth/login");
+    if (err?.response?.status === 401 && getToken() && !isLogin) {
+      setToken(null);
+      window.location.reload();
+    }
+    return Promise.reject(err);
+  }
+);
+
 // ---- auth / platform ----
 export const authRegister = (p) => api.post("/auth/register", p).then((r) => r.data);
 export const authLogin = (p) => api.post("/auth/login", p).then((r) => r.data);
@@ -49,16 +65,26 @@ export const closeCase = (id, p) => api.post(`/cases/${id}/close`, p).then((r) =
 export const rateCase = (id, p) => api.post(`/cases/${id}/rate`, p).then((r) => r.data);
 export const caseTimeline = (id) => api.get(`/cases/${id}/timeline`).then((r) => r.data);
 
+export const listMeetings = (id) => api.get(`/cases/${id}/meetings`).then((r) => r.data);
+export const createMeeting = (id, p) =>
+  api.post(`/cases/${id}/meetings`, p).then((r) => r.data);
+export const cancelMeeting = (id, mid) =>
+  api.delete(`/cases/${id}/meetings/${mid}`).then((r) => r.data);
+
 export const listUsers = () => api.get("/users").then((r) => r.data);
 export const createUser = (p) => api.post("/users", p).then((r) => r.data);
 export const listTeams = () => api.get("/teams").then((r) => r.data);
 export const createTeam = (p) => api.post("/teams", p).then((r) => r.data);
+export const listTeamMembers = (id) =>
+  api.get(`/teams/${id}/members`).then((r) => r.data);
 
 export const getNotifications = () => api.get("/notifications").then((r) => r.data);
 export const markNotificationsRead = () =>
   api.post("/notifications/read-all").then((r) => r.data);
 
 export const getHealth = () => api.get("/health").then((r) => r.data);
+
+export const getAnalytics = () => api.get("/analytics/summary").then((r) => r.data);
 
 export const listVideos = () => api.get("/videos").then((r) => r.data);
 

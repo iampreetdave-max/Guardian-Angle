@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes } from "lucide-react";
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
@@ -15,6 +15,7 @@ import NotificationBell from "./components/platform/NotificationBell";
 import ComplaintsView from "./components/platform/ComplaintsView";
 import CasesView from "./components/platform/CasesView";
 import AdminView from "./components/platform/AdminView";
+import AnalyticsView from "./components/platform/AnalyticsView";
 import Footer from "./components/platform/Footer";
 
 // Top-level gate: show the login screen until authenticated, then the app shell.
@@ -49,10 +50,21 @@ function Workbench() {
 
   const { user, logout } = useAuth();
   const staff = isStaff(user);
-  // citizens land on complaints; staff land on the VisionScan workbench
-  const [module, setModule] = useState(staff ? "vision" : "complaints");
+  // citizens land on complaints; staff land on the command dashboard
+  const [module, setModule] = useState(staff ? "dashboard" : "complaints");
   const [arbiterSeed, setArbiterSeed] = useState(""); // cross-module: prefill incident
   const [openCaseId, setOpenCaseId] = useState(null); // deep-link from complaint -> case
+  const [feedsOpen, setFeedsOpen] = useState(false); // mobile: VisionScan sidebar drawer
+
+  // Role-based navigation, shared by the desktop top-nav and the mobile bottom bar.
+  const navItems = [
+    staff && { key: "dashboard", label: "Dashboard", icon: BarChart3 },
+    staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
+    staff && { key: "arbiter", label: "Arbiter", icon: Scale },
+    { key: "cases", label: "Cases", icon: FolderOpen },
+    { key: "complaints", label: "Complaints", icon: Megaphone },
+    isAdmin(user) && { key: "admin", label: "Admin", icon: Shield },
+  ].filter(Boolean);
 
   const lastQuery = useRef({ query: "", type: "text" });
   const lastSearchArgs = useRef(null); // for live auto-refresh
@@ -186,10 +198,34 @@ function Workbench() {
       return next;
     });
 
-  const selectedHits = useMemo(() => {
-    if (!results) return [];
-    return results.hits.filter((h) => selectedIds.has(h.frame_id));
-  }, [results, selectedIds]);
+  // All selectable frames keyed by id — both top-level hits and the individual
+  // frames inside a grouped event. Event frames inherit camera/file info from
+  // their representative hit so a report can include any of them.
+  const frameIndex = useMemo(() => {
+    const map = new Map();
+    if (results) {
+      for (const h of results.hits) {
+        map.set(h.frame_id, h);
+        for (const f of h.event_frames || []) {
+          if (!map.has(f.frame_id)) {
+            map.set(f.frame_id, {
+              ...f,
+              camera_id: h.camera_id,
+              video_id: h.video_id,
+              filename: h.filename,
+              query_type: h.query_type,
+            });
+          }
+        }
+      }
+    }
+    return map;
+  }, [results]);
+
+  const selectedHits = useMemo(
+    () => [...selectedIds].map((id) => frameIndex.get(id)).filter(Boolean),
+    [selectedIds, frameIndex]
+  );
 
   const generateReport = async (payload) => {
     const blob = await API.generateReport(payload);
@@ -206,32 +242,26 @@ function Workbench() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-5 py-3 backdrop-blur">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-3 py-3 backdrop-blur sm:px-5">
+        <div className="flex items-center gap-2 sm:gap-3">
           <img
             src="/logo.jpeg"
             alt="Cyber Crime Branch, Ahmedabad City Police"
-            className="h-11 w-11 rounded-lg object-contain bg-white/5 p-0.5 ring-1 ring-ink-600"
+            className="h-12 w-12 rounded-lg object-contain bg-white/5 p-0.5 ring-1 ring-ink-600 sm:h-16 sm:w-16"
           />
           <div>
-            <h1 className="font-serif text-xl font-bold leading-tight text-white">
+            <h1 className="font-serif text-lg font-bold leading-tight text-white sm:text-xl">
               City<span className="text-accent">Shield</span>
             </h1>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">
+            <p className="hidden text-[10px] uppercase tracking-wider text-slate-500 sm:block">
               Unified AI Policing · Cyber Crime Branch, Ahmedabad City Police
             </p>
           </div>
         </div>
 
-        {/* role-based module nav */}
-        <nav className="ml-4 flex items-center gap-1 rounded-lg bg-ink-900/60 p-1">
-          {[
-            staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
-            staff && { key: "arbiter", label: "Arbiter", icon: Scale },
-            { key: "cases", label: "Cases", icon: FolderOpen },
-            { key: "complaints", label: "Complaints", icon: Megaphone },
-            isAdmin(user) && { key: "admin", label: "Admin", icon: Shield },
-          ].filter(Boolean).map((m) => (
+        {/* role-based module nav — desktop only; mobile uses the bottom bar */}
+        <nav className="ml-4 hidden items-center gap-1 rounded-lg bg-ink-900/60 p-1 md:flex">
+          {navItems.map((m) => (
             <button
               key={m.key}
               onClick={() => setModule(m.key)}
@@ -244,11 +274,11 @@ function Workbench() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
-          {module === "vision" && <StatusBar health={health} />}
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          {module === "vision" && <div className="hidden lg:block"><StatusBar health={health} /></div>}
           <NotificationBell />
-          <div className="flex items-center gap-2 border-l border-ink-700 pl-3">
-            <div className="text-right">
+          <div className="flex items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
+            <div className="hidden text-right sm:block">
               <div className="text-xs font-semibold text-slate-200">{user.name}</div>
               <div className="text-[10px] uppercase tracking-wide text-slate-500">{user.role}</div>
             </div>
@@ -263,10 +293,13 @@ function Workbench() {
       <div className="tricolor-bar" />
 
       {module === "arbiter" ? (
-        <ArbiterPanel seedText={arbiterSeed} />
-      ) : module === "complaints" || module === "cases" || module === "admin" ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
+          <ArbiterPanel seedText={arbiterSeed} />
+        </div>
+      ) : module === "dashboard" || module === "complaints" || module === "cases" || module === "admin" ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-16 md:pb-0">
           <div className="flex-1">
+            {module === "dashboard" && <AnalyticsView />}
             {module === "complaints" && (
               <ComplaintsView onOpenCase={(id) => { setOpenCaseId(id); setModule("cases"); }} />
             )}
@@ -279,8 +312,8 @@ function Workbench() {
         </div>
       ) : (
       <div className="flex min-h-0 flex-1">
-        {/* Sidebar */}
-        <aside className="w-72 shrink-0 border-r border-ink-700 bg-ink-800/40 p-4">
+        {/* Sidebar — desktop */}
+        <aside className="hidden w-72 shrink-0 border-r border-ink-700 bg-ink-800/40 p-4 md:block">
           <VideoManager
             videos={videos}
             feeds={feeds}
@@ -294,8 +327,40 @@ function Workbench() {
           />
         </aside>
 
+        {/* Sidebar — mobile slide-over drawer */}
+        {feedsOpen && (
+          <div className="fixed inset-0 z-40 flex md:hidden">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setFeedsOpen(false)} />
+            <aside className="relative w-72 max-w-[85%] overflow-y-auto border-r border-ink-700 bg-ink-800 p-4 pb-20">
+              <button
+                onClick={() => setFeedsOpen(false)}
+                className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200"
+              >
+                <X size={14} /> Close
+              </button>
+              <VideoManager
+                videos={videos}
+                feeds={feeds}
+                selectedVideo={selectedVideo}
+                onSelectVideo={(id) => { setSelectedVideo(id); setFeedsOpen(false); }}
+                onUpload={handleUpload}
+                onIngestStream={handleIngestStream}
+                onStartLive={handleStartLive}
+                onReindex={handleReindex}
+                onDelete={handleDelete}
+              />
+            </aside>
+          </div>
+        )}
+
         {/* Main */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden p-5">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden p-3 pb-16 sm:p-5 md:pb-5">
+          <button
+            onClick={() => setFeedsOpen(true)}
+            className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 md:hidden"
+          >
+            <Menu size={14} /> Feeds &amp; Upload
+          </button>
           {liveVideo && (
             <LivePlayer
               video={liveVideo}
@@ -366,6 +431,23 @@ function Workbench() {
                     </button>
                   )}
                 </div>
+                {/* Reactive nudge: a text search that returned little is usually the
+                    wrong tool for a specific object — offer the precise region mode. */}
+                {results.query_type === "text" && results.count <= 6 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-slate-300">
+                    <Lightbulb size={14} className="text-accent" />
+                    <span>
+                      {results.count === 0 ? "No strong text matches." : "Few text matches."}{" "}
+                      Looking for a specific object? <span className="font-semibold text-accent">Find every object</span> scores each detected object and is far more precise.
+                    </span>
+                    <button
+                      onClick={() => runSearch({ mode: "region", query: results.query })}
+                      className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent-600 px-2.5 py-1 font-semibold text-white transition hover:bg-accent-700"
+                    >
+                      <Boxes size={13} /> Find every object
+                    </button>
+                  </div>
+                )}
                 {results.count === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                     <Inbox size={28} />
@@ -402,9 +484,24 @@ function Workbench() {
       </div>
       )}
 
+      {/* Mobile bottom tab bar — mirrors the desktop top nav */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-700 bg-ink-900/95 backdrop-blur md:hidden">
+        {navItems.map((m) => (
+          <button
+            key={m.key}
+            onClick={() => setModule(m.key)}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition ${
+              module === m.key ? "text-accent" : "text-slate-500"
+            }`}
+          >
+            <m.icon size={18} /> {m.label}
+          </button>
+        ))}
+      </nav>
+
       <FrameDetail
         hit={detailHit}
-        selected={detailHit && selectedIds.has(detailHit.frame_id)}
+        selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onClose={() => setDetailHit(null)}
       />

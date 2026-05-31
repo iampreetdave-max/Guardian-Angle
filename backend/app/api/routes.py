@@ -11,6 +11,7 @@ import numpy as np
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Depends,
     File,
     Form,
     HTTPException,
@@ -19,6 +20,7 @@ from fastapi import (
 from fastapi.responses import Response
 
 from ..config import get_settings
+from ..platform.security import auth_gate
 from ..core import detection, embedding
 from ..core import query_router as qr
 from ..core.index import get_clip_index, get_face_index
@@ -71,6 +73,7 @@ async def upload_video(
     background: BackgroundTasks,
     file: UploadFile = File(...),
     camera_id: str = Form("CAM-1"),
+    _user: dict | None = Depends(auth_gate),
 ) -> VideoOut:
     settings = get_settings()
     ext = "." + (file.filename or "").rsplit(".", 1)[-1].lower()
@@ -102,7 +105,10 @@ def list_public_feeds() -> list[PublicFeed]:
 
 
 @router.post("/streams", response_model=VideoOut, tags=["videos"])
-def ingest_stream(body: StreamIn, background: BackgroundTasks) -> VideoOut:
+def ingest_stream(
+    body: StreamIn, background: BackgroundTasks,
+    _user: dict | None = Depends(auth_gate),
+) -> VideoOut:
     """Capture a bounded window from a public live stream and analyze it.
 
     Use only with intentionally-public feeds (e.g. government traffic cameras,
@@ -124,7 +130,7 @@ def ingest_stream(body: StreamIn, background: BackgroundTasks) -> VideoOut:
 
 
 @router.post("/streams/live", response_model=VideoOut, tags=["videos"])
-def start_live_feed(body: StreamIn) -> VideoOut:
+def start_live_feed(body: StreamIn, _user: dict | None = Depends(auth_gate)) -> VideoOut:
     """Start a continuous LIVE monitoring session on a public feed: the stream
     is watched and indexed in real time until stopped, so it can be viewed and
     searched live. Use only with intentionally-public feeds."""
@@ -133,14 +139,14 @@ def start_live_feed(body: StreamIn) -> VideoOut:
 
 
 @router.post("/videos/{video_id}/stop", response_model=VideoOut, tags=["videos"])
-def stop_live_feed(video_id: int) -> VideoOut:
+def stop_live_feed(video_id: int, _user: dict | None = Depends(auth_gate)) -> VideoOut:
     """Stop a running live session (finalizes the feed as a searchable video)."""
     stop_live(video_id)
     return _video_out(video_id)
 
 
 @router.get("/videos", response_model=list[VideoOut], tags=["videos"])
-def list_videos() -> list[VideoOut]:
+def list_videos(_user: dict | None = Depends(auth_gate)) -> list[VideoOut]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM videos ORDER BY created_at DESC"
@@ -149,12 +155,12 @@ def list_videos() -> list[VideoOut]:
 
 
 @router.get("/videos/{video_id}", response_model=VideoOut, tags=["videos"])
-def get_video(video_id: int) -> VideoOut:
+def get_video(video_id: int, _user: dict | None = Depends(auth_gate)) -> VideoOut:
     return _video_out(video_id)
 
 
 @router.delete("/videos/{video_id}", tags=["videos"])
-def delete_video(video_id: int) -> dict:
+def delete_video(video_id: int, _user: dict | None = Depends(auth_gate)) -> dict:
     settings = get_settings()
     with get_conn() as conn:
         vid = conn.execute(
@@ -208,7 +214,7 @@ def delete_video(video_id: int) -> dict:
 
 
 @router.post("/reindex", tags=["videos"])
-def reindex_objects(background: BackgroundTasks) -> dict:
+def reindex_objects(background: BackgroundTasks, _user: dict | None = Depends(auth_gate)) -> dict:
     """Backfill region-level (object-crop) embeddings for footage processed
     before this feature existed, by re-running the pipeline on file-based
     videos. Live/stream feeds (no re-readable source) are skipped."""
@@ -231,7 +237,7 @@ def reindex_objects(background: BackgroundTasks) -> dict:
 
 # ------------------------------------------------------------------ search
 @router.post("/search/text", response_model=SearchResponse, tags=["search"])
-def search_text(body: TextQueryIn) -> SearchResponse:
+def search_text(body: TextQueryIn, _user: dict | None = Depends(auth_gate)) -> SearchResponse:
     hits = qr.search_text(
         body.query, body.top_k, body.camera_id, body.video_id, body.group_events
     )
@@ -241,7 +247,7 @@ def search_text(body: TextQueryIn) -> SearchResponse:
 
 
 @router.post("/search/region", response_model=SearchResponse, tags=["search"])
-def search_region(body: RegionQueryIn) -> SearchResponse:
+def search_region(body: RegionQueryIn, _user: dict | None = Depends(auth_gate)) -> SearchResponse:
     """Instance-level search: returns every matching detected object (e.g. all
     five red cars) as its own hit with its bounding box."""
     hits = qr.search_regions(
@@ -253,7 +259,7 @@ def search_region(body: RegionQueryIn) -> SearchResponse:
 
 
 @router.post("/search/object", response_model=SearchResponse, tags=["search"])
-def search_object(body: ObjectQueryIn) -> SearchResponse:
+def search_object(body: ObjectQueryIn, _user: dict | None = Depends(auth_gate)) -> SearchResponse:
     hits = qr.search_object(
         body.label, body.top_k, body.min_confidence, body.camera_id,
         body.video_id, body.group_events,
@@ -270,6 +276,7 @@ async def search_image(
     camera_id: Optional[str] = Form(None),
     video_id: Optional[int] = Form(None),
     group_events: bool = Form(True),
+    _user: dict | None = Depends(auth_gate),
 ) -> SearchResponse:
     frame = _decode_upload(await file.read())
     hits = qr.search_image(frame, top_k, camera_id, video_id, group_events)
@@ -286,6 +293,7 @@ async def search_face(
     camera_id: Optional[str] = Form(None),
     video_id: Optional[int] = Form(None),
     group_events: bool = Form(True),
+    _user: dict | None = Depends(auth_gate),
 ) -> SearchResponse:
     if not detection.face_available():
         raise HTTPException(503, "Face recognition model is not available")
@@ -299,7 +307,7 @@ async def search_face(
 
 # ------------------------------------------------------------------ report
 @router.post("/report", tags=["report"])
-def generate_report(body: ReportRequest) -> Response:
+def generate_report(body: ReportRequest, _user: dict | None = Depends(auth_gate)) -> Response:
     if not body.frame_ids:
         raise HTTPException(400, "No frames provided for the report")
     pdf = report_svc.build_report(

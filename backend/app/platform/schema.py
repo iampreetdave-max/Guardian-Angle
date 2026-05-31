@@ -112,6 +112,19 @@ CREATE TABLE IF NOT EXISTS case_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_msg_case ON case_messages(case_id);
 
+CREATE TABLE IF NOT EXISTS case_meetings (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    case_id      INTEGER NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+    title        TEXT NOT NULL,
+    scheduled_at TEXT NOT NULL,             -- ISO datetime the team should be available
+    duration_min INTEGER DEFAULT 60,
+    location     TEXT DEFAULT 'Ahmedabad Cyber Crime Branch',
+    notes        TEXT,
+    created_by   INTEGER NOT NULL REFERENCES users(id),
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_meetings_case ON case_meetings(case_id);
+
 CREATE TABLE IF NOT EXISTS ratings (
     case_id    INTEGER PRIMARY KEY REFERENCES cases(id) ON DELETE CASCADE,
     citizen_id INTEGER NOT NULL REFERENCES users(id),

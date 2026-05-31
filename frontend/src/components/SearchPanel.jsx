@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Search, Type, Boxes, Image as ImageIcon, ScanFace, Loader2, Layers } from "lucide-react";
+import { Search, Type, Boxes, Image as ImageIcon, ScanFace, Loader2, Layers, Lightbulb } from "lucide-react";
 
 const MODES = [
   { key: "text", label: "Text", icon: Type, ph: 'e.g. "person in red jacket near the gate"' },
@@ -9,6 +9,15 @@ const MODES = [
 ];
 
 const COMMON_OBJECTS = ["person", "car", "truck", "motorcycle", "bicycle", "bus", "backpack", "handbag"];
+
+// Object-ish nouns that hint the operator really wants per-object (region)
+// search rather than mushy whole-frame text matching.
+const OBJECT_WORDS = [
+  "car", "cars", "truck", "van", "bus", "vehicle", "motorcycle", "motorbike",
+  "bike", "bicycle", "scooter", "rickshaw", "auto", "person", "people", "man",
+  "woman", "child", "bag", "backpack", "handbag", "suitcase", "phone", "laptop",
+  "knife", "gun", "bottle", "dog", "cat", "umbrella",
+];
 
 export default function SearchPanel({ onSearch, searching, faceEnabled }) {
   const [mode, setMode] = useState("text");
@@ -24,6 +33,17 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
 
   const current = MODES.find((m) => m.key === mode);
   const isImageMode = mode === "image" || mode === "face";
+  // Whole-frame text search is weak for a specific object; nudge toward the
+  // precise region ("find every object") mode when the query reads like one.
+  const looksLikeObject =
+    mode === "text" &&
+    !perObject &&
+    text.trim() &&
+    text.toLowerCase().split(/\W+/).some((w) => OBJECT_WORDS.includes(w));
+  const runRegion = () => {
+    setPerObject(true);
+    if (text.trim()) onSearch({ mode: "region", query: text.trim(), group });
+  };
 
   const switchMode = (key) => {
     setMode(key);
@@ -150,6 +170,23 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
               {o}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Proactive nudge: query looks like a specific object → region search is far more precise */}
+      {looksLikeObject && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-[11px] text-slate-300">
+          <Lightbulb size={13} className="text-accent" />
+          <span>
+            Searching for a specific object? Whole-frame text match is fuzzy —{" "}
+            <span className="font-semibold text-accent">Find every object</span> scores each detected object for precise matches.
+          </span>
+          <button
+            onClick={runRegion}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent-600 px-2.5 py-1 font-semibold text-white transition hover:bg-accent-700"
+          >
+            <Boxes size={12} /> Find every object
+          </button>
         </div>
       )}
 

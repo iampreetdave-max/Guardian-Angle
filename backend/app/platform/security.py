@@ -50,9 +50,8 @@ def _decode(token: str) -> dict:
 
 
 # ---------------- dependencies ----------------
-def get_current_user(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> dict:
+def _user_from_creds(creds: HTTPAuthorizationCredentials | None) -> dict:
+    """Resolve a live, active user from bearer credentials, or raise 401."""
     if creds is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     payload = _decode(creds.credentials)
@@ -65,6 +64,25 @@ def get_current_user(
     if row is None or not row["active"]:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
     return dict(row)
+
+
+def get_current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> dict:
+    return _user_from_creds(creds)
+
+
+def auth_gate(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> dict | None:
+    """Flag-gated auth for the VisionScan / Arbiter routes.
+
+    Open by default (public demo). When VISIONSCAN_REQUIRE_AUTH=true, a valid
+    login token is required just like get_current_user.
+    """
+    if not get_settings().require_auth:
+        return None
+    return _user_from_creds(creds)
 
 
 def require_role(*roles: str):

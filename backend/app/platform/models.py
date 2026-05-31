@@ -99,6 +99,14 @@ class MessageIn(BaseModel):
     body: str
 
 
+class MeetingIn(BaseModel):
+    title: str
+    scheduled_at: str = Field(..., description="ISO datetime, e.g. 2026-06-02T15:30")
+    duration_min: int = Field(60, ge=5, le=600)
+    location: str = "Ahmedabad Cyber Crime Branch"
+    notes: str = ""
+
+
 class CloseCaseIn(BaseModel):
     verdict: str
 

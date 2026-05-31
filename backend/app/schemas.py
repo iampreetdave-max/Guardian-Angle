@@ -86,6 +86,16 @@ class ObjectQueryIn(BaseModel):
     group_events: bool = Field(True, description="Collapse nearby frames into events")
 
 
+class EventFrame(BaseModel):
+    """A single frame belonging to a grouped event — enough to render it in the
+    detail gallery and add it to a report individually."""
+    frame_id: int
+    timestamp_sec: float
+    timestamp_hms: str
+    thumbnail_url: str
+    score: float
+
+
 class SearchHit(BaseModel):
     frame_id: int
     video_id: int
@@ -101,6 +111,9 @@ class SearchHit(BaseModel):
     event_count: int = Field(1, description="Frames collapsed into this event")
     event_start_hms: Optional[str] = None
     event_end_hms: Optional[str] = None
+    # Every frame in the event (chronological), so the UI can show all instances
+    # instead of only the representative best frame. Empty for single-frame hits.
+    event_frames: list[EventFrame] = []
     # Region-level (instance) search: the specific detected object that matched.
     match_label: Optional[str] = None
     match_bbox: Optional[BBox] = None
