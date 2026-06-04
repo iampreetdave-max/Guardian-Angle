@@ -47,6 +47,9 @@ export const listComplaints = () => api.get("/complaints").then((r) => r.data);
 export const fileComplaint = (p) => api.post("/complaints", p).then((r) => r.data);
 export const triageComplaint = (id, p) =>
   api.post(`/complaints/${id}/triage`, p).then((r) => r.data);
+// NCRP/1930 cybercrime fraud taxonomy for the structured intake form.
+export const getCyberCategories = () =>
+  api.get("/complaints/cyber/categories").then((r) => r.data);
 
 export const listCases = (statusFilter) =>
   api.get("/cases", { params: statusFilter ? { status_filter: statusFilter } : {} }).then((r) => r.data);
@@ -101,9 +104,16 @@ export const getAnalytics = () => api.get("/analytics/summary").then((r) => r.da
 export const getAreas = () => api.get("/analytics/areas").then((r) => r.data);
 export const getMapData = (params = {}) =>
   api.get("/analytics/map", { params }).then((r) => r.data);
+// Cyber-fraud victim-location density (₹ lost + fraud-channel mix per area).
+export const getCyberMapData = (params = {}) =>
+  api.get("/analytics/map/cyber", { params }).then((r) => r.data);
 
 // ---- predictive policing ----
 export const getRiskScores = () => api.get("/predict/risk").then((r) => r.data);
+// Backtested accuracy (rolling-origin CV). compare=true also returns the
+// baseline comparison table + surge detection; officer-gated, cached ~10 min.
+export const getValidation = (params = { compare: true }) =>
+  api.get("/predict/validation", { params }).then((r) => r.data);
 export const getTemporal = (params = {}) =>
   api.get("/predict/temporal", { params }).then((r) => r.data);
 export const getPatrolRoutes = (params = {}) =>

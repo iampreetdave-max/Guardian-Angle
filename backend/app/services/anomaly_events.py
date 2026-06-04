@@ -69,6 +69,17 @@ def record_signals(video_id: int, frame_id: int, timestamp_sec: float,
 
         if not grouped:
             _maybe_notify(event_id, video_id, sig, is_live, settings)
+            # Closed-loop response: a NEW event on a LIVE feed auto-spawns a
+            # geo-tagged case + dispatches the nearest unit. Fail-soft and
+            # env-gated (VISIONSCAN_AUTO_CASE) inside the loop; ingestion is
+            # never blocked. Historical uploads (is_live=False) are unaffected.
+            if is_live:
+                try:
+                    from .incident_loop import handle_new_event
+
+                    handle_new_event(event_id)
+                except Exception:  # never let the closed loop break capture
+                    log.warning("incident loop dispatch failed", exc_info=True)
     return created
 
 

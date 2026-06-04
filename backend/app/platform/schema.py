@@ -2,7 +2,52 @@
 
 Lives in the same SQLite database as the VisionScan metadata. Applied
 idempotently from database.init_db() so it never disturbs existing tables.
+
+Also hosts the complaint-create request model: ComplaintIn started out as a
+plain title/description form but now carries the NCRP/1930 structured
+cybercrime intake fields, so it validates against the cyber fraud taxonomy in
+constants/cyber.py.
 """
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from ..constants.cyber import category_keys, FRAUD_CHANNELS
+
+
+# ---- complaints (NCRP/1930-style structured cybercrime intake) ----
+class ComplaintIn(BaseModel):
+    """Citizen complaint payload. The cyber_* fields are optional and only set
+    when the citizen files via the Cybercrime form; setting cyber_category is
+    what flips the complaint into the cyber_fraud track (see routes)."""
+
+    title: str
+    description: str
+    category: Optional[str] = None
+    location: Optional[str] = None
+    area: Optional[str] = None        # Ahmedabad locality (constants/ahmedabad.py)
+    # ---- structured cybercrime intake (NCRP / 1930) ----
+    cyber_category: Optional[str] = None    # key in constants/cyber.CYBER_CATEGORIES
+    amount_lost: Optional[float] = Field(None, ge=0)   # ₹ money lost, if any
+    fraud_channel: Optional[str] = None     # how it happened (FRAUD_CHANNELS)
+    hours_since_incident: Optional[float] = Field(None, ge=0)  # for golden-hour nudge
+
+    @field_validator("cyber_category")
+    @classmethod
+    def _check_category(cls, v: Optional[str]) -> Optional[str]:
+        if v not in (None, "") and v not in category_keys():
+            raise ValueError(f"cyber_category must be one of {category_keys()}")
+        return v or None
+
+    @field_validator("fraud_channel")
+    @classmethod
+    def _check_channel(cls, v: Optional[str]) -> Optional[str]:
+        if v not in (None, "") and v not in FRAUD_CHANNELS:
+            raise ValueError(f"fraud_channel must be one of {list(FRAUD_CHANNELS)}")
+        return v or None
+
 
 PLATFORM_SCHEMA = """
 CREATE TABLE IF NOT EXISTS teams (

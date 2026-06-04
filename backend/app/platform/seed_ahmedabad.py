@@ -40,50 +40,61 @@ CRIME_CATEGORIES = (
 )
 
 # --- area-wise crime profile -------------------------------------------------
-# Intensity is "low" | "medium" | "high". We use the same three buckets the doc
-# describes; "medium-high" in the doc is represented here as "high" or "medium"
-# (rounded toward the dominant character) to keep the heatmap legend simple.
+# Intensity is "low" | "medium" | "high". The distribution is deliberately
+# skewed to mirror the *law of crime concentration* (a small share of places
+# hosts a disproportionate share of crime): ~6 genuinely "high" hotspots, ~8
+# "medium" areas, and the remaining majority "low" / "very-low". This editorial
+# skew (eastern industrial belt + a few west-central transit hubs run hot; the
+# planned residential suburbs run low) is what gives the demo heatmap and the
+# predictive backtest a realistic, concentrated signal to find. Only the
+# intensity *labels* were re-tiered here; every area keeps its original category
+# list. The fine-grained per-area daily volume used by the synthetic generator
+# lives in seed_synthetic.AREA_BASE_RATE (a steeper skew than three buckets can
+# express); these labels still drive the heatmap legend and the model's static
+# prior.
 
 AREA_CRIME_PROFILE = {
-    # West / west-central (planned suburbs -> cyber fraud, vehicle theft, snatching)
+    # West / west-central (planned suburbs -> cyber fraud, vehicle theft, snatching).
+    # Mostly low-crime residential belts; the transit/market spine runs hotter.
     "Navrangpura": {"intensity": "medium", "categories": ["chain_snatching", "cyber_fraud", "theft"]},
-    "Ellisbridge": {"intensity": "medium", "categories": ["chain_snatching", "theft", "cyber_fraud"]},
-    "Paldi": {"intensity": "medium", "categories": ["chain_snatching", "burglary", "theft"]},
-    "Vasna": {"intensity": "medium", "categories": ["theft", "vehicle_theft", "burglary"]},
-    "Vejalpur": {"intensity": "medium", "categories": ["vehicle_theft", "cyber_fraud", "theft"]},
-    "Satellite": {"intensity": "high", "categories": ["cyber_fraud", "chain_snatching", "vehicle_theft"]},
-    "Vastrapur": {"intensity": "high", "categories": ["cyber_fraud", "chain_snatching", "theft"]},
-    "Bodakdev": {"intensity": "high", "categories": ["cyber_fraud", "burglary", "vehicle_theft"]},
-    "Thaltej": {"intensity": "high", "categories": ["cyber_fraud", "vehicle_theft", "burglary"]},
-    "Bopal": {"intensity": "medium", "categories": ["cyber_fraud", "vehicle_theft", "burglary"]},
+    "Ellisbridge": {"intensity": "low", "categories": ["chain_snatching", "theft", "cyber_fraud"]},
+    "Paldi": {"intensity": "low", "categories": ["chain_snatching", "burglary", "theft"]},
+    "Vasna": {"intensity": "low", "categories": ["theft", "vehicle_theft", "burglary"]},
+    "Vejalpur": {"intensity": "low", "categories": ["vehicle_theft", "cyber_fraud", "theft"]},
+    "Satellite": {"intensity": "medium", "categories": ["cyber_fraud", "chain_snatching", "vehicle_theft"]},
+    "Vastrapur": {"intensity": "medium", "categories": ["cyber_fraud", "chain_snatching", "theft"]},
+    "Bodakdev": {"intensity": "low", "categories": ["cyber_fraud", "burglary", "vehicle_theft"]},
+    "Thaltej": {"intensity": "low", "categories": ["cyber_fraud", "vehicle_theft", "burglary"]},
+    "Bopal": {"intensity": "low", "categories": ["cyber_fraud", "vehicle_theft", "burglary"]},
     "SG Highway": {"intensity": "high", "categories": ["cyber_fraud", "vehicle_theft", "theft"]},
-    "Gota": {"intensity": "medium", "categories": ["vehicle_theft", "burglary", "cyber_fraud"]},
-    "Ghatlodia": {"intensity": "high", "categories": ["chain_snatching", "vehicle_theft", "theft"]},
-    "Memnagar": {"intensity": "medium", "categories": ["chain_snatching", "theft", "cyber_fraud"]},
-    "Ranip": {"intensity": "medium", "categories": ["vehicle_theft", "theft", "assault"]},
+    "Gota": {"intensity": "low", "categories": ["vehicle_theft", "burglary", "cyber_fraud"]},
+    "Ghatlodia": {"intensity": "medium", "categories": ["chain_snatching", "vehicle_theft", "theft"]},
+    "Memnagar": {"intensity": "low", "categories": ["chain_snatching", "theft", "cyber_fraud"]},
+    "Ranip": {"intensity": "low", "categories": ["vehicle_theft", "theft", "assault"]},
 
     # North / north-west (growth belts -> vehicle theft, burglary)
-    "Chandkheda": {"intensity": "high", "categories": ["vehicle_theft", "burglary", "theft"]},
-    "Sabarmati": {"intensity": "medium", "categories": ["theft", "vehicle_theft", "assault"]},
+    "Chandkheda": {"intensity": "medium", "categories": ["vehicle_theft", "burglary", "theft"]},
+    "Sabarmati": {"intensity": "low", "categories": ["theft", "vehicle_theft", "assault"]},
 
     # Central-east / old city (mixed; markets, transit -> theft, assault)
-    "Shahibaug": {"intensity": "medium", "categories": ["theft", "cyber_fraud", "assault"]},
-    "Asarwa": {"intensity": "high", "categories": ["assault", "theft", "body_offences"]},
-    "Jamalpur": {"intensity": "high", "categories": ["theft", "assault", "chain_snatching"]},
+    "Shahibaug": {"intensity": "low", "categories": ["theft", "cyber_fraud", "assault"]},
+    "Asarwa": {"intensity": "medium", "categories": ["assault", "theft", "body_offences"]},
+    "Jamalpur": {"intensity": "medium", "categories": ["theft", "assault", "chain_snatching"]},
 
-    # Eastern industrial / working-class belt (Zone 5/6 -> violent / body offences)
+    # Eastern industrial / working-class belt (Zone 5/6 -> violent / body offences).
+    # This belt holds most of the city's genuinely "high" intensity.
     "Bapunagar": {"intensity": "high", "categories": ["assault", "body_offences", "theft"]},
     "Naroda": {"intensity": "high", "categories": ["assault", "vehicle_theft", "body_offences", "cyber_fraud"]},
-    "Nikol": {"intensity": "high", "categories": ["vehicle_theft", "theft", "assault"]},
-    "Odhav": {"intensity": "high", "categories": ["assault", "body_offences", "vehicle_theft"]},
+    "Nikol": {"intensity": "medium", "categories": ["vehicle_theft", "theft", "assault"]},
+    "Odhav": {"intensity": "medium", "categories": ["assault", "body_offences", "vehicle_theft"]},
     "Gomtipur": {"intensity": "high", "categories": ["murder", "assault", "body_offences"]},
     "Vatva": {"intensity": "high", "categories": ["assault", "body_offences", "narcotics", "theft"]},
 
     # South / south-east (mixed residential-industrial)
     "Maninagar": {"intensity": "high", "categories": ["chain_snatching", "theft", "vehicle_theft"]},
-    "Kankaria": {"intensity": "medium", "categories": ["theft", "chain_snatching", "assault"]},
-    "Isanpur": {"intensity": "medium", "categories": ["vehicle_theft", "theft", "assault"]},
-    "Behrampura": {"intensity": "high", "categories": ["theft", "assault", "body_offences"]},
+    "Kankaria": {"intensity": "low", "categories": ["theft", "chain_snatching", "assault"]},
+    "Isanpur": {"intensity": "low", "categories": ["vehicle_theft", "theft", "assault"]},
+    "Behrampura": {"intensity": "medium", "categories": ["theft", "assault", "body_offences"]},
 }
 
 # --- generic public-reported seed incidents ----------------------------------

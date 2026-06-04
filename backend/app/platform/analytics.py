@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from ..constants.ahmedabad import AHMEDABAD_CENTER, AREAS
+from ..constants.cyber import CYBER_CATEGORIES, FRAUD_CHANNELS
 from ..database import get_conn
 from .security import get_current_user, require_role
 
@@ -216,4 +217,108 @@ def map_aggregates(category: str | None = None, days: int | None = None,
         "areas": areas,
         "categories": categories,
         "filters": {"category": category, "days": days},
+    }
+
+
+# A cyber complaint is anything on the cyber-fraud track: the broad category OR
+# any structured NCRP/1930 cyber_category tag (set via the cybercrime intake).
+_CYBER_WHERE = "(category = 'cyber_fraud' OR cyber_category IS NOT NULL)"
+
+
+@analytics_router.get("/map/cyber", tags=["analytics"])
+def map_cyber(days: int | None = 90,
+              _: dict = Depends(require_role("officer"))) -> dict:
+    """Per-locality cyber-fraud aggregates for the Cyber Fraud map layer:
+    victim count, total ₹ lost, top cyber_category (with its taxonomy label)
+    and fraud-channel mix — plus citywide totals. This is *victim-location*
+    density (where victims live), not where the fraudsters operate.
+
+    Mirrors /map: officer-only, same `days` lookback window, and every known
+    area is returned (zeros included) so the layer is always full. Areas join
+    to centroids via the same constants/ahmedabad AREAS table /map uses.
+
+    NB: synthetic rows predate the amount_lost column (it is NULL there), so the
+    frontend falls back to victim_count sizing when amounts are absent — the
+    aggregates here stay correct either way (total_amount_lost is COALESCE'd)."""
+    flt, params = "", []
+    if days and days > 0:
+        flt += " AND created_at >= datetime('now', ?)"
+        params.append(f"-{int(days)} days")
+
+    with get_conn() as conn:
+        victims = {
+            r["area"]: r["n"]
+            for r in conn.execute(
+                "SELECT area, COUNT(*) n FROM complaints "
+                f"WHERE area IS NOT NULL AND area != '' AND {_CYBER_WHERE}{flt} "
+                "GROUP BY area", params)
+        }
+        amounts = {
+            r["area"]: (r["amt"] or 0)
+            for r in conn.execute(
+                "SELECT area, COALESCE(SUM(amount_lost), 0) amt FROM complaints "
+                f"WHERE area IS NOT NULL AND area != '' AND {_CYBER_WHERE}{flt} "
+                "GROUP BY area", params)
+        }
+
+        # Top cyber_category per area (ascending so the last write wins = max).
+        top_cat: dict[str, str] = {}
+        for r in conn.execute(
+            "SELECT area, cyber_category, COUNT(*) n FROM complaints "
+            "WHERE area IS NOT NULL AND area != '' "
+            f"AND cyber_category IS NOT NULL AND cyber_category != ''{flt} "
+            "GROUP BY area, cyber_category ORDER BY n ASC", params
+        ):
+            top_cat[r["area"]] = r["cyber_category"]
+
+        # Fraud-channel counts per area.
+        channels_by_area: dict[str, dict[str, int]] = {}
+        for r in conn.execute(
+            "SELECT area, fraud_channel, COUNT(*) n FROM complaints "
+            "WHERE area IS NOT NULL AND area != '' "
+            f"AND fraud_channel IS NOT NULL AND fraud_channel != ''{flt} "
+            f"AND {_CYBER_WHERE} GROUP BY area, fraud_channel", params
+        ):
+            channels_by_area.setdefault(r["area"], {})[r["fraud_channel"]] = r["n"]
+
+        # Citywide totals over the same window.
+        city_victims = _scalar(
+            conn,
+            "SELECT COUNT(*) FROM complaints "
+            f"WHERE {_CYBER_WHERE}{flt}", tuple(params))
+        city_amount = _scalar(
+            conn,
+            "SELECT COALESCE(SUM(amount_lost), 0) FROM complaints "
+            f"WHERE {_CYBER_WHERE}{flt}", tuple(params))
+        top_channels = _counts(
+            conn,
+            "SELECT fraud_channel, COUNT(*) FROM complaints "
+            f"WHERE {_CYBER_WHERE} AND fraud_channel IS NOT NULL "
+            f"AND fraud_channel != ''{flt} "
+            "GROUP BY fraud_channel ORDER BY COUNT(*) DESC LIMIT 3", tuple(params))
+
+    areas = []
+    for name, (lat, lng) in AREAS.items():
+        cat_key = top_cat.get(name)
+        cat_label = (
+            CYBER_CATEGORIES.get(cat_key, {}).get("label") if cat_key else None)
+        areas.append({
+            "area": name, "lat": lat, "lng": lng,
+            "victim_count": victims.get(name, 0),
+            "total_amount_lost": round(amounts.get(name, 0) or 0, 2),
+            "top_category": cat_key,
+            "top_category_label": cat_label,
+            "fraud_channels": channels_by_area.get(name, {}),
+        })
+
+    return {
+        "center": {"lat": AHMEDABAD_CENTER[0], "lng": AHMEDABAD_CENTER[1]},
+        "areas": areas,
+        "channels": list(FRAUD_CHANNELS),
+        "citywide": {
+            "total_amount_lost": round(city_amount or 0, 2),
+            "total_victims": city_victims,
+            "top_channels": top_channels,
+        },
+        "filters": {"days": days},
     }

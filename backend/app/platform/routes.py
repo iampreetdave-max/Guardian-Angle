@@ -12,12 +12,16 @@ from ..config import get_settings
 from ..database import get_conn
 from . import service as svc
 from ..constants.ahmedabad import area_centroid
+from ..constants.cyber import category_list
 from .models import (
-    AssignIn, BroadcastIn, CaseIn, ChangePasswordIn, CloseCaseIn, ComplaintIn,
+    AssignIn, BroadcastIn, CaseIn, ChangePasswordIn, CloseCaseIn,
     CreateUserIn, DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn,
     MessageIn, RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn,
     UpdateUserIn, VisibilityIn,
 )
+# ComplaintIn carries the structured cybercrime intake fields + taxonomy
+# validation, so it lives alongside the schema it validates against.
+from .schema import ComplaintIn
 from .security import (
     create_token, get_current_user, hash_password, require_role, role_rank,
     verify_password,
@@ -293,16 +297,34 @@ def create_team(body: TeamIn, user: dict = Depends(require_role("admin"))) -> di
 
 
 # ============================================================= COMPLAINTS
+@complaints_router.get("/cyber/categories", tags=["complaints"])
+def cyber_categories() -> dict:
+    """NCRP/1930 cybercrime fraud taxonomy for the structured intake form.
+
+    Open to any authenticated user-facing context (no role gate) — it's static
+    reference data the file-complaint form needs. Returns the controlled
+    category vocabulary plus the valid fraud channels."""
+    from ..constants.cyber import FRAUD_CHANNELS
+    return {"categories": category_list(), "fraud_channels": list(FRAUD_CHANNELS)}
+
+
 @complaints_router.post("", tags=["complaints"])
 def create_complaint(body: ComplaintIn, user: dict = Depends(get_current_user)) -> dict:
     centroid = area_centroid(body.area)
     lat, lng = centroid if centroid else (None, None)
+    # A structured cyber complaint always lands in the cyber_fraud track so the
+    # existing map/analytics keep grouping it correctly, regardless of any free
+    # text the citizen typed into the category box.
+    category = "cyber_fraud" if body.cyber_category else body.category
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO complaints (citizen_id, title, description, category, "
-            "location, area, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (user["id"], body.title, body.description, body.category,
-             body.location, body.area, lat, lng),
+            "location, area, lat, lng, cyber_category, amount_lost, "
+            "fraud_channel, hours_since_incident) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (user["id"], body.title, body.description, category,
+             body.location, body.area, lat, lng, body.cyber_category,
+             body.amount_lost, body.fraud_channel, body.hours_since_incident),
         )
         cid = cur.lastrowid
     svc.audit(user["id"], "file_complaint", "complaint", cid, body.title)

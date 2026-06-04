@@ -18,7 +18,7 @@ _STATUSES = {"new", "acknowledged", "dismissed"}
 
 _CARD_SQL = """
 SELECT a.id, a.type, a.confidence, a.source, a.status, a.peak_count,
-       a.last_ts_sec, a.created_at, a.updated_at,
+       a.last_ts_sec, a.created_at, a.updated_at, a.case_id,
        a.video_id, a.frame_id, a.x1, a.y1, a.x2, a.y2,
        v.camera_id, v.filename, v.status AS video_status,
        f.thumbnail_path

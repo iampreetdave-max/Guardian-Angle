@@ -165,3 +165,66 @@ def list_patrol_logs(area: str | None = None, limit: int = 50,
             f"JOIN users u ON u.id = p.officer_id {where} "
             f"ORDER BY p.created_at DESC LIMIT ?", (*params, limit)).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------------- nearest-unit dispatch ----------------
+def nearest_unit_to_area(area: str, conn=None) -> dict | None:
+    """Pick the patrol unit (officer) closest to ``area`` for auto-dispatch.
+
+    Patrol check-ins (patrol_logs) carry an area, not raw coordinates, so each
+    officer's *current* position is the centroid of their most recent check-in.
+    We haversine those against the target area's centroid and take the minimum.
+    When no officer has ever checked in (fresh DB / demo first-run) we fall back
+    to any active officer-role user so dispatch never silently no-ops.
+
+    Returns {"id", "name", "badge_no", "area", "distance_km"} or None if there
+    is no eligible officer at all. ``distance_km`` is None on the fallback path.
+    Accepts an optional open connection so it can run inside an existing
+    transaction (incident loop); opens its own otherwise.
+    """
+    from ..constants.ahmedabad import area_centroid
+
+    target = area_centroid(area)
+
+    def _run(c) -> dict | None:
+        # Latest check-in per officer (most recent patrol_logs row each).
+        rows = c.execute(
+            "SELECT p.officer_id, p.area, u.name, u.badge_no "
+            "FROM patrol_logs p "
+            "JOIN users u ON u.id = p.officer_id "
+            "WHERE u.active = 1 AND u.role IN ('officer', 'lead') "
+            "AND p.id IN (SELECT MAX(id) FROM patrol_logs GROUP BY officer_id) "
+            "ORDER BY p.created_at DESC"
+        ).fetchall()
+        best = None
+        if target:
+            for r in rows:
+                here = area_centroid(r["area"])
+                if not here:
+                    continue
+                d = _haversine_km(target, here)
+                if best is None or d < best["distance_km"]:
+                    best = {"id": r["officer_id"], "name": r["name"],
+                            "badge_no": r["badge_no"], "area": r["area"],
+                            "distance_km": round(d, 2)}
+        if best is not None:
+            return best
+        # Fallback: any active officer/lead, freshest check-in first if present.
+        if rows:
+            r = rows[0]
+            return {"id": r["officer_id"], "name": r["name"],
+                    "badge_no": r["badge_no"], "area": r["area"],
+                    "distance_km": None}
+        fb = c.execute(
+            "SELECT id, name, badge_no FROM users "
+            "WHERE active = 1 AND role IN ('officer', 'lead') ORDER BY id LIMIT 1"
+        ).fetchone()
+        if fb is None:
+            return None
+        return {"id": fb["id"], "name": fb["name"], "badge_no": fb["badge_no"],
+                "area": None, "distance_km": None}
+
+    if conn is not None:
+        return _run(conn)
+    with get_conn() as c:
+        return _run(c)

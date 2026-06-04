@@ -116,6 +116,54 @@ def main() -> None:
         check("time-window filter narrows the map",
               0 < recent_total < all_total, f"{recent_total}/{all_total}")
 
+        # ---- backtesting / validation harness ----
+        # Role gate mirrors the other predict endpoints.
+        r = client.get("/api/predict/validation", headers=citizen)
+        check("citizen blocked from validation (403)", r.status_code == 403)
+        r = client.get("/api/predict/validation?compare=true&folds=8",
+                       headers=officer)
+        check("officer gets backtest validation", r.status_code == 200, r.text[:80])
+        v = r.json()
+        check("rolling-origin folds evaluated", v.get("folds", 0) >= 4,
+              f"folds={v.get('folds')}")
+        ms = v["model"]["summary"]
+        hr10 = ms.get("hit_rate@10", 0.0)
+        pai10 = ms.get("pai@10", 0.0)
+        # Pull the baseline rows from the comparison table.
+        by_name = {row["strategy"]: row for row in v.get("comparison", [])}
+        rnd = by_name.get("random", {})
+        rnd_hr10 = rnd.get("hit_rate@10", 0.0)
+
+        # (1) The full model must STRICTLY beat the uniform-random baseline on
+        # next-week hit-rate@10 — i.e. it carries real out-of-sample signal.
+        check("model hit-rate@10 strictly beats random baseline",
+              hr10 > rnd_hr10, f"model={hr10:.3f} random={rnd_hr10:.3f}")
+
+        # (2) PAI@10 must show genuine concentration of crime (> 1.0 = better
+        # than spreading patrols uniformly). NOTE: the demo's synthetic stream is
+        # a near-stationary Poisson process with only ~1.67x intensity contrast,
+        # so even a perfect-hindsight oracle averages PAI@10 ≈ 1.6 (reported as
+        # oracle_pai). A >1.0 floor is the defensible, data-appropriate bar here;
+        # the surge-detection check below is where the model's real edge shows.
+        oracle10 = (v.get("oracle_pai", {}) or {}).get("10") \
+            or (v.get("oracle_pai", {}) or {}).get(10) or 0.0
+        check("PAI@10 > 1.0 (concentrates crime better than chance)",
+              pai10 > 1.0, f"pai@10={pai10:.3f} (oracle ceiling {oracle10:.2f})")
+
+        # (3) Surge detection: every planted surge-area is surfaced into the live
+        # top-10 while its surge is happening — Maninagar's chain-snatching spree
+        # included (aligned to PLANTED_SURGES, not a hard-coded week).
+        surges = v.get("surge_detection", [])
+        check("planted surges are detected at all", len(surges) >= 1,
+              f"{len(surges)} surge-areas")
+        maninagar = [s for s in surges if s["area"] == "Maninagar"]
+        check("Maninagar surfaced in model top-k during its planted surge",
+              bool(maninagar) and maninagar[0]["in_top10_during"],
+              str(maninagar[:1]))
+        check("all planted surge-areas caught in live top-10 during surge",
+              surges and all(s["in_top10_during"] for s in surges),
+              f"caught {sum(s['in_top10_during'] for s in surges)}/{len(surges)}")
+
     print("\n" + "=" * 50)
     if FAILURES:
         print(f"RESULT: {len(FAILURES)} failure(s): {FAILURES}")

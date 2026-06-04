@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Siren, Flame, Cloud, CarFront, Sword, Swords, Check, X, Inbox, Loader2,
-  RadioTower, Layers,
+  RadioTower, Layers, Briefcase,
 } from "lucide-react";
 import * as API from "../../api";
 
@@ -68,6 +68,12 @@ function AlertCard({ alert, onAck, onDismiss, busy }) {
             </span>
           )}
         </div>
+        {alert.case_id && (
+          <a href={`/?module=cases&case=${alert.case_id}`}
+            className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent transition hover:bg-accent/25">
+            <Briefcase size={10} /> Case #{alert.case_id} auto-created
+          </a>
+        )}
         {alert.status === "new" && (
           <div className="flex gap-2 pt-1">
             <button onClick={() => onAck(alert.id)} disabled={busy}

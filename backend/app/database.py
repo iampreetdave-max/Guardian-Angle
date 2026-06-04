@@ -127,12 +127,30 @@ def _migrate(conn: sqlite3.Connection) -> None:
             conn.execute("ALTER TABLE complaints ADD COLUMN lat REAL")
         if "lng" not in ccols:
             conn.execute("ALTER TABLE complaints ADD COLUMN lng REAL")
+        # NCRP/1930-style structured cybercrime intake: fraud taxonomy + the
+        # money-loss / channel / timing fields the 1930 helpline triages on.
+        if "cyber_category" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN cyber_category TEXT")
+        if "amount_lost" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN amount_lost REAL")
+        if "fraud_channel" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN fraud_channel TEXT")
+        if "hours_since_incident" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN hours_since_incident REAL")
 
     # City Map: cameras/feeds can be tagged with a locality so anomaly events
     # become mappable.
     vcols = {r["name"] for r in conn.execute("PRAGMA table_info(videos)")}
     if vcols and "area" not in vcols:
         conn.execute("ALTER TABLE videos ADD COLUMN area TEXT")
+
+    # Closed-loop incident response: a live anomaly auto-spawns a geo-tagged
+    # case; the originating event remembers its case (NULL until/unless one is
+    # created) so the Live Alerts panel can link to it and we can dedupe within
+    # the debounce window.
+    aecols = {r["name"] for r in conn.execute("PRAGMA table_info(anomaly_events)")}
+    if aecols and "case_id" not in aecols:
+        conn.execute("ALTER TABLE anomaly_events ADD COLUMN case_id INTEGER")
 
     # Token revocation: bumping a user's token_version invalidates every JWT
     # issued before the bump (logout-all, account disable, password reset).

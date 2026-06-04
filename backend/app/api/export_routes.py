@@ -218,3 +218,85 @@ def export_audit(user: dict = Depends(require_role("admin"))) -> StreamingRespon
         raise
     _audit_export(user, "audit.csv")
     return resp
+
+
+# ----------------------------------------- predictive-policing CSVs (officer)
+# These two are operational artefacts an officer takes into the field: the
+# ranked risk table and the optimized patrol plan. They are officer-gated
+# (lower bar than the admin DB dumps above) but still leave an audit footprint.
+def _top_contributions(contrib: dict, k: int = 3) -> str:
+    """Render an area's score decomposition into one human-readable cell:
+    "prior 4; murder 66; assault 23". Picks the prior + top-k recent categories
+    + any anomaly boost, biggest-first."""
+    parts: list[tuple[str, float]] = []
+    if contrib.get("prior"):
+        parts.append(("prior", float(contrib["prior"])))
+    for cat, val in (contrib.get("recent_by_category") or {}).items():
+        parts.append((cat, float(val)))
+    if contrib.get("anomaly_boost"):
+        parts.append(("anomaly_boost", float(contrib["anomaly_boost"])))
+    parts.sort(key=lambda kv: -kv[1])
+    return "; ".join(f"{name} {round(val)}" for name, val in parts[:k] if val)
+
+
+@export_router.get("/risk.csv")
+def export_risk(user: dict = Depends(require_role("officer"))) -> StreamingResponse:
+    """Ranked locality risk table (area, risk, band, trend, top contributions)."""
+    try:
+        # Imported lazily so the predictive module never loads at export import.
+        from ..platform.predictive import compute_risk
+
+        areas = compute_risk()
+        header = ["rank", "area", "lat", "lng", "risk_score", "risk_band",
+                  "predicted_score", "trend", "n_reports_used",
+                  "top_contributions"]
+        rows = [
+            (i + 1, a["area"], a["lat"], a["lng"], a["risk_score"],
+             a["risk_band"], a["predicted_score"], a["trend"],
+             a.get("n_reports_used", 0),
+             _top_contributions(a.get("contributions") or {}))
+            for i, a in enumerate(areas)
+        ]
+        resp = _csv_response(rows, header, "risk.csv")
+    except Exception as e:
+        _audit_export_failed(user, "risk.csv", e)
+        raise
+    _audit_export(user, "risk.csv")
+    return resp
+
+
+@export_router.get("/patrol-plan.csv")
+def export_patrol_plan(
+    units: int = 2, max_stops: int = 12,
+    user: dict = Depends(require_role("officer")),
+) -> StreamingResponse:
+    """Optimized patrol plan flattened to one stop per row
+    (unit, stop order, area, lat, lng, risk, eta)."""
+    try:
+        # Lazy import: reuse the live route optimizer, never duplicate the TSP.
+        from ..platform.patrol import patrol_routes
+
+        plan = patrol_routes(units=units, max_stops=max_stops)
+        station = plan.get("station") or {}
+        header = ["unit", "stop_order", "area", "lat", "lng", "risk_score",
+                  "risk_band", "unit_distance_km", "unit_eta_min"]
+        rows = []
+        for rt in plan.get("routes", []):
+            for order, wp in enumerate(rt.get("waypoints", []), start=1):
+                rows.append((
+                    rt["unit"], order, wp["area"], wp["lat"], wp["lng"],
+                    wp.get("risk_score"), wp.get("risk_band"),
+                    rt.get("distance_km"), rt.get("eta_min"),
+                ))
+        # Leading station row gives the plan an explicit depot/origin.
+        if station:
+            rows.insert(0, (
+                0, 0, station.get("name", "Station"),
+                station.get("lat"), station.get("lng"), "", "", "", "",
+            ))
+        resp = _csv_response(rows, header, "patrol-plan.csv")
+    except Exception as e:
+        _audit_export_failed(user, "patrol-plan.csv", e)
+        raise
+    _audit_export(user, "patrol-plan.csv")
+    return resp

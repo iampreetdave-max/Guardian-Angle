@@ -102,3 +102,13 @@ def _seed_incidents(citizen_id: int | None, lead_id: int | None, team_id: int) -
                 n_cases += 1
     log.info("Seeded %d demo incidents (%d converted to cases) across Ahmedabad",
              len(SEED_INCIDENTS), n_cases)
+
+    # Lay down the high-volume, deterministic synthetic stream UNDER the ~20
+    # labeled incidents above (which stay as the distinguishable overlay). Its
+    # own gating (row-count < ~100 OR VISIONSCAN_SEED_SYNTHETIC) + an
+    # app_settings marker make this safe to call every run.
+    try:
+        from .seed_synthetic import maybe_seed_synthetic
+        maybe_seed_synthetic()
+    except Exception:  # never block startup on demo data
+        log.warning("synthetic incident seeding skipped", exc_info=True)
