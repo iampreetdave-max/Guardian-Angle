@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark, Siren, Map } from "lucide-react";
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
@@ -17,6 +17,10 @@ import ComplaintsView from "./components/platform/ComplaintsView";
 import CasesView from "./components/platform/CasesView";
 import AdminView from "./components/platform/AdminView";
 import AnalyticsView from "./components/platform/AnalyticsView";
+import LiveAlertsView from "./components/platform/LiveAlertsView";
+import AlertTicker from "./components/platform/AlertTicker";
+import CityMapView from "./components/platform/CityMapView";
+import DisasterBanner from "./components/platform/DisasterBanner";
 import Footer from "./components/platform/Footer";
 
 // Top-level gate: show the login screen until authenticated, then the app shell.
@@ -61,6 +65,8 @@ function Workbench() {
   const navItems = [
     staff && { key: "dashboard", label: "Dashboard", icon: BarChart3 },
     staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
+    staff && { key: "alerts", label: "Live Alerts", icon: Siren },
+    staff && { key: "map", label: "City Map", icon: Map },
     staff && { key: "arbiter", label: "Arbiter", icon: Scale },
     { key: "govintel", label: "Legal Feed", icon: Landmark },
     { key: "cases", label: "Cases", icon: FolderOpen },
@@ -278,6 +284,7 @@ function Workbench() {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {module === "vision" && <div className="hidden lg:block"><StatusBar health={health} /></div>}
+          {staff && <AlertTicker onOpen={() => setModule("alerts")} />}
           <NotificationBell />
           <div className="flex items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
             <div className="hidden text-right sm:block">
@@ -294,6 +301,9 @@ function Workbench() {
 
       <div className="tricolor-bar" />
 
+      {/* City-wide disaster/advisory banner — every role sees active alerts */}
+      <DisasterBanner />
+
       {module === "arbiter" ? (
         <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
           <ArbiterPanel seedText={arbiterSeed} />
@@ -302,10 +312,12 @@ function Workbench() {
         <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
           <GovIntelPanel />
         </div>
-      ) : module === "dashboard" || module === "complaints" || module === "cases" || module === "admin" ? (
+      ) : module === "dashboard" || module === "complaints" || module === "cases" || module === "admin" || module === "alerts" || module === "map" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-16 md:pb-0">
           <div className="flex-1">
             {module === "dashboard" && <AnalyticsView />}
+            {module === "alerts" && <LiveAlertsView />}
+            {module === "map" && <CityMapView />}
             {module === "complaints" && (
               <ComplaintsView onOpenCase={(id) => { setOpenCaseId(id); setModule("cases"); }} />
             )}

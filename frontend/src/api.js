@@ -85,7 +85,41 @@ export const markNotificationsRead = () =>
 
 export const getHealth = () => api.get("/health").then((r) => r.data);
 
+// ---- anomaly watch (always-on CCTV incident alerts) ----
+export const listAnomalies = (params = {}) =>
+  api.get("/anomalies", { params }).then((r) => r.data);
+export const anomalySummary = () =>
+  api.get("/anomalies/summary").then((r) => r.data);
+export const ackAnomaly = (id) =>
+  api.post(`/anomalies/${id}/ack`).then((r) => r.data);
+export const dismissAnomaly = (id) =>
+  api.post(`/anomalies/${id}/dismiss`).then((r) => r.data);
+
 export const getAnalytics = () => api.get("/analytics/summary").then((r) => r.data);
+
+// ---- city map + broadcasts ----
+export const getAreas = () => api.get("/analytics/areas").then((r) => r.data);
+export const getMapData = (params = {}) =>
+  api.get("/analytics/map", { params }).then((r) => r.data);
+
+// ---- predictive policing ----
+export const getRiskScores = () => api.get("/predict/risk").then((r) => r.data);
+export const getTemporal = (params = {}) =>
+  api.get("/predict/temporal", { params }).then((r) => r.data);
+export const getPatrolRoutes = (params = {}) =>
+  api.get("/predict/patrol-routes", { params }).then((r) => r.data);
+export const addPatrolLog = (p) =>
+  api.post("/predict/patrol-logs", p).then((r) => r.data);
+export const listPatrolLogs = (params = {}) =>
+  api.get("/predict/patrol-logs", { params }).then((r) => r.data);
+export const sendBroadcast = (p) =>
+  api.post("/notifications/broadcast", p).then((r) => r.data);
+export const getActiveBroadcasts = () =>
+  api.get("/notifications/broadcasts/active").then((r) => r.data);
+export const listBroadcasts = () =>
+  api.get("/notifications/broadcasts").then((r) => r.data);
+export const deactivateBroadcast = (id) =>
+  api.post(`/notifications/broadcasts/${id}/deactivate`).then((r) => r.data);
 
 export const listVideos = () => api.get("/videos").then((r) => r.data);
 
@@ -146,6 +180,21 @@ export const generateReport = (payload) =>
   api
     .post("/report", payload, { responseType: "blob" })
     .then((r) => r.data);
+
+// ---- admin system / security / monitoring / data ----
+export const getSystemStatus = () => api.get("/admin/system").then((r) => r.data);
+export const setLockdown = (enabled) =>
+  api.post("/admin/lockdown", { enabled }).then((r) => r.data);
+export const getSecurityEvents = () =>
+  api.get("/admin/security-events").then((r) => r.data);
+export const logoutAll = () => api.post("/auth/logout-all").then((r) => r.data);
+
+// URL of an export endpoint (relative to the /api base). The component fetches
+// it as a blob (auth header applied by the axios interceptor) and triggers an
+// anchor download — same responseType: "blob" pattern as generateReport.
+export const downloadExport = (kind) => `/admin/export/${kind}`;
+export const fetchExportBlob = (kind) =>
+  api.get(downloadExport(kind), { responseType: "blob" }).then((r) => r.data);
 
 // ---- GovIntel (Unified Legal & Government Intelligence) ----
 export const govHealth = () => api.get("/gov/health").then((r) => r.data);

@@ -16,17 +16,19 @@ export default function ComplaintsView({ onOpenCase }) {
   const citizen = user.role === "citizen";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ title: "", description: "", category: "", location: "" });
+  const [form, setForm] = useState({ title: "", description: "", category: "", location: "", area: "" });
+  const [areas, setAreas] = useState([]);
   const [triage, setTriage] = useState(null); // complaint being triaged
 
   const refresh = () => { setLoading(true); API.listComplaints().then(setItems).finally(() => setLoading(false)); };
   useEffect(() => { refresh(); }, []);
+  useEffect(() => { API.getAreas().then((d) => setAreas(d.areas)).catch(() => {}); }, []);
 
   const file = async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.description.trim()) return;
-    await API.fileComplaint(form);
-    setForm({ title: "", description: "", category: "", location: "" });
+    await API.fileComplaint({ ...form, area: form.area || null });
+    setForm({ title: "", description: "", category: "", location: "", area: "" });
     refresh();
   };
 
@@ -42,9 +44,14 @@ export default function ComplaintsView({ onOpenCase }) {
           <div className="mb-2 text-sm font-semibold text-slate-200">File a new complaint</div>
           <input required placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inp + " mb-2"} />
           <textarea required placeholder="Describe what happened" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inp + " mb-2 resize-y"} />
-          <div className="mb-2 grid grid-cols-2 gap-2">
+          <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             <input placeholder="Category (e.g. cyber-fraud)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inp} />
-            <input placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className={inp} />
+            <select value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} className={inp}
+              title="Pick the locality — it places your complaint on the city map">
+              <option value="">Area (Ahmedabad)…</option>
+              {areas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
+            </select>
+            <input placeholder="Landmark / address detail" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className={inp} />
           </div>
           <button className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-700">
             <Plus size={15} /> Submit complaint

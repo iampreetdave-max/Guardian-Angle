@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
+from ..constants.ahmedabad import AHMEDABAD_CENTER, AREAS
 from ..database import get_conn
-from .security import require_role
+from .security import get_current_user, require_role
 
 analytics_router = APIRouter()
 
@@ -121,4 +122,98 @@ def summary(_: dict = Depends(require_role("officer"))) -> dict:
         "cases_by_severity": cases_by_severity,
         "top_locations": top_locations,
         "complaints_over_time": complaints_over_time,
+    }
+
+
+@analytics_router.get("/areas", tags=["analytics"])
+def list_areas(_: dict = Depends(get_current_user)) -> dict:
+    """Ahmedabad locality names + centroids for dropdowns and the map.
+    Available to every authenticated role (citizens pick an area when filing)."""
+    return {
+        "center": {"lat": AHMEDABAD_CENTER[0], "lng": AHMEDABAD_CENTER[1]},
+        "areas": [
+            {"name": name, "lat": lat, "lng": lng}
+            for name, (lat, lng) in AREAS.items()
+        ],
+    }
+
+
+@analytics_router.get("/map", tags=["analytics"])
+def map_aggregates(category: str | None = None, days: int | None = None,
+                   _: dict = Depends(require_role("officer"))) -> dict:
+    """Per-locality aggregates for the City Map: complaint/case density,
+    severity mix, top category, and anomaly counts (via camera area tags).
+    Every known area is returned (zeros included) so the map is always full.
+    Optional layer filters: category (exact match) and days (lookback window)."""
+    flt, params = "", []
+    if category:
+        flt += " AND category = ?"
+        params.append(category)
+    if days and days > 0:
+        flt += " AND created_at >= datetime('now', ?)"
+        params.append(f"-{int(days)} days")
+
+    with get_conn() as conn:
+        complaints = {
+            r["area"]: r["n"]
+            for r in conn.execute(
+                "SELECT area, COUNT(*) n FROM complaints "
+                f"WHERE area IS NOT NULL AND area != ''{flt} GROUP BY area",
+                params)
+        }
+        case_flt = flt.replace("category", "cp.category").replace(
+            "created_at", "cp.created_at")
+        cases = {
+            r["area"]: r["n"]
+            for r in conn.execute(
+                "SELECT cp.area area, COUNT(*) n FROM cases c "
+                "JOIN complaints cp ON cp.id = c.complaint_id "
+                f"WHERE cp.area IS NOT NULL AND cp.area != ''{case_flt} "
+                "GROUP BY cp.area", params)
+        }
+        severity_rows = conn.execute(
+            "SELECT area, severity, COUNT(*) n FROM complaints "
+            "WHERE area IS NOT NULL AND area != '' AND severity IS NOT NULL"
+            f"{flt} GROUP BY area, severity", params).fetchall()
+        by_severity: dict[str, dict[str, int]] = {}
+        for r in severity_rows:
+            by_severity.setdefault(r["area"], {})[r["severity"]] = r["n"]
+
+        top_category: dict[str, str] = {}
+        for r in conn.execute(
+            "SELECT area, category, COUNT(*) n FROM complaints "
+            "WHERE area IS NOT NULL AND area != '' AND category IS NOT NULL"
+            f"{flt} GROUP BY area, category ORDER BY n ASC", params
+        ):
+            # ascending order means the last write per area is the max count
+            top_category[r["area"]] = r["category"]
+
+        categories = [r["category"] for r in conn.execute(
+            "SELECT DISTINCT category FROM complaints "
+            "WHERE category IS NOT NULL AND category != '' ORDER BY category")]
+
+        anomalies = {
+            r["area"]: r["n"]
+            for r in conn.execute(
+                "SELECT v.area area, COUNT(*) n FROM anomaly_events a "
+                "JOIN videos v ON v.id = a.video_id "
+                "WHERE v.area IS NOT NULL AND v.area != '' "
+                "AND a.status != 'dismissed' GROUP BY v.area")
+        }
+
+    areas = []
+    for name, (lat, lng) in AREAS.items():
+        areas.append({
+            "area": name, "lat": lat, "lng": lng,
+            "complaints": complaints.get(name, 0),
+            "cases": cases.get(name, 0),
+            "by_severity": by_severity.get(name, {}),
+            "top_category": top_category.get(name),
+            "anomalies": anomalies.get(name, 0),
+        })
+    return {
+        "center": {"lat": AHMEDABAD_CENTER[0], "lng": AHMEDABAD_CENTER[1]},
+        "areas": areas,
+        "categories": categories,
+        "filters": {"category": category, "days": days},
     }

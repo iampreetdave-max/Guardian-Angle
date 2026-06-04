@@ -6,15 +6,17 @@ from __future__ import annotations
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 
+from ..config import get_settings
 from ..database import get_conn
 from . import service as svc
+from ..constants.ahmedabad import area_centroid
 from .models import (
-    AssignIn, CaseIn, ChangePasswordIn, CloseCaseIn, ComplaintIn, CreateUserIn,
-    DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn, MessageIn,
-    RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn, UpdateUserIn,
-    VisibilityIn,
+    AssignIn, BroadcastIn, CaseIn, ChangePasswordIn, CloseCaseIn, ComplaintIn,
+    CreateUserIn, DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn,
+    MessageIn, RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn,
+    UpdateUserIn, VisibilityIn,
 )
 from .security import (
     create_token, get_current_user, hash_password, require_role, role_rank,
@@ -51,20 +53,52 @@ def register(body: RegisterIn) -> dict:
         )
         uid = cur.lastrowid
     svc.audit(uid, "register", "user", uid, "citizen self-registration")
-    token = create_token(uid, "citizen")
+    # A freshly-inserted row has token_version = 0 (column default); pass it
+    # explicitly so token minting stays consistent with the user's tv state.
+    token = create_token(uid, "citizen", token_version=0)
     return {"token": token, "user": {"id": uid, "name": body.name,
             "email": body.email, "role": "citizen"}}
 
 
 @auth_router.post("/login", tags=["auth"])
-def login(body: LoginIn) -> dict:
+def login(body: LoginIn, request: Request) -> dict:
+    s = get_settings()
+    ip = request.client.host if request.client else None
     with get_conn() as conn:
+        # Serialize concurrent attempts for the same email: take the DB write
+        # lock up front so the count-then-insert below is atomic. Without this,
+        # two requests could both read N-1 failures, both pass the check, and
+        # both record a failure — overshooting the lockout threshold.
+        conn.execute("BEGIN IMMEDIATE")
+        # Brute-force lockout: count recent failures for this email within the
+        # lockout window before doing any password work.
+        recent_fails = conn.execute(
+            "SELECT COUNT(*) c FROM login_attempts WHERE email = ? AND ok = 0 "
+            "AND created_at >= datetime('now', ?)",
+            (body.email, f"-{s.login_lockout_minutes} minutes"),
+        ).fetchone()["c"]
+        if recent_fails >= s.login_max_attempts:
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "Too many failed logins; try again later.")
+
         row = conn.execute("SELECT * FROM users WHERE email = ?", (body.email,)).fetchone()
-    if row is None or not verify_password(body.password, row["password_hash"]):
+        ok = bool(row) and verify_password(body.password, row["password_hash"])
+        # Journal every attempt (success or failure) for lockout + audit review.
+        conn.execute(
+            "INSERT INTO login_attempts (email, ip, ok) VALUES (?, ?, ?)",
+            (body.email, ip, 1 if ok else 0),
+        )
+        if ok:
+            # Clear this email's failed rows to reset the window on success.
+            conn.execute("DELETE FROM login_attempts WHERE email = ? AND ok = 0",
+                         (body.email,))
+
+    if not ok:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
     if not row["active"]:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is disabled")
-    return {"token": create_token(row["id"], row["role"]), "user": _public_user(row)}
+    token = create_token(row["id"], row["role"], row["token_version"])
+    return {"token": token, "user": _public_user(row)}
 
 
 @auth_router.post("/logout", tags=["auth"])
@@ -72,6 +106,17 @@ def logout(user: dict = Depends(get_current_user)) -> dict:
     # Stateless JWT: the client discards the token. Endpoint exists for symmetry
     # and audit. (A token blocklist can be added if hard revocation is needed.)
     svc.audit(user["id"], "logout", "user", user["id"])
+    return {"ok": True}
+
+
+@auth_router.post("/logout-all", tags=["auth"])
+def logout_all(user: dict = Depends(get_current_user)) -> dict:
+    """Revoke every existing session for the caller (including the current
+    token) by bumping their token_version."""
+    with get_conn() as conn:
+        conn.execute("UPDATE users SET token_version = token_version + 1 WHERE id = ?",
+                     (user["id"],))
+    svc.audit(user["id"], "logout_all", "user", user["id"])
     return {"ok": True}
 
 
@@ -86,14 +131,18 @@ def change_password(body: ChangePasswordIn, user: dict = Depends(get_current_use
         row = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user["id"],)).fetchone()
         if not verify_password(body.current_password, row["password_hash"]):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
-        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?",
-                     (hash_password(body.new_password), user["id"]))
+        # Bump token_version so any other sessions (incl. a leaked token) are
+        # revoked the moment the password changes — same as reset_password.
+        conn.execute(
+            "UPDATE users SET password_hash = ?, "
+            "token_version = token_version + 1 WHERE id = ?",
+            (hash_password(body.new_password), user["id"]))
     svc.audit(user["id"], "change_password", "user", user["id"])
     return {"ok": True}
 
 
 @auth_router.post("/forgot-password", tags=["auth"])
-def forgot_password(body: ForgotPasswordIn) -> dict:
+def forgot_password(body: ForgotPasswordIn, background: BackgroundTasks) -> dict:
     token = secrets.token_urlsafe(24)
     with get_conn() as conn:
         row = conn.execute("SELECT id FROM users WHERE email = ?", (body.email,)).fetchone()
@@ -102,10 +151,15 @@ def forgot_password(body: ForgotPasswordIn) -> dict:
                 "UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?",
                 (token, (datetime.utcnow() + timedelta(hours=1)).isoformat(), row["id"]),
             )
-    # Always 200 (don't reveal whether the email exists). Deliver the link.
+    # Always 200 (don't reveal whether the email exists). Deliver the link only
+    # when the email exists, but do it AFTER the response is sent (background
+    # task) so the response latency is identical in both branches — otherwise
+    # the extra send_email() work leaks account existence via a timing side
+    # channel.
     if row:
         from . import email as email_svc
-        email_svc.send_email(
+        background.add_task(
+            email_svc.send_email,
             body.email, "CityShield password reset",
             f"Use this token to reset your password (valid 1 hour): {token}",
         )
@@ -123,7 +177,7 @@ def reset_password(body: ResetPasswordIn) -> dict:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired token")
         conn.execute(
             "UPDATE users SET password_hash = ?, reset_token = NULL, "
-            "reset_expires = NULL WHERE id = ?",
+            "reset_expires = NULL, token_version = token_version + 1 WHERE id = ?",
             (hash_password(body.new_password), row["id"]),
         )
     svc.audit(row["id"], "reset_password", "user", row["id"])
@@ -161,8 +215,9 @@ def create_user(body: CreateUserIn, user: dict = Depends(require_role("admin")))
 @admin_router.patch("/users/{user_id}", tags=["admin"])
 def update_user(user_id: int, body: UpdateUserIn,
                 user: dict = Depends(require_role("admin"))) -> dict:
-    """Assign/move a user to a team and/or change their role. Only the fields
-    sent in the body are touched; team_id=null removes them from any team."""
+    """Assign/move a user to a team, change their role, and/or activate /
+    deactivate the account. Only the fields sent in the body are touched;
+    team_id=null removes them from any team."""
     fields = body.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(400, "Nothing to update")
@@ -181,6 +236,13 @@ def update_user(user_id: int, body: UpdateUserIn,
             sets.append("team_id = ?"); params.append(fields["team_id"])
         if "role" in fields:
             sets.append("role = ?"); params.append(fields["role"])
+        if "active" in fields:
+            sets.append("active = ?"); params.append(1 if fields["active"] else 0)
+        # A role change alters permissions and a deactivation must immediately
+        # cut off access: in either case revoke the user's existing sessions so
+        # outstanding tokens stop working (bump token_version exactly once).
+        if "role" in fields or "active" in fields:
+            sets.append("token_version = token_version + 1")
         params.append(user_id)
         conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
     svc.audit(user["id"], "update_user", "user", user_id, str(fields))
@@ -233,11 +295,14 @@ def create_team(body: TeamIn, user: dict = Depends(require_role("admin"))) -> di
 # ============================================================= COMPLAINTS
 @complaints_router.post("", tags=["complaints"])
 def create_complaint(body: ComplaintIn, user: dict = Depends(get_current_user)) -> dict:
+    centroid = area_centroid(body.area)
+    lat, lng = centroid if centroid else (None, None)
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO complaints (citizen_id, title, description, category, location) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (user["id"], body.title, body.description, body.category, body.location),
+            "INSERT INTO complaints (citizen_id, title, description, category, "
+            "location, area, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (user["id"], body.title, body.description, body.category,
+             body.location, body.area, lat, lng),
         )
         cid = cur.lastrowid
     svc.audit(user["id"], "file_complaint", "complaint", cid, body.title)
@@ -599,3 +664,87 @@ def mark_all_read(user: dict = Depends(get_current_user)) -> dict:
     with get_conn() as conn:
         conn.execute("UPDATE notifications SET read = 1 WHERE user_id = ?", (user["id"],))
     return {"ok": True}
+
+
+# ============================================================= BROADCASTS
+# City-wide alerts (disasters, advisories). The broadcast row powers the
+# always-visible banner; a notification per active user delivers the ping.
+_BROADCAST_KINDS = {"disaster", "advisory"}
+_SEVERITIES = ("low", "medium", "high", "critical")
+
+
+@notif_router.post("/broadcast", tags=["notifications"])
+def send_broadcast(body: BroadcastIn,
+                   user: dict = Depends(require_role("admin"))) -> dict:
+    if body.kind not in _BROADCAST_KINDS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "kind must be disaster|advisory")
+    if body.severity not in _SEVERITIES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid severity")
+    if body.expires_at:
+        try:
+            datetime.fromisoformat(body.expires_at)
+        except ValueError:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                "expires_at must be ISO datetime")
+
+    prefix = f"[{body.severity.upper()}]"
+    where = f" ({body.area})" if body.area else ""
+    message = f"{prefix} {body.title}{where}: {body.message}"
+
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO broadcasts (kind, title, message, area, severity, "
+            "link, expires_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (body.kind, body.title, body.message, body.area, body.severity,
+             body.link, body.expires_at or None, user["id"]),
+        )
+        bid = cur.lastrowid
+        # fan out one notification per active user, in a single transaction
+        uids = [r["id"] for r in conn.execute(
+            "SELECT id FROM users WHERE active = 1")]
+        conn.executemany(
+            "INSERT INTO notifications (user_id, type, message, link) "
+            "VALUES (?, ?, ?, ?)",
+            [(uid, body.kind, message, body.link) for uid in uids],
+        )
+    svc.audit(user["id"], "broadcast", "broadcast", bid,
+              f"{body.kind}/{body.severity}: {body.title} -> {len(uids)} users")
+    return {"id": bid, "recipients": len(uids)}
+
+
+@notif_router.get("/broadcasts/active", tags=["notifications"])
+def active_broadcasts(user: dict = Depends(get_current_user)) -> list[dict]:
+    """Active, unexpired broadcasts for the alert banner — all roles."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT b.*, u.name AS sender FROM broadcasts b "
+            "JOIN users u ON u.id = b.created_by "
+            "WHERE b.active = 1 AND (b.expires_at IS NULL "
+            "OR b.expires_at > datetime('now')) "
+            "ORDER BY CASE b.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 "
+            "WHEN 'medium' THEN 2 ELSE 3 END, b.created_at DESC",
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@notif_router.get("/broadcasts", tags=["notifications"])
+def list_broadcasts(user: dict = Depends(require_role("admin"))) -> list[dict]:
+    """Full broadcast history for the admin panel (newest first)."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT b.*, u.name AS sender FROM broadcasts b "
+            "JOIN users u ON u.id = b.created_by "
+            "ORDER BY b.created_at DESC LIMIT 100").fetchall()
+    return [dict(r) for r in rows]
+
+
+@notif_router.post("/broadcasts/{bid}/deactivate", tags=["notifications"])
+def deactivate_broadcast(bid: int,
+                         user: dict = Depends(require_role("admin"))) -> dict:
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM broadcasts WHERE id = ?", (bid,)).fetchone()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Broadcast not found")
+        conn.execute("UPDATE broadcasts SET active = 0 WHERE id = ?", (bid,))
+    svc.audit(user["id"], "broadcast_deactivate", "broadcast", bid)
+    return {"id": bid, "active": False}

@@ -21,12 +21,13 @@ def audit(actor_id, action: str, entity: str, entity_id, detail: str = "") -> No
 
 # ---------------- notifications ----------------
 def notify(user_id: int, ntype: str, message: str, case_id=None,
-           complaint_id=None, email: bool = False) -> None:
+           complaint_id=None, link: str | None = None,
+           email: bool = False) -> None:
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO notifications (user_id, type, message, case_id, complaint_id) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (user_id, ntype, message, case_id, complaint_id),
+            "INSERT INTO notifications (user_id, type, message, case_id, "
+            "complaint_id, link) VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, ntype, message, case_id, complaint_id, link),
         )
         if email:
             row = conn.execute("SELECT email FROM users WHERE id = ?", (user_id,)).fetchone()

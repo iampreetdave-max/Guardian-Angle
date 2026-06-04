@@ -46,9 +46,13 @@ class CreateUserIn(BaseModel):
 
 class UpdateUserIn(BaseModel):
     """Partial update of a staff user. Only fields present in the request body
-    are changed (team_id may be set to null to remove from a team)."""
+    are changed (team_id may be set to null to remove from a team).
+
+    ``active=False`` deactivates the account (and revokes its sessions); the
+    user can no longer authenticate until reactivated."""
     team_id: Optional[int] = None
     role: Optional[str] = None
+    active: Optional[bool] = None
 
 
 class TeamIn(BaseModel):
@@ -63,6 +67,19 @@ class ComplaintIn(BaseModel):
     description: str
     category: Optional[str] = None
     location: Optional[str] = None
+    area: Optional[str] = None      # Ahmedabad locality (constants/ahmedabad.py)
+
+
+# ---- broadcasts (city-wide disaster / advisory alerts) ----
+class BroadcastIn(BaseModel):
+    kind: str = Field("advisory", description="disaster|advisory")
+    title: str = Field(..., min_length=3, max_length=120)
+    message: str = Field(..., min_length=3, max_length=2000)
+    area: Optional[str] = None      # optional Ahmedabad locality
+    severity: str = Field("medium", description="low|medium|high|critical")
+    link: Optional[str] = None
+    expires_at: Optional[str] = Field(
+        None, description="ISO datetime; empty = active until deactivated")
 
 
 class TriageIn(BaseModel):

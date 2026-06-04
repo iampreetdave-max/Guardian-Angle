@@ -146,6 +146,45 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
 
+-- Always-on CCTV anomaly watch: one row per debounced incident (consecutive
+-- detections of the same type on the same feed collapse into one event).
+-- References the VisionScan core tables (same SQLite file, created earlier
+-- in init_db), so the FKs are valid by the time this schema is applied.
+CREATE TABLE IF NOT EXISTS anomaly_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id    INTEGER NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    frame_id    INTEGER REFERENCES frames(id) ON DELETE SET NULL,
+    type        TEXT NOT NULL,             -- fire|smoke|accident|weapon|violence
+    confidence  REAL NOT NULL,
+    source      TEXT NOT NULL,             -- clip|yolo|clip+yolo
+    x1 REAL, y1 REAL, x2 REAL, y2 REAL,    -- optional bbox (object signals)
+    status      TEXT NOT NULL DEFAULT 'new',   -- new|acknowledged|dismissed
+    peak_count  INTEGER NOT NULL DEFAULT 1,    -- frames merged into this event
+    last_ts_sec REAL,                      -- newest grouped frame timestamp
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_anom_status ON anomaly_events(status);
+CREATE INDEX IF NOT EXISTS idx_anom_video ON anomaly_events(video_id, type);
+
+-- Government/admin city-wide alerts (disasters, advisories). The broadcast
+-- row is the durable record + powers the "active alert" banner; delivery to
+-- each user is fanned out into the notifications table at send time.
+CREATE TABLE IF NOT EXISTS broadcasts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind       TEXT NOT NULL DEFAULT 'advisory',  -- disaster|advisory
+    title      TEXT NOT NULL,
+    message    TEXT NOT NULL,
+    area       TEXT,                              -- optional Ahmedabad locality
+    severity   TEXT NOT NULL DEFAULT 'medium',    -- low|medium|high|critical
+    link       TEXT,
+    expires_at TEXT,                              -- ISO; NULL = until deactivated
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_broadcasts_active ON broadcasts(active);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     actor_id   INTEGER,
@@ -156,6 +195,33 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity, entity_id);
+
+-- Login attempt journal: powers brute-force lockout + security event review.
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    email      TEXT NOT NULL,
+    ip         TEXT,
+    ok         INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempts ON login_attempts(email, created_at);
+
+-- Tiny key/value store for runtime switches (e.g. emergency lockdown).
+CREATE TABLE IF NOT EXISTS app_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Patrol check-ins: ground truth for the predictive patrol-routing loop.
+CREATE TABLE IF NOT EXISTS patrol_logs (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    officer_id INTEGER NOT NULL REFERENCES users(id),
+    area       TEXT NOT NULL,
+    note       TEXT,
+    status     TEXT NOT NULL DEFAULT 'clear',  -- clear|incident|followup
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_patrol_area ON patrol_logs(area, created_at);
 
 CREATE TABLE IF NOT EXISTS email_outbox (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

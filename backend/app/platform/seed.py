@@ -46,3 +46,59 @@ def seed_demo() -> None:
         if "lead" in ids:
             conn.execute("UPDATE teams SET lead_user_id = ? WHERE id = ?", (ids["lead"], tid))
     log.info("Seeded demo accounts (admin/lead/officer/citizen) + 1 team")
+
+    from ..config import get_settings
+    if get_settings().seed_demo_data:
+        try:
+            _seed_incidents(ids.get("citizen"), ids.get("lead"), tid)
+        except Exception:  # never block startup on demo data
+            log.warning("incident seeding skipped", exc_info=True)
+
+
+def _seed_incidents(citizen_id: int | None, lead_id: int | None, team_id: int) -> None:
+    """Seed ~20 generic Ahmedabad incidents (approximations compiled from
+    public NCRB/police/press reporting — see docs/AHMEDABAD_CRIME_DATA.md) as
+    complaints, converting the high-severity ones into cases. Gives the City
+    Map and analytics a realistic area-wise distribution on first launch."""
+    if not citizen_id:
+        return
+    from ..constants.ahmedabad import area_centroid
+    from .seed_ahmedabad import SEED_INCIDENTS
+
+    n_cases = 0
+    with get_conn() as conn:
+        for i, inc in enumerate(SEED_INCIDENTS):
+            centroid = area_centroid(inc["area"])
+            lat, lng = centroid if centroid else (None, None)
+            make_case = inc["severity"] in ("high", "critical") and lead_id
+            # Deterministic spread over the last ~90 days (some fresh, some
+            # old) so recency-weighted risk scoring and trend analysis have a
+            # realistic time axis instead of a single "today" spike.
+            age_days = (i * 11 + 2) % 90
+            cid = conn.execute(
+                "INSERT INTO complaints (citizen_id, title, description, "
+                "category, location, area, lat, lng, severity, status, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                "datetime('now', ?))",
+                (citizen_id, inc["title"], inc["description"], inc["category"],
+                 f"{inc['area']}, Ahmedabad ({inc['year']})", inc["area"],
+                 lat, lng, inc["severity"],
+                 "converted" if make_case else "under_review",
+                 f"-{age_days} days"),
+            ).lastrowid
+            if make_case:
+                case_id = conn.execute(
+                    "INSERT INTO cases (title, description, complaint_id, "
+                    "created_by, assigned_team_id, status, severity, citizen_id) "
+                    "VALUES (?, ?, ?, ?, ?, 'active', ?, ?)",
+                    (inc["title"], inc["description"], cid, lead_id, team_id,
+                     inc["severity"], citizen_id),
+                ).lastrowid
+                conn.execute(
+                    "UPDATE complaints SET case_id = ? WHERE id = ?", (case_id, cid))
+                conn.execute(
+                    "INSERT INTO case_assignments (case_id, user_id, role_on_case) "
+                    "VALUES (?, ?, 'lead')", (case_id, lead_id))
+                n_cases += 1
+    log.info("Seeded %d demo incidents (%d converted to cases) across Ahmedabad",
+             len(SEED_INCIDENTS), n_cases)
