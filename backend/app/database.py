@@ -118,6 +118,29 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if ncols and "link" not in ncols:
         conn.execute("ALTER TABLE notifications ADD COLUMN link TEXT")
 
+    # City Map: complaints gain an Ahmedabad locality + centroid coordinates.
+    ccols = {r["name"] for r in conn.execute("PRAGMA table_info(complaints)")}
+    if ccols:
+        if "area" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN area TEXT")
+        if "lat" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN lat REAL")
+        if "lng" not in ccols:
+            conn.execute("ALTER TABLE complaints ADD COLUMN lng REAL")
+
+    # City Map: cameras/feeds can be tagged with a locality so anomaly events
+    # become mappable.
+    vcols = {r["name"] for r in conn.execute("PRAGMA table_info(videos)")}
+    if vcols and "area" not in vcols:
+        conn.execute("ALTER TABLE videos ADD COLUMN area TEXT")
+
+    # Token revocation: bumping a user's token_version invalidates every JWT
+    # issued before the bump (logout-all, account disable, password reset).
+    ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if ucols and "token_version" not in ucols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
+
 
 @contextmanager
 def get_conn() -> Iterator[sqlite3.Connection]:

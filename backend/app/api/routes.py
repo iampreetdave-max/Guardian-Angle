@@ -15,17 +15,21 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
 )
 from fastapi.responses import Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..config import get_settings
-from ..platform.security import auth_gate
+from ..platform.security import auth_gate, _user_from_creds, is_staff
 from ..core import detection, embedding
 from ..core import query_router as qr
 from ..core.index import get_clip_index, get_face_index
 from ..database import get_conn
 from ..feeds import load_feeds
+from ..net_guard import assert_public_url
+from ..upload_validation import validate_image_bytes, validate_video_head
 from ..schemas import (
     HealthOut,
     ObjectQueryIn,
@@ -45,12 +49,40 @@ from ..services.stream import process_stream, start_live, stop_live
 
 router = APIRouter()
 
+# Keep parity with `_VIDEO_EXTS` in upload_validation.py.
 _VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
+
+# Tolerant bearer: never 401s on its own, so endpoints can degrade gracefully
+# (full payload for staff, minimal for anonymous) instead of rejecting probes.
+_opt_bearer = HTTPBearer(auto_error=False)
+
+
+def _optional_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_opt_bearer),
+) -> dict | None:
+    """Resolve the caller from a bearer token, or None if absent/invalid.
+
+    Unlike auth_gate this never raises — callers decide what an anonymous
+    request may see.
+    """
+    if creds is None:
+        return None
+    try:
+        return _user_from_creds(creds)
+    except Exception:
+        return None
 
 
 # ------------------------------------------------------------------ system
-@router.get("/health", response_model=HealthOut, tags=["system"])
-def health() -> HealthOut:
+@router.get("/health", tags=["system"])
+def health(user: dict | None = Depends(_optional_user)) -> dict:
+    """Health probe. Anonymous/citizen callers learn only that we're up; the
+    full device/model/count payload is reserved for authenticated staff
+    (officer+). The React StatusBar polls this with its token attached, so
+    staff keep the live status while anonymous probes get nothing useful."""
+    if user is None or not is_staff(user):
+        return {"status": "ok"}
+
     settings = get_settings()
     with get_conn() as conn:
         n_videos = conn.execute("SELECT COUNT(*) c FROM videos").fetchone()["c"]
@@ -64,7 +96,7 @@ def health() -> HealthOut:
         },
         videos=n_videos,
         indexed_frames=get_clip_index().ntotal,
-    )
+    ).model_dump()
 
 
 # ------------------------------------------------------------------ videos
@@ -77,13 +109,38 @@ async def upload_video(
 ) -> VideoOut:
     settings = get_settings()
     ext = "." + (file.filename or "").rsplit(".", 1)[-1].lower()
-    if ext not in _VIDEO_EXTS:
-        raise HTTPException(400, f"Unsupported video type: {ext}")
+
+    # Sniff the first bytes: extension whitelist + container magic number.
+    head = await file.read(16)
+    validate_video_head(file.filename, head)
 
     stored_name = f"{uuid.uuid4().hex}{ext}"
     dest = settings.videos_dir / stored_name
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+
+    # Stream to disk in 1 MiB chunks, enforcing the size cap as we go so we
+    # never buffer a whole video in memory or write past the limit.
+    max_bytes = settings.max_video_upload_mb * 1024 * 1024
+    written = 0
+    try:
+        with dest.open("wb") as f:
+            f.write(head)
+            written += len(head)
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise HTTPException(
+                        413,
+                        f"Video exceeds the {settings.max_video_upload_mb} MB limit",
+                    )
+                f.write(chunk)
+    except Exception:
+        # Abort cleanly: drop the partial file (covers the 413 size cap and
+        # any I/O error mid-stream) before propagating.
+        dest.unlink(missing_ok=True)
+        raise
 
     with get_conn() as conn:
         cur = conn.execute(
@@ -108,6 +165,7 @@ def list_public_feeds() -> list[PublicFeed]:
 def ingest_stream(
     body: StreamIn, background: BackgroundTasks,
     _user: dict | None = Depends(auth_gate),
+    caller: dict | None = Depends(_optional_user),
 ) -> VideoOut:
     """Capture a bounded window from a public live stream and analyze it.
 
@@ -115,6 +173,12 @@ def ingest_stream(
     public YouTube-live street cams). The stream URL is stored as the feed's
     'path' and processed exactly like an uploaded video.
     """
+    # SSRF guard: a non-admin can only point us at genuinely public hosts.
+    # Authenticated admins are trusted to ingest internal/LAN feeds.
+    is_admin = bool(caller and caller.get("role") == "admin")
+    if not is_admin:
+        assert_public_url(body.url)
+
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO videos (filename, path, camera_id, status) "
@@ -123,18 +187,29 @@ def ingest_stream(
         )
         video_id = cur.lastrowid
 
+    # For non-admins, re-validate the *resolved* stream URL inside the worker
+    # (yt-dlp can resolve a public youtube.com link to a private address).
     background.add_task(
-        process_stream, video_id, body.url, body.duration_sec, body.max_frames
+        process_stream, video_id, body.url, body.duration_sec, body.max_frames,
+        enforce_public=not is_admin,
     )
     return _video_out(video_id)
 
 
 @router.post("/streams/live", response_model=VideoOut, tags=["videos"])
-def start_live_feed(body: StreamIn, _user: dict | None = Depends(auth_gate)) -> VideoOut:
+def start_live_feed(
+    body: StreamIn,
+    _user: dict | None = Depends(auth_gate),
+    caller: dict | None = Depends(_optional_user),
+) -> VideoOut:
     """Start a continuous LIVE monitoring session on a public feed: the stream
     is watched and indexed in real time until stopped, so it can be viewed and
     searched live. Use only with intentionally-public feeds."""
-    video_id = start_live(body.url, body.camera_id)
+    # SSRF guard for non-admin callers (see ingest_stream).
+    is_admin = bool(caller and caller.get("role") == "admin")
+    if not is_admin:
+        assert_public_url(body.url)
+    video_id = start_live(body.url, body.camera_id, enforce_public=not is_admin)
     return _video_out(video_id)
 
 
@@ -278,7 +353,9 @@ async def search_image(
     group_events: bool = Form(True),
     _user: dict | None = Depends(auth_gate),
 ) -> SearchResponse:
-    frame = _decode_upload(await file.read())
+    data = await file.read()
+    validate_image_bytes(data)
+    frame = _decode_upload(data)
     hits = qr.search_image(frame, top_k, camera_id, video_id, group_events)
     return SearchResponse(
         query=f"[image:{file.filename}]", query_type="image",
@@ -297,7 +374,9 @@ async def search_face(
 ) -> SearchResponse:
     if not detection.face_available():
         raise HTTPException(503, "Face recognition model is not available")
-    frame = _decode_upload(await file.read())
+    data = await file.read()
+    validate_image_bytes(data)
+    frame = _decode_upload(data)
     hits = qr.search_face(frame, top_k, camera_id, video_id, group_events)
     return SearchResponse(
         query=f"[face:{file.filename}]", query_type="face",

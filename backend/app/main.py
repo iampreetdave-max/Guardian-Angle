@@ -38,13 +38,27 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+# Security middleware stack. FastAPI runs the LAST add_middleware first, so
+# adding Lockdown → RateLimit → Metrics → SecurityHeaders yields the intended
+# onion: SecurityHeaders outermost (headers on every response, including 429s
+# and 423s), then Metrics, RateLimit, Lockdown innermost.
+from .security_mw import (  # noqa: E402
+    LockdownMiddleware, MetricsMiddleware, RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
+app.add_middleware(LockdownMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(MetricsMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.on_event("startup")
 def _startup() -> None:
+    settings.assert_secure()  # refuse prod auth mode on the dev JWT secret
     settings.ensure_dirs()
     init_db()
     log = logging.getLogger("visionscan")
@@ -54,7 +68,7 @@ def _startup() -> None:
     # Warm models in the background so the first search / live frame is fast
     # rather than stalling ~30s on lazy load.
     def _warm() -> None:
-        from .core import detection, embedding
+        from .core import anomaly, detection, embedding
         try:
             embedding.warmup()
         except Exception:
@@ -63,6 +77,10 @@ def _startup() -> None:
             detection.warmup()
         except Exception:
             log.warning("detector warmup failed", exc_info=True)
+        try:
+            anomaly.warmup()  # pre-embed the anomaly prompt bank
+        except Exception:
+            log.warning("anomaly warmup failed", exc_info=True)
         log.info("Model warmup complete")
 
     import threading
@@ -94,6 +112,16 @@ app.mount(
 
 app.include_router(router, prefix="/api")
 
+# Anomaly watch — always-on incident alerts from the CCTV pipeline
+from .api.anomaly_routes import anomaly_router  # noqa: E402
+app.include_router(anomaly_router, prefix="/api")
+
+# Admin ops: server monitoring + emergency lockdown, and data export/backup
+from .api.admin_system import admin_system_router  # noqa: E402
+from .api.export_routes import export_router  # noqa: E402
+app.include_router(admin_system_router, prefix="/api")
+app.include_router(export_router, prefix="/api")
+
 # Arbiter legal-intelligence module (CityShield) — modular, under /api/legal/*
 from .arbiter.routes import router as legal_router  # noqa: E402
 app.include_router(legal_router, prefix="/api/legal")
@@ -107,6 +135,10 @@ from .platform.routes import (  # noqa: E402
     admin_router, auth_router, cases_router, complaints_router, notif_router,
 )
 from .platform.analytics import analytics_router  # noqa: E402
+from .platform.predictive import predict_router  # noqa: E402
+from .platform.patrol import patrol_router  # noqa: E402
+app.include_router(predict_router, prefix="/api/predict")
+app.include_router(patrol_router, prefix="/api/predict")
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(admin_router, prefix="/api")
 app.include_router(complaints_router, prefix="/api/complaints")

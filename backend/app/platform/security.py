@@ -32,11 +32,14 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 # ---------------- tokens ----------------
-def create_token(user_id: int, role: str) -> str:
+def create_token(user_id: int, role: str, token_version: int = 0) -> str:
     s = get_settings()
     payload = {
         "sub": str(user_id),
         "role": role,
+        # Embed the user's token_version so revocation (logout-all, password
+        # reset, role change, deactivation) invalidates tokens minted earlier.
+        "tv": token_version,
         "exp": datetime.now(timezone.utc) + timedelta(hours=s.jwt_expire_hours),
     }
     return jwt.encode(payload, s.jwt_secret, algorithm="HS256")
@@ -58,11 +61,17 @@ def _user_from_creds(creds: HTTPAuthorizationCredentials | None) -> dict:
     uid = int(payload.get("sub", 0))
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, name, email, role, team_id, active FROM users WHERE id = ?",
+            "SELECT id, name, email, role, team_id, active, token_version "
+            "FROM users WHERE id = ?",
             (uid,),
         ).fetchone()
     if row is None or not row["active"]:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
+    # Revocation check: tokens minted before a token_version bump are rejected.
+    # Tokens issued before the column existed carry no "tv" -> default 0, which
+    # equals the column default, so legacy tokens keep working.
+    if payload.get("tv", 0) != row["token_version"]:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token revoked")
     return dict(row)
 
 

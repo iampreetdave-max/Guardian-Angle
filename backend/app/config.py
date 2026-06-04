@@ -84,6 +84,34 @@ class Settings(BaseSettings):
     text_rel_ratio: float = 0.88
     region_rel_ratio: float = 0.88
 
+    # ---- Anomaly watch (always-on CCTV incident detection) ----
+    # Hybrid detector: CLIP zero-shot scene scoring (fire/smoke/accident/
+    # weapon/violence prompt ensembles, calibrated against "normal scene"
+    # prompts) + YOLO object signals (COCO 'knife'; optional specialized
+    # weights). Reuses the embeddings/detections the pipeline already
+    # computes, so the per-frame cost is negligible.
+    enable_anomaly: bool = True
+    # A CLIP class only fires when its similarity beats the best "normal"
+    # prompt by at least this margin. Calibrated empirically: anomaly frames
+    # land at +0.03..+0.15 margin, normal scenes are negative (see
+    # scripts/anomaly_selftest.py). Per-class overrides below.
+    anomaly_conf_threshold: float = 0.03
+    # Consecutive detections of the same type on the same feed within this
+    # window collapse into one event (mirrors event_gap_sec for search).
+    anomaly_event_gap_sec: float = 30.0
+    # Only events at/above this NORMALIZED confidence (0..1 — CLIP margins are
+    # rescaled onto the same scale YOLO confidences use) ping the admins.
+    # Applies to live feeds only.
+    anomaly_notify_threshold: float = 0.70
+    # YOLO 'knife' (COCO) minimum confidence to register a weapon signal.
+    anomaly_weapon_yolo_conf: float = 0.40
+    # Optional path to a specialized .pt (e.g. a fire/weapon YOLO). Loaded
+    # fail-soft: if missing/broken the CLIP layer still covers every class.
+    anomaly_specialized_weights: str = ""
+    # Per-class margin overrides, env as JSON:
+    # VISIONSCAN_ANOMALY_CLASS_THRESHOLDS={"weapon": 0.32}
+    anomaly_class_thresholds: dict[str, float] = {}
+
     # ---- Arbiter legal AI ----
     # If set, Arbiter uses Gemini for polished generation; otherwise it falls
     # back to offline, citation-grounded templates. Reads VISIONSCAN_GEMINI_API_KEY
@@ -103,9 +131,37 @@ class Settings(BaseSettings):
     jwt_secret: str = "cityshield-dev-secret-change-me"
     jwt_expire_hours: int = 12
     seed_demo_users: bool = True   # seed admin/officer/citizen accounts on first run
+    # Also seed ~20 generic Ahmedabad incidents (public-sourced approximations,
+    # see docs/AHMEDABAD_CRIME_DATA.md) so the City Map and analytics demo well.
+    seed_demo_data: bool = True
     # When True, the VisionScan + Arbiter API routes also require a valid login
     # token (production). Default False keeps the public, login-less demo working.
     require_auth: bool = False
+
+    # ---- Security protocol ----
+    # Login brute-force lockout: this many failures within the window → 429.
+    login_max_attempts: int = 5
+    login_lockout_minutes: int = 15
+    # In-memory per-IP rate limiting (token buckets, no external store).
+    enable_rate_limit: bool = True
+    rate_limit_default_per_min: int = 120
+    rate_limit_login_per_min: int = 10
+    rate_limit_upload_per_min: int = 20
+    # Upload caps (enforced while streaming, with magic-number sniffing).
+    max_video_upload_mb: int = 500
+    max_image_upload_mb: int = 15
+    # Arbiter prompt-injection guard: hard cap on untrusted text fed to the LLM.
+    arbiter_max_input_chars: int = 4000
+
+    def assert_secure(self) -> None:
+        """Refuse to run a production (require_auth=True) deployment on the
+        well-known dev JWT secret. Dev/demo mode is unaffected."""
+        if self.require_auth and self.jwt_secret == "cityshield-dev-secret-change-me":
+            raise RuntimeError(
+                "VISIONSCAN_REQUIRE_AUTH is enabled but VISIONSCAN_JWT_SECRET "
+                "is still the dev default — set a strong secret before "
+                "exposing this deployment."
+            )
 
     # ---- Email (hybrid: SMTP if configured, else offline outbox) ----
     smtp_host: str = ""
