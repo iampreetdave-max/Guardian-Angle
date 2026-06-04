@@ -11,9 +11,11 @@ same letterhead, e.g. ``from app.services.report import _brand_header``.
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import logging
 import os
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -49,6 +51,106 @@ ACCENT = GOLD_DARK
 
 # Height of the navy letterhead band.
 _BAND_H = 70
+
+# ---- Export-integrity (chain-of-custody) ----
+# Header name carried on every served report PDF; mirrors the in-footer stamp.
+INTEGRITY_HEADER = "X-Integrity-SHA256"
+
+# Per-build integrity state the footer draws, set by ``stamp_integrity``. Holds
+# a (footer_line, generated_at) pair: ``footer_line`` is the printed stamp and
+# ``generated_at`` PINS the footer's "Generated …" timestamp for the build so
+# BOTH passes (and any later re-verification render) produce byte-identical
+# content — which is what makes the stamped hash genuinely reproducible.
+#
+# A ContextVar (not a global) so concurrent report builds in different request
+# threads never bleed each other's hash into a footer. When unset the footer
+# renders exactly as before (live ``datetime.now()``), so these helpers are
+# purely additive and the legacy ``build_report``/CrimeGPT paths are untouched.
+_INTEGRITY_CTX: ContextVar[tuple[str, str] | None] = ContextVar(
+    "report_integrity", default=None)
+
+
+def integrity_sha256(pdf_bytes: bytes) -> str:
+    """Full lowercase hex SHA-256 of the rendered PDF payload — the canonical
+    chain-of-custody digest for an exported report."""
+    return hashlib.sha256(pdf_bytes).hexdigest()
+
+
+def integrity_short(digest: str) -> str:
+    """Human-readable short form of a hex digest: ``ab12…ef89`` (first 4 + last 4
+    hex chars with an ellipsis), for the printed footer line."""
+    d = digest or ""
+    return f"{d[:4]}…{d[-4:]}" if len(d) >= 8 else d
+
+
+def integrity_header(digest: str) -> dict[str, str]:
+    """Response header dict for a known integrity digest. Use with the digest
+    returned by ``build_report_with_integrity`` / ``stamp_integrity`` so the
+    served ``X-Integrity-SHA256`` matches the value stamped in the PDF footer::
+
+        pdf, digest = build_report_with_integrity(...)
+        return Response(content=pdf, media_type="application/pdf",
+                        headers={**integrity_header(digest), ...})
+    """
+    return {INTEGRITY_HEADER: digest}
+
+
+def integrity_headers(pdf_bytes: bytes) -> dict[str, str]:
+    """Response header dict computed from served PDF bytes (the delivered-bytes
+    digest). For stamped reports prefer ``integrity_header(digest)`` so header and
+    footer carry the same content hash."""
+    return {INTEGRITY_HEADER: integrity_sha256(pdf_bytes)}
+
+
+def stamp_integrity(build_fn) -> tuple[bytes, str]:
+    """Render a PDF with a reproducible chain-of-custody footer, two-pass.
+
+    ``build_fn`` is a zero-arg callable that builds and returns the PDF bytes
+    (it must call ``_on_page`` / ``_brand_footer`` for the stamp to appear).
+
+    Determinism is the whole point: rendering runs with ReportLab's ``invariant``
+    flag on (fixed PDF timestamps/IDs) AND the footer's "Generated" time pinned,
+    so the document bytes become a pure function of its content. That makes the
+    stamped SHA-256 genuinely re-verifiable -- re-render the same content and you
+    get the same hash.
+
+      pass 1: render the *content* (blank stamp) -> hash those bytes.
+      pass 2: render again with the footer carrying
+              ``Integrity SHA-256: ab12...ef89 . generated <ts>``.
+
+    Returns ``(final_pdf_bytes, sha256_hex)`` where ``sha256_hex`` is the pass-1
+    content hash -- the value stamped in the footer AND the one to advertise in
+    the ``X-Integrity-SHA256`` header (via ``integrity_header``), so the printed
+    copy and the response header agree.
+
+    Fail-soft: if the second pass raises, the (unstamped) first-pass bytes and
+    their hash are returned so a report is never lost to a stamping error.
+    """
+    from reportlab import rl_config
+
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    prev_invariant = rl_config.invariant
+    rl_config.invariant = 1
+    # Pass 1 -- content only, but with the "Generated" timestamp pinned so the
+    # content bytes match what pass 2 (and any re-verification) will produce.
+    token = _INTEGRITY_CTX.set(("", ts))
+    try:
+        content = build_fn()
+        digest = integrity_sha256(content)
+        stamp = f"Integrity SHA-256: {integrity_short(digest)} · generated {ts}"
+        # Pass 2 -- same content, footer now carries the stamp line.
+        _INTEGRITY_CTX.reset(token)
+        token = _INTEGRITY_CTX.set((stamp, ts))
+        try:
+            stamped = build_fn()
+            return stamped, digest
+        except Exception:  # pragma: no cover - defensive: never lose a report
+            log.warning("integrity re-render failed; serving unstamped PDF",
+                        exc_info=True)
+            return content, digest
+    finally:
+        _INTEGRITY_CTX.reset(token)
+        rl_config.invariant = prev_invariant
 
 
 def _find_logo() -> Path | None:
@@ -140,7 +242,11 @@ def _brand_footer(canvas, doc) -> None:
     canvas.setLineWidth(0.8)
     canvas.line(doc.leftMargin, y + 10, page_w - doc.rightMargin, y + 10)
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # On an integrity-stamped build the "Generated" time is PINNED (so both
+    # passes hash identically); otherwise it's live. Backward compatible: an
+    # unstamped build behaves exactly as before.
+    integ = _INTEGRITY_CTX.get()
+    now = integ[1] if integ else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     canvas.setFillColor(INK)
     canvas.setFont("Helvetica", 7.5)
     canvas.drawString(doc.leftMargin, y, f"Generated {now}")
@@ -149,6 +255,14 @@ def _brand_footer(canvas, doc) -> None:
         "CONFIDENTIAL — For authorized investigation use only",
     )
     canvas.drawRightString(page_w - doc.rightMargin, y, f"Page {doc.page}")
+
+    # Chain-of-custody stamp (only on the second integrity pass; see
+    # stamp_integrity). Drawn just under the footer line in muted gold so a
+    # printed copy carries its verifiable hash + generation time.
+    if integ and integ[0]:
+        canvas.setFillColor(GOLD_DARK)
+        canvas.setFont("Helvetica", 6.5)
+        canvas.drawCentredString(page_w / 2.0, y - 9, integ[0])
     canvas.restoreState()
 
 
@@ -168,13 +282,17 @@ def _styles():
     return styles
 
 
-def build_report(
+def _build_report_pdf(
     case_title: str,
     investigator: str,
     query: str,
     query_type: str,
     frame_ids: list[int],
 ) -> bytes:
+    """Render the forensic CCTV report to PDF bytes once. Self-contained (fresh
+    buffer + story every call) so it can be invoked twice by ``stamp_integrity``
+    without flowable-reuse issues. The behaviour is identical to the original
+    ``build_report`` body."""
     settings = get_settings()
     styles = _styles()
     buf = io.BytesIO()
@@ -191,7 +309,11 @@ def build_report(
     story = []
     story.append(Paragraph("CCTV Investigation Report", styles["VSTitle"]))
     story.append(Spacer(1, 6))
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Pin the body "Generated" time to the integrity build's timestamp when one
+    # is active, so both stamp passes (and re-verification) hash identically;
+    # otherwise live, as before.
+    _integ = _INTEGRITY_CTX.get()
+    now = _integ[1] if _integ else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     meta = (
         f"<b>Case:</b> {case_title}<br/>"
         f"<b>Investigator:</b> {investigator or 'N/A'}<br/>"
@@ -265,3 +387,35 @@ def build_report(
 
     doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
     return buf.getvalue()
+
+
+def build_report(
+    case_title: str,
+    investigator: str,
+    query: str,
+    query_type: str,
+    frame_ids: list[int],
+) -> bytes:
+    """Backward-compatible entry point: returns the stamped report PDF bytes.
+
+    Now carries the chain-of-custody footer (``Integrity SHA-256: … · generated
+    …``); the signature and return type are unchanged so existing callers keep
+    working. Use ``build_report_with_integrity`` when you also need the digest for
+    the ``X-Integrity-SHA256`` response header."""
+    pdf, _digest = build_report_with_integrity(
+        case_title, investigator, query, query_type, frame_ids)
+    return pdf
+
+
+def build_report_with_integrity(
+    case_title: str,
+    investigator: str,
+    query: str,
+    query_type: str,
+    frame_ids: list[int],
+) -> tuple[bytes, str]:
+    """Render the forensic report with its integrity footer and return
+    ``(pdf_bytes, sha256_hex)``. The hex digest is the one stamped in the footer;
+    pass it (or the bytes) to ``integrity_headers`` at the serving site."""
+    return stamp_integrity(lambda: _build_report_pdf(
+        case_title, investigator, query, query_type, frame_ids))

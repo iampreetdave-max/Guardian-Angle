@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer, TileLayer, CircleMarker, Polyline, Popup, Tooltip,
 } from "react-leaflet";
@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import {
   Map as MapIcon, Loader2, Siren, TriangleAlert, Route, X,
   TrendingUp, TrendingDown, Minus, Building2, Brain, Layers, ShieldAlert,
-  Info, Target, ChevronDown, ChevronRight, Download, BarChart3,
+  Info, Target, ChevronDown, ChevronRight, Download, BarChart3, WifiOff,
 } from "lucide-react";
 import * as API from "../../api";
 import { BarList } from "./charts";
@@ -405,6 +405,22 @@ export default function CityMapView() {
   const [valLoading, setValLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);  // area name with open "why"
   const [exporting, setExporting] = useState(null); // export kind in flight
+  const [tilesOffline, setTilesOffline] = useState(false); // OSM tiles failing
+
+  // Tile-resilience: count tile loads vs errors (refs so counting never
+  // re-renders the map). When >25% of attempted tiles error, surface a small
+  // offline notice — the data layers (circles/routes) keep rendering over the
+  // navy MapContainer background regardless of basemap availability.
+  const tileStats = useRef({ ok: 0, err: 0 });
+  const onTileLoad = useCallback(() => {
+    tileStats.current.ok += 1;
+  }, []);
+  const onTileError = useCallback(() => {
+    const s = tileStats.current;
+    s.err += 1;
+    const attempted = s.ok + s.err;
+    if (attempted >= 8 && s.err / attempted > 0.25) setTilesOffline(true);
+  }, []);
 
   const refresh = useCallback(() => {
     const params = {};
@@ -601,12 +617,25 @@ export default function CityMapView() {
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_280px]">
         {/* map */}
-        <div className="min-h-[460px] overflow-hidden rounded-xl border border-ink-600">
+        <div className="relative min-h-[460px] overflow-hidden rounded-xl border border-ink-600">
+          {tilesOffline && (
+            <div className="pointer-events-none absolute left-1/2 top-3 z-[1000] -translate-x-1/2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ink-900/90 px-3 py-1.5 text-[11px] font-semibold text-amber-200 shadow-lg ring-1 ring-amber-500/40">
+                <WifiOff size={12} className="text-amber-300" />
+                Map tiles unavailable — running offline; data layers still live
+              </span>
+            </div>
+          )}
           <MapContainer center={[data.center.lat, data.center.lng]} zoom={12} scrollWheelZoom
             style={{ height: "100%", width: "100%", minHeight: 460, background: "#0a1124" }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              // A transparent 1x1 PNG for failed tiles -> the navy MapContainer
+              // background shows through instead of broken-image gray. The data
+              // layers (circles/routes) stay fully visible offline.
+              errorTileUrl="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+              eventHandlers={{ tileload: onTileLoad, tileerror: onTileError }}
             />
 
             {layer === "reports" && data.areas.map((a) => {
