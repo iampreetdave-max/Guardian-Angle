@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark, Siren, Map, FileText } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark, Siren, Map as MapIcon, FileText } from "lucide-react";
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
@@ -67,7 +67,7 @@ function Workbench() {
     staff && { key: "dashboard", label: "Dashboard", icon: BarChart3 },
     staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
     staff && { key: "alerts", label: "Live Alerts", icon: Siren },
-    staff && { key: "map", label: "City Map", icon: Map },
+    staff && { key: "map", label: "City Map", icon: MapIcon },
     staff && { key: "arbiter", label: "Arbiter", icon: Scale },
     staff && { key: "crimegpt", label: "CrimeGPT", icon: FileText },
     { key: "govintel", label: "Legal Feed", icon: Landmark },
