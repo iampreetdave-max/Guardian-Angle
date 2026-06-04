@@ -62,6 +62,15 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "proposals")
 TODAY = date.today().isoformat()
 TEAM = "Team <TBD>"
+DEMO_URL = "https://visionscan.centralindia.cloudapp.azure.com"
+GITHUB_URL = "https://github.com/iampreetdave-max/Guardian-Angle"
+HF_URL = "https://huggingface.co/spaces/iampreetdave/visionscan"
+DEMO_ACCOUNTS = [
+    ["Admin", "admin@city.gov", "admin123"],
+    ["Team lead", "lead@city.gov", "lead123"],
+    ["Officer", "officer@city.gov", "officer123"],
+    ["Citizen", "citizen@example.com", "citizen123"],
+]
 
 
 # ============================================================ live backtest
@@ -204,6 +213,7 @@ def _cover(spec: dict) -> list:
         ["Category", f"Category {spec['category']}"],
         ["Hackathon", "Kanad S.H.I.E.L.D. 2026 — Cyber Crime Branch, Ahmedabad City Police"],
         ["Venue", "Live pitch at i-Hub Gujarat · Submission 20 June 2026"],
+        ["Live demo", DEMO_URL],
         ["Team", TEAM],
         ["Date", TODAY],
     ]
@@ -488,12 +498,35 @@ def _evidence_facts(intro: str, facts: list[str]) -> list:
     out.append(_p(
         "<b>Regression evidence:</b> the backend suite — <b>77 tests passing</b>, "
         "verified live for this submission — pins the security controls and core "
-        "behaviour. The platform also runs as a public Hugging Face Space "
-        "(huggingface.co/spaces/iampreetdave/visionscan)."))
+        f"behaviour. The platform runs live at {DEMO_URL} "
+        "(see Live demo &amp; access)."))
     return out
 
 
 # ============================================================ proposal assembly
+def _live_demo_access() -> list:
+    out = [_p("Live demo &amp; access", "VSH1"),
+           HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
+           _p("The complete platform is deployed and publicly reachable over HTTPS — "
+              "evaluators can verify every claim in this proposal hands-on, at any time, "
+              "without installing anything:"),
+           _p(f"<b>Live deployment:</b> <font color='#1a4fa0'>{DEMO_URL}</font> "
+              "(Microsoft Azure, Central India region, TLS-secured)"),
+           _p(f"<b>Source code:</b> <font color='#1a4fa0'>{GITHUB_URL}</font>"),
+           _p(f"<b>Mirror (Hugging Face Space):</b> <font color='#1a4fa0'>{HF_URL}</font>"),
+           Spacer(1, 4),
+           _p("<b>Demo accounts</b> — log in with any role to explore its dashboard:")]
+    rows = [["Role", "Email", "Password"]] + DEMO_ACCOUNTS
+    out.append(_table(rows, [3.5 * cm, 7.5 * cm, 4 * cm]))
+    out.append(_p(
+        "All data on the demo is synthetic (seeded Ahmedabad demonstration data); the "
+        "instance resets cleanly and contains no real personal or police information. "
+        "The recommended first walk-through: log in as Officer &rarr; City Map &rarr; "
+        "toggle the Cyber-fraud layer &rarr; open a hotspot's “Why this hotspot?” "
+        "breakdown &rarr; Accuracy panel &rarr; generate a patrol route."))
+    return out
+
+
 def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -515,6 +548,8 @@ def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     story.append(PageBreak())
     story += spec["evidence"](bt)
     story.append(PageBreak())
+    story += _live_demo_access()
+    story.append(Spacer(1, 8))
     story += _security_summary(spec.get("security_extra"))
     story += _disclaimer_page()
 

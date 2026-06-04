@@ -21,6 +21,7 @@ license: mit
 
 [![tests](https://img.shields.io/badge/backend%20tests-77%20passing-2ea44f)](backend/tests)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
+[![Live demo](https://img.shields.io/badge/live%20demo-HTTPS-success)](https://visionscan.centralindia.cloudapp.azure.com)
 [![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue)](https://huggingface.co/spaces/iampreetdave/visionscan)
 [![offline](https://img.shields.io/badge/runs-offline%20on%20CPU-0a1124)](#quick-start)
 
@@ -169,6 +170,11 @@ its FIR and statutory documents (CrimeGPT/Arbiter), and surface relevant law
 ---
 
 ## Quick start
+
+### Option 0 — No install: the live demo
+
+The full platform is deployed at **https://visionscan.centralindia.cloudapp.azure.com**
+(Azure, Central India, TLS) — open it and sign in with a [demo account](#demo-accounts).
 
 ### Option A — One command (recommended)
 

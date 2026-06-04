@@ -62,8 +62,9 @@ passes; app boots and demos **with Wi-Fi unplugged**.
 ---
 
 ### Try it / demo accounts
-**Deploy:** `docker compose up -d` → `http://localhost:8080` (or `start.ps1`).
-**HF Space:** https://huggingface.co/spaces/iampreetdave/visionscan
+**Live demo (HTTPS):** https://visionscan.centralindia.cloudapp.azure.com
+**Local deploy:** `docker compose up -d` → `http://localhost:8080` (or `start.ps1`).
+**Mirror (HF Space):** https://huggingface.co/spaces/iampreetdave/visionscan
 
 | Role | Email | Password |
 |---|---|---|
