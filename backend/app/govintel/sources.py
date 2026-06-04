@@ -185,19 +185,38 @@ def fetch_feed(feed: dict, timeout: int) -> list[dict]:
 
 def fetch_all() -> list[dict]:
     """Poll every configured feed. Best-effort; unavailable feeds are skipped."""
+    return fetch_all_with_status()[0]
+
+
+def fetch_all_with_status() -> tuple[list[dict], list[dict]]:
+    """Like fetch_all(), but also returns a per-feed health record so the refresh
+    layer can persist source health for the insights strip.
+
+    Returns (docs, statuses) where each status is
+    {feed_key, name, ok, last_count, attempted_at}. Never raises.
+    """
+    from datetime import datetime, timezone
+
     settings = get_settings()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     if not getattr(settings, "govintel_enable", True):
-        return []
+        return [], []
     timeout = getattr(settings, "govintel_feed_timeout", 6)
     docs: list[dict] = []
     seen: set[str] = set()
+    statuses: list[dict] = []
     for feed in FEEDS:
-        for doc in fetch_feed(feed, timeout):
+        items = fetch_feed(feed, timeout)
+        statuses.append({
+            "feed_key": feed["key"], "name": feed["name"],
+            "ok": bool(items), "last_count": len(items), "attempted_at": now,
+        })
+        for doc in items:
             if doc["id"] in seen:
                 continue
             seen.add(doc["id"])
             docs.append(doc)
-    return docs
+    return docs, statuses
 
 
 def feed_catalog() -> list[dict]:

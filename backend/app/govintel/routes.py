@@ -33,6 +33,17 @@ class BookmarkRequest(BaseModel):
     doc_id: str
 
 
+class SavedSearchRequest(BaseModel):
+    name: str = ""
+    query: str = ""
+    doc_type: str = ""
+    region: str = ""
+    department: str = ""
+    date_from: str = ""
+    date_to: str = ""
+    alert: bool = False
+
+
 # ----------------------------------------------------------------- health/meta
 @router.get("/health", tags=["gov"])
 def gov_health() -> dict:
@@ -65,6 +76,13 @@ def gov_trending() -> dict:
     return {"trending": service.trending()}
 
 
+@router.get("/insights", tags=["gov"])
+def gov_insights() -> dict:
+    """Trending/insights strip: counts by type & jurisdiction, most-bookmarked,
+    latest fetch timestamp and per-feed source health."""
+    return service.insights()
+
+
 @router.get("/suggest", tags=["gov"])
 def gov_suggest(q: str = Query("", description="prefix to auto-complete")) -> dict:
     return {"suggestions": service.suggest(q)}
@@ -76,6 +94,7 @@ def gov_search(
     q: str = Query("", description="keyword / semantic query"),
     doc_type: str = Query("", description="GR|Notification|Circular|Act|Rule|Judgment|Scheme"),
     region: str = Query("", description="central|gujarat"),
+    jurisdiction: str = Query("", description="alias for region: central|gujarat"),
     department: str = Query(""),
     date_from: str = Query("", description="ISO date lower bound"),
     date_to: str = Query("", description="ISO date upper bound"),
@@ -83,8 +102,8 @@ def gov_search(
     _user=Depends(auth_gate),
 ) -> dict:
     return service.search(query=q, doc_type=doc_type, region=region,
-                          department=department, date_from=date_from,
-                          date_to=date_to, k=k)
+                          jurisdiction=jurisdiction, department=department,
+                          date_from=date_from, date_to=date_to, k=k)
 
 
 @router.get("/document/{doc_id}", tags=["gov"])
@@ -143,6 +162,41 @@ def add_subscription(body: SubscriptionRequest,
 @router.delete("/subscriptions/{sub_id}", tags=["gov"])
 def remove_subscription(sub_id: int, user: dict = Depends(get_current_user)) -> dict:
     service.remove_subscription(user["id"], sub_id)
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------- saved searches
+@router.get("/saved-searches", tags=["gov"])
+def list_saved_searches(user: dict = Depends(get_current_user)) -> dict:
+    return {"items": service.list_saved_searches(user["id"])}
+
+
+@router.post("/saved-searches", tags=["gov"])
+def add_saved_search(body: SavedSearchRequest,
+                     user: dict = Depends(get_current_user)) -> dict:
+    if not (body.query.strip() or body.doc_type or body.region or body.department):
+        raise HTTPException(400, "A saved search needs a query, category, region or department")
+    filters = {
+        "doc_type": body.doc_type, "region": body.region,
+        "department": body.department, "date_from": body.date_from,
+        "date_to": body.date_to,
+    }
+    return service.add_saved_search(user["id"], name=body.name, query=body.query,
+                                    filters=filters, alert=body.alert)
+
+
+@router.post("/saved-searches/{search_id}/run", tags=["gov"])
+def run_saved_search(search_id: int, k: int = Query(24, ge=1, le=60),
+                     user: dict = Depends(get_current_user)) -> dict:
+    res = service.run_saved_search(user["id"], search_id, k=k)
+    if not res:
+        raise HTTPException(404, "Saved search not found")
+    return res
+
+
+@router.delete("/saved-searches/{search_id}", tags=["gov"])
+def remove_saved_search(search_id: int, user: dict = Depends(get_current_user)) -> dict:
+    service.remove_saved_search(user["id"], search_id)
     return {"ok": True}
 
 

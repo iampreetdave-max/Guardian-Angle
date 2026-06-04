@@ -91,6 +91,10 @@ def init_db() -> None:
         from .govintel.schema import GOVINTEL_SCHEMA
 
         conn.executescript(GOVINTEL_SCHEMA)
+        # CrimeGPT tables (unified case data pool, diary, generated documents)
+        from .crimegpt.schema import CRIMEGPT_SCHEMA
+
+        conn.executescript(CRIMEGPT_SCHEMA)
         _migrate(conn)
         conn.commit()
     # seed demo accounts on first run (after tables exist)

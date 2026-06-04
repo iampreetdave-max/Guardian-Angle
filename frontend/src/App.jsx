@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark, Siren, Map } from "lucide-react";
+import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, Shield, LogOut, BarChart3, Menu, X, Lightbulb, Boxes, Landmark, Siren, Map, FileText } from "lucide-react";
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
@@ -11,6 +11,7 @@ import ReportTray from "./components/ReportTray";
 import LivePlayer from "./components/LivePlayer";
 import ArbiterPanel from "./components/Arbiter/ArbiterPanel";
 import GovIntelPanel from "./components/GovIntel/GovIntelPanel";
+import CrimeGPTView from "./components/crimegpt/CrimeGPTView";
 import LoginView from "./components/platform/LoginView";
 import NotificationBell from "./components/platform/NotificationBell";
 import ComplaintsView from "./components/platform/ComplaintsView";
@@ -68,6 +69,7 @@ function Workbench() {
     staff && { key: "alerts", label: "Live Alerts", icon: Siren },
     staff && { key: "map", label: "City Map", icon: Map },
     staff && { key: "arbiter", label: "Arbiter", icon: Scale },
+    staff && { key: "crimegpt", label: "CrimeGPT", icon: FileText },
     { key: "govintel", label: "Legal Feed", icon: Landmark },
     { key: "cases", label: "Cases", icon: FolderOpen },
     { key: "complaints", label: "Complaints", icon: Megaphone },
@@ -311,6 +313,10 @@ function Workbench() {
       ) : module === "govintel" ? (
         <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
           <GovIntelPanel />
+        </div>
+      ) : module === "crimegpt" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
+          <CrimeGPTView />
         </div>
       ) : module === "dashboard" || module === "complaints" || module === "cases" || module === "admin" || module === "alerts" || module === "map" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-16 md:pb-0">

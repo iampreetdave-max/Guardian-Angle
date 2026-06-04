@@ -50,4 +50,30 @@ CREATE TABLE IF NOT EXISTS gov_search_log (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_gov_searchlog_q ON gov_search_log(query);
+
+-- Saved searches: a named query + the full advanced-filter set (stored as JSON
+-- in `filters`) that a user can re-run from the "Saved" tab. When alert=1 the
+-- saved search rides the existing refresh fan-out, so matching fresh documents
+-- raise a gov_update notification (same in-app bell as subscriptions).
+CREATE TABLE IF NOT EXISTS gov_saved_searches (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    name       TEXT NOT NULL DEFAULT '',     -- friendly label (defaults to the query)
+    query      TEXT NOT NULL DEFAULT '',
+    filters    TEXT NOT NULL DEFAULT '{}',   -- JSON: doc_type/region/department/date_from/date_to
+    alert      INTEGER NOT NULL DEFAULT 0,    -- 1 = notify on matching fresh docs
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_gov_saved_user ON gov_saved_searches(user_id);
+
+-- Feed health: one row per feed, updated on every refresh so the insights strip
+-- can show per-source last-success / last-attempt and item counts (source health).
+CREATE TABLE IF NOT EXISTS gov_feed_status (
+    feed_key      TEXT PRIMARY KEY,
+    name          TEXT NOT NULL DEFAULT '',
+    last_attempt  TEXT,
+    last_success  TEXT,
+    last_count    INTEGER NOT NULL DEFAULT 0,
+    ok            INTEGER NOT NULL DEFAULT 0     -- 1 = last fetch returned >=0 items without error
+);
 """

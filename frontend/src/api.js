@@ -232,6 +232,51 @@ export const govRemoveSubscription = (id) =>
   api.delete(`/gov/subscriptions/${id}`).then((r) => r.data);
 export const govRefresh = () => api.post("/gov/refresh").then((r) => r.data);
 
+// ---- CrimeGPT (AI crime documentation automation) ----
+export const crimegptHealth = () => api.get("/crimegpt/health").then((r) => r.data);
+export const crimegptSuggestSections = (payload) =>
+  api.post("/crimegpt/suggest-sections", payload).then((r) => r.data);
+export const crimegptLegalCatalogue = () =>
+  api.get("/crimegpt/legal/catalogue").then((r) => r.data);
+
+export const crimegptGetPool = (caseId) =>
+  api.get(`/crimegpt/cases/${caseId}/pool`).then((r) => r.data);
+export const crimegptAddParty = (caseId, p) =>
+  api.post(`/crimegpt/cases/${caseId}/parties`, p).then((r) => r.data);
+export const crimegptUpdateParty = (caseId, partyId, p) =>
+  api.patch(`/crimegpt/cases/${caseId}/parties/${partyId}`, p).then((r) => r.data);
+export const crimegptDeleteParty = (caseId, partyId) =>
+  api.delete(`/crimegpt/cases/${caseId}/parties/${partyId}`).then((r) => r.data);
+export const crimegptAddSeizure = (caseId, p) =>
+  api.post(`/crimegpt/cases/${caseId}/seizures`, p).then((r) => r.data);
+export const crimegptDeleteSeizure = (caseId, seizureId) =>
+  api.delete(`/crimegpt/cases/${caseId}/seizures/${seizureId}`).then((r) => r.data);
+export const crimegptAddStatement = (caseId, p) =>
+  api.post(`/crimegpt/cases/${caseId}/statements`, p).then((r) => r.data);
+export const crimegptDeleteStatement = (caseId, statementId) =>
+  api.delete(`/crimegpt/cases/${caseId}/statements/${statementId}`).then((r) => r.data);
+
+export const crimegptDiary = (caseId) =>
+  api.get(`/crimegpt/cases/${caseId}/diary`).then((r) => r.data);
+export const crimegptAddDiary = (caseId, p) =>
+  api.post(`/crimegpt/cases/${caseId}/diary`, p).then((r) => r.data);
+
+export const crimegptDocuments = (caseId) =>
+  api.get(`/crimegpt/cases/${caseId}/documents`).then((r) => r.data);
+// Generate a document; returns the PDF as a blob (auth header applied by the
+// axios interceptor) plus the version from the response headers.
+export const crimegptGenerateDocument = (caseId, docType, language = "en") =>
+  api
+    .post(`/crimegpt/cases/${caseId}/documents/${docType}`, null, {
+      params: { language },
+      responseType: "blob",
+    })
+    .then((r) => ({
+      blob: r.data,
+      version: r.headers["x-document-version"],
+      docType: r.headers["x-document-type"] || docType,
+    }));
+
 // ---- Arbiter (legal intelligence) ----
 export const legalHealth = () => api.get("/legal/health").then((r) => r.data);
 export const legalSections = (payload) =>

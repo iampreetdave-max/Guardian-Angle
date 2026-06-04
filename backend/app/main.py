@@ -130,6 +130,10 @@ app.include_router(legal_router, prefix="/api/legal")
 from .govintel.routes import router as gov_router  # noqa: E402
 app.include_router(gov_router, prefix="/api/gov")
 
+# CrimeGPT — AI crime documentation automation, modular, under /api/crimegpt/*
+from .crimegpt.routes import router as crimegpt_router  # noqa: E402
+app.include_router(crimegpt_router, prefix="/api/crimegpt")
+
 # CityShield platform: auth, users/teams, complaints, cases, notifications
 from .platform.routes import (  # noqa: E402
     admin_router, auth_router, cases_router, complaints_router, notif_router,

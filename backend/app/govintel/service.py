@@ -9,21 +9,48 @@ table, so government updates surface in the same in-app bell as case alerts.
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 
 from ..database import get_conn
 from ..arbiter import llm  # reuse Gemini-or-offline generation + LANGUAGES
-from . import sources, store
+from . import categorize, sources, store
 
 log = logging.getLogger("visionscan.govintel.service")
 
 CATEGORIES = ["GR", "Notification", "Circular", "Act", "Rule", "Judgment", "Scheme"]
 REGIONS = ["central", "gujarat"]
+# Human-facing jurisdiction labels mapped onto the stored `region` value.
+JURISDICTIONS = {"central": "Central (Government of India)", "gujarat": "Gujarat"}
 
 _seed_lock = threading.Lock()
 _seeded = False
 _related_map: dict[str, list[str]] = {}
+
+# Idempotent DDL for the tables this module owns beyond the base schema. Run from
+# _ensure_seed() so the module is self-contained even on an older DB that predates
+# saved-searches / feed-health (mirrors database._migrate's CREATE IF NOT EXISTS).
+_EXTRA_TABLES = """
+CREATE TABLE IF NOT EXISTS gov_saved_searches (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    name       TEXT NOT NULL DEFAULT '',
+    query      TEXT NOT NULL DEFAULT '',
+    filters    TEXT NOT NULL DEFAULT '{}',
+    alert      INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_gov_saved_user ON gov_saved_searches(user_id);
+CREATE TABLE IF NOT EXISTS gov_feed_status (
+    feed_key      TEXT PRIMARY KEY,
+    name          TEXT NOT NULL DEFAULT '',
+    last_attempt  TEXT,
+    last_success  TEXT,
+    last_count    INTEGER NOT NULL DEFAULT 0,
+    ok            INTEGER NOT NULL DEFAULT 0
+);
+"""
 
 
 # --------------------------------------------------------------- seeding / cache
@@ -38,15 +65,23 @@ def _ensure_seed() -> None:
             return
         corpus = store.load_bundled_corpus()
         with get_conn() as conn:
+            conn.executescript(_EXTRA_TABLES)  # self-contained table provisioning
             for d in corpus:
                 kw = ", ".join(d.get("keywords", []) or [])
+                # Derive (and persist) department / jurisdiction once when the
+                # corpus entry omits them, so advanced filters work uniformly and
+                # we never recompute the heuristic per query.
+                dept = d.get("department") or categorize.guess_department(
+                    d.get("title", ""), d.get("summary", "") or d.get("body", ""))
+                region = d.get("region") or categorize.guess_region(
+                    d.get("title", ""), d.get("summary", "") or d.get("body", ""))
                 conn.execute(
                     "INSERT OR IGNORE INTO gov_documents "
                     "(id, title, doc_type, department, ministry, region, date, "
                     " summary, body, keywords, source_url, language, origin) "
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'bundled')",
-                    (d["id"], d["title"], d["doc_type"], d.get("department"),
-                     d.get("ministry"), d.get("region"), d.get("date"),
+                    (d["id"], d["title"], d["doc_type"], dept,
+                     d.get("ministry"), region, d.get("date"),
                      d.get("summary"), d.get("body"), kw, d.get("source_url"),
                      d.get("language", "en")),
                 )
@@ -147,8 +182,11 @@ def _post_filter(hits: list[dict], department: str = "", date_from: str = "",
 
 def search(query: str = "", doc_type: str = "", region: str = "",
            department: str = "", date_from: str = "", date_to: str = "",
-           k: int = 20) -> dict:
+           jurisdiction: str = "", k: int = 20) -> dict:
     _ensure_seed()
+    # `jurisdiction` is the citizen-facing label for `region` (Central vs
+    # Gujarat); accept either so the advanced-filter UI can use the clearer term.
+    region = region or jurisdiction
     chroma_filters = {}
     if doc_type:
         chroma_filters["doc_type"] = doc_type
@@ -186,33 +224,95 @@ def search(query: str = "", doc_type: str = "", region: str = "",
 
 
 # --------------------------------------------------------------- cross-linking
+def _kw_set(doc: dict) -> set[str]:
+    kw = doc.get("keywords")
+    if isinstance(kw, str):
+        kw = [k.strip() for k in kw.split(",")]
+    return {k.lower() for k in (kw or []) if k}
+
+
+def _act_family(doc: dict) -> str:
+    """A coarse 'act family' key so a GR, its parent Act and a judgment that share
+    a subject group together (e.g. 'rti', 'data', 'pension'). Offline, deterministic."""
+    blob = f"{doc.get('id','')} {doc.get('title','')} {doc.get('keywords','')}".lower()
+    for fam in ("rti", "right to information", "data protection", "dpdp", "pension",
+                "cyber", "scholarship", "ration", "land record", "ayushman",
+                "consumer", "gst", "rera", "labour", "sanhita"):
+        if fam in blob:
+            return fam.split()[0]
+    # else the id stem before the first dash group (e.g. act-rti-2005 -> act)
+    return (doc.get("id", "").split("-", 1)[0] or "").lower()
+
+
+def _overlap_score(base: set[str], base_fam: str, base_type: str, cand: dict) -> tuple[float, str]:
+    """Offline relatedness: keyword Jaccard + act-family + category bonuses.
+
+    Returns (score, link_type) where link_type explains the strongest signal so
+    the UI can label the chain (family / keyword / category)."""
+    cand_kw = _kw_set(cand)
+    inter = base & cand_kw
+    union = base | cand_kw
+    jacc = (len(inter) / len(union)) if union else 0.0
+    score = 0.6 * jacc
+    link = "keyword" if inter else "related"
+    if base_fam and base_fam == _act_family(cand):
+        score += 0.35
+        link = "family"
+    if base_type and base_type == cand.get("doc_type"):
+        score += 0.05
+    return round(min(1.0, score), 4), link
+
+
 def related(doc_id: str, k: int = 6) -> dict:
     _ensure_seed()
     doc = get_document(doc_id)
     if not doc:
         return {"doc_id": doc_id, "related": [], "grouped": {}}
 
+    base_kw = _kw_set(doc)
+    base_fam = _act_family(doc)
+    base_type = doc.get("doc_type")
+
     picked: dict[str, dict] = {}
-    # 1) explicit curated links (bundled corpus)
+    # 1) explicit curated links (bundled corpus, GR↔parent Act↔judgment chains)
     for rid in _related_map.get(doc_id, []):
         rd = get_document(rid)
         if rd:
-            rd = {**rd, "score": 1.0, "link_type": "curated"}
-            picked[rid] = rd
-    # 2) semantic neighbours over title+summary (or lexical fallback)
-    query = f"{doc.get('title','')} {doc.get('summary','')} {doc.get('keywords','') if isinstance(doc.get('keywords'),str) else ' '.join(doc.get('keywords') or [])}"
+            picked[rid] = {**rd, "score": 1.0, "link_type": "curated"}
+
+    # 2) candidate pool — semantic neighbours when available, else the whole
+    #    SQLite cache scored by offline keyword/metadata overlap.
+    query = (f"{doc.get('title','')} {doc.get('summary','')} "
+             f"{doc.get('keywords','') if isinstance(doc.get('keywords'), str) else ' '.join(doc.get('keywords') or [])}")
     if store.semantic_enabled():
-        neighbours = store.retrieve(query, k=k + 4)
+        candidates = store.retrieve(query, k=k + 12)
     else:
-        neighbours = _keyword_search(query, {}, k=k + 4)
-    for h in neighbours:
+        with get_conn() as conn:
+            candidates = [_kw_hit(r) for r in conn.execute(
+                "SELECT * FROM gov_documents").fetchall()]
+
+    scored: list[dict] = []
+    for h in candidates:
         if h["id"] == doc_id or h["id"] in picked:
             continue
-        picked[h["id"]] = {**h, "link_type": "semantic"}
+        ov, link = _overlap_score(base_kw, base_fam, base_type, h)
+        # keep a semantic neighbour even with no lexical overlap (Chroma already
+        # vouched for it); otherwise require some overlap signal.
+        sem = h.get("score") if store.semantic_enabled() else None
+        if ov <= 0 and not sem:
+            continue
+        merged = ov if sem is None else round(max(ov, 0.45 + 0.55 * float(sem)), 4)
+        scored.append({**h, "score": merged,
+                       "link_type": link if ov >= 0.1 else "semantic"})
+
+    scored.sort(key=lambda r: r["score"], reverse=True)
+    for h in scored:
         if len(picked) >= k:
             break
+        picked[h["id"]] = h
 
     rel = list(picked.values())
+    rel.sort(key=lambda r: (r.get("link_type") != "curated", -(r.get("score") or 0)))
     grouped: dict[str, list[dict]] = {}
     for r in rel:
         grouped.setdefault(r["doc_type"], []).append(r)
@@ -344,6 +444,117 @@ def remove_bookmark(user_id: int, doc_id: str) -> None:
                      (user_id, doc_id))
 
 
+# --------------------------------------------------------------- saved searches
+_SAVED_FILTER_KEYS = ("doc_type", "region", "department", "date_from", "date_to")
+
+
+def _saved_row(row) -> dict:
+    d = dict(row)
+    try:
+        d["filters"] = json.loads(d.get("filters") or "{}")
+    except (ValueError, TypeError):
+        d["filters"] = {}
+    d["alert"] = bool(d.get("alert"))
+    return d
+
+
+def list_saved_searches(user_id: int) -> list[dict]:
+    _ensure_seed()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM gov_saved_searches WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,)).fetchall()
+    return [_saved_row(r) for r in rows]
+
+
+def add_saved_search(user_id: int, name: str = "", query: str = "",
+                     filters: dict | None = None, alert: bool = False) -> dict:
+    _ensure_seed()
+    clean = {k: (filters or {}).get(k) or "" for k in _SAVED_FILTER_KEYS}
+    label = (name or query or "").strip()
+    if not label:
+        label = " · ".join(v for v in (clean["doc_type"], clean["region"],
+                                       clean["department"]) if v) or "All updates"
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO gov_saved_searches (user_id, name, query, filters, alert) "
+            "VALUES (?,?,?,?,?)",
+            (user_id, label, (query or "").strip(), json.dumps(clean), 1 if alert else 0))
+        sid = cur.lastrowid
+    return {"id": sid, "name": label, "query": query, "filters": clean, "alert": alert}
+
+
+def remove_saved_search(user_id: int, search_id: int) -> None:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM gov_saved_searches WHERE id = ? AND user_id = ?",
+                     (search_id, user_id))
+
+
+def run_saved_search(user_id: int, search_id: int, k: int = 24) -> dict:
+    _ensure_seed()
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM gov_saved_searches WHERE id = ? AND user_id = ?",
+            (search_id, user_id)).fetchone()
+    if not row:
+        return {}
+    s = _saved_row(row)
+    f = s["filters"]
+    return search(query=s["query"], doc_type=f.get("doc_type", ""),
+                  region=f.get("region", ""), department=f.get("department", ""),
+                  date_from=f.get("date_from", ""), date_to=f.get("date_to", ""), k=k)
+
+
+# --------------------------------------------------------------- insights / trending strip
+def insights() -> dict:
+    """Small dashboard payload for the panel header: counts by type & jurisdiction,
+    most-bookmarked documents, latest fetch timestamp and per-feed source health."""
+    _ensure_seed()
+    with get_conn() as conn:
+        by_type = {r["doc_type"]: r["c"] for r in conn.execute(
+            "SELECT doc_type, COUNT(*) c FROM gov_documents GROUP BY doc_type")}
+        by_jur = {r["region"]: r["c"] for r in conn.execute(
+            "SELECT region, COUNT(*) c FROM gov_documents "
+            "WHERE region IS NOT NULL AND region <> '' GROUP BY region")}
+        total = conn.execute("SELECT COUNT(*) c FROM gov_documents").fetchone()["c"]
+        live = conn.execute(
+            "SELECT COUNT(*) c FROM gov_documents WHERE origin = 'live'").fetchone()["c"]
+        latest = conn.execute(
+            "SELECT MAX(fetched_at) m FROM gov_documents").fetchone()["m"]
+        top = conn.execute(
+            "SELECT b.doc_id, COUNT(*) c, d.title, d.doc_type, d.region "
+            "FROM gov_bookmarks b JOIN gov_documents d ON d.id = b.doc_id "
+            "GROUP BY b.doc_id ORDER BY c DESC, MAX(b.created_at) DESC LIMIT 5"
+        ).fetchall()
+        feeds = [dict(r) for r in conn.execute(
+            "SELECT * FROM gov_feed_status ORDER BY name").fetchall()]
+        saved = conn.execute("SELECT COUNT(*) c FROM gov_saved_searches").fetchone()["c"]
+        marks = conn.execute("SELECT COUNT(*) c FROM gov_bookmarks").fetchone()["c"]
+
+    most_bookmarked = [{"doc_id": r["doc_id"], "title": r["title"],
+                        "doc_type": r["doc_type"], "region": r["region"],
+                        "count": r["c"]} for r in top]
+    # If no refresh has run yet, surface the static feed catalog as "not yet polled"
+    if not feeds:
+        feeds = [{"feed_key": f["key"], "name": f["name"], "ok": None,
+                  "last_attempt": None, "last_success": None, "last_count": 0}
+                 for f in sources.feed_catalog()]
+    return {
+        "total_documents": total,
+        "live_documents": live,
+        "by_type": by_type,
+        "by_jurisdiction": by_jur,
+        "jurisdiction_labels": JURISDICTIONS,
+        "latest_fetched": latest,
+        "most_bookmarked": most_bookmarked,
+        "total_bookmarks": marks,
+        "total_saved_searches": saved,
+        "feeds": feeds,
+        "semantic": store.semantic_enabled(),
+        "llm_online": llm.is_online(),
+    }
+
+
 # --------------------------------------------------------------- subscriptions
 def list_subscriptions(user_id: int) -> list[dict]:
     with get_conn() as conn:
@@ -397,7 +608,8 @@ def refresh() -> dict:
     Offline-safe: if no feed is reachable, returns zero counts without error.
     """
     _ensure_seed()
-    docs = sources.fetch_all()
+    docs, statuses = sources.fetch_all_with_status()
+    _record_feed_status(statuses)
     new_docs: list[dict] = []
     with get_conn() as conn:
         for d in docs:
@@ -430,18 +642,73 @@ def refresh() -> dict:
             "feeds": sources.feed_catalog()}
 
 
+def _record_feed_status(statuses: list[dict]) -> None:
+    """Upsert per-feed health rows so the insights strip can show source health."""
+    if not statuses:
+        return
+    try:
+        with get_conn() as conn:
+            for s in statuses:
+                conn.execute(
+                    "INSERT INTO gov_feed_status "
+                    "(feed_key, name, last_attempt, last_success, last_count, ok) "
+                    "VALUES (?,?,?,?,?,?) "
+                    "ON CONFLICT(feed_key) DO UPDATE SET "
+                    "  name=excluded.name, last_attempt=excluded.last_attempt, "
+                    "  last_count=excluded.last_count, ok=excluded.ok, "
+                    "  last_success=CASE WHEN excluded.ok=1 "
+                    "    THEN excluded.last_attempt ELSE gov_feed_status.last_success END",
+                    (s["feed_key"], s["name"], s["attempted_at"],
+                     s["attempted_at"] if s["ok"] else None,
+                     s["last_count"], 1 if s["ok"] else 0))
+    except Exception:  # pragma: no cover - never let health logging break refresh
+        log.debug("GovIntel: feed status record failed", exc_info=True)
+
+
+def _saved_alert_matches(saved: dict, doc: dict) -> bool:
+    """A saved search with alert=1 behaves like a subscription over its filters."""
+    f = saved.get("filters") or {}
+    if f.get("doc_type") and f["doc_type"] != doc.get("doc_type"):
+        return False
+    if f.get("region") and f["region"] != doc.get("region"):
+        return False
+    dep = (f.get("department") or "").lower()
+    if dep and dep not in (doc.get("department") or "").lower():
+        return False
+    q = (saved.get("query") or "").strip().lower()
+    if q:
+        blob = f"{doc.get('title','')} {doc.get('summary','')} {doc.get('keywords','')}".lower()
+        if not any(term in blob for term in q.split()):
+            return False
+    return True
+
+
 def _fan_out(new_docs: list[dict]) -> int:
     if not new_docs:
         return 0
     with get_conn() as conn:
         subs = [dict(r) for r in conn.execute(
             "SELECT * FROM gov_subscriptions").fetchall()]
+        saved = [_saved_row(r) for r in conn.execute(
+            "SELECT * FROM gov_saved_searches WHERE alert = 1").fetchall()]
     alerts = 0
     for doc in new_docs:
+        # de-dupe so a user watching the same topic via both a subscription and a
+        # saved-search alert only gets one notification per fresh document.
+        notified: set[int] = set()
         for sub in subs:
-            if _sub_matches(sub, doc):
+            if _sub_matches(sub, doc) and sub["user_id"] not in notified:
                 msg = f"New {doc.get('doc_type','update')}: {doc.get('title','')}"
                 _notify_gov(sub["user_id"], msg, doc.get("source_url") or "")
+                notified.add(sub["user_id"])
+                alerts += 1
+        for sv in saved:
+            if sv["user_id"] in notified:
+                continue
+            if _saved_alert_matches(sv, doc):
+                msg = f"New {doc.get('doc_type','update')}: {doc.get('title','')}"
+                _notify_gov(sv["user_id"], msg, doc.get("source_url") or "")
+                notified.add(sv["user_id"])
                 alerts += 1
     return alerts
 
