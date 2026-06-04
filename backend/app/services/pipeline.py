@@ -65,11 +65,13 @@ def _set_status(video_id: int, status: str, error: str | None = None) -> None:
         )
 
 
-def process_keyframe(video_id: int, kf, thumb_dir: Path) -> int:
+def process_keyframe(video_id: int, kf, thumb_dir: Path,
+                     is_live: bool = False) -> int:
     """Run layers 2-3 on a single keyframe: enhance, thumbnail, CLIP-embed +
     index, persist the frame row, and run object/face detection. Returns the
     new frame_id. Shared by both the batch (process_video) and continuous
-    (process_stream_live) paths so they stay identical."""
+    (process_stream_live) paths so they stay identical. is_live marks frames
+    from a continuous feed so anomaly alerts can notify admins in real time."""
     settings = get_settings()
     clip_index = get_clip_index()
     face_index = get_face_index()
@@ -93,7 +95,8 @@ def process_keyframe(video_id: int, kf, thumb_dir: Path) -> int:
         frame_id = cur.lastrowid
 
     object_index = get_object_index()
-    for det in detection.detect_objects(enhanced):
+    dets = detection.detect_objects(enhanced)
+    for det in dets:
         # Embed the object's crop in CLIP space so it can be found individually
         # by a text/image query (e.g. each of five red cars), not just the frame.
         obj_faiss_id = _embed_object_crop(enhanced, det.bbox, object_index)
@@ -103,6 +106,22 @@ def process_keyframe(video_id: int, kf, thumb_dir: Path) -> int:
                 "x1, y1, x2, y2, obj_faiss_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (frame_id, det.label, det.confidence, *det.bbox, obj_faiss_id),
             )
+
+    # Anomaly watch: score the SAME clip vector + detections we just computed
+    # (near-zero extra cost) and record any fire/smoke/accident/weapon/violence
+    # signal as a debounced event. Strictly fail-soft — never blocks ingest.
+    if settings.enable_anomaly:
+        try:
+            from ..core import anomaly
+            from .anomaly_events import record_signals
+
+            signals = anomaly.detect_anomalies(vec[0], dets, frame_bgr=enhanced)
+            if signals:
+                record_signals(video_id, frame_id, kf.timestamp_sec,
+                               signals, is_live=is_live)
+        except Exception:
+            log.warning("anomaly scoring failed for frame %s", frame_id,
+                        exc_info=True)
 
     for face in detection.detect_faces(enhanced):
         face_faiss_id = face_index.add(face.embedding.reshape(1, -1))[0]

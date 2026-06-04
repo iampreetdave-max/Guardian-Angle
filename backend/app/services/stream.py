@@ -24,11 +24,17 @@ log = logging.getLogger("visionscan.stream")
 _YT_HOSTS = ("youtube.com", "youtu.be")
 
 
-def resolve_stream_url(url: str) -> str:
+def resolve_stream_url(url: str, enforce_public: bool = False) -> str:
     """Return a URL that OpenCV's VideoCapture can open.
 
     For YouTube(-live) links we use yt-dlp to extract the underlying HLS/stream
     URL. Other schemes (rtsp://, http(s):// .m3u8 / mjpeg) are returned as-is.
+
+    SSRF: the request-time guard in routes.py only validates the *submitted*
+    URL. For YouTube the real streaming server is only known after yt-dlp
+    extraction, so when ``enforce_public`` is set (non-admin caller) we
+    re-validate the resolved URL here, before it is ever opened, to stop a
+    public youtube.com link from resolving to a private/internal address.
     """
     lowered = url.lower()
     if any(h in lowered for h in _YT_HOSTS):
@@ -51,9 +57,24 @@ def resolve_stream_url(url: str) -> str:
         stream_url = info.get("url")
         if not stream_url:
             raise RuntimeError("Could not resolve a playable stream URL from YouTube")
+        if enforce_public:
+            _assert_resolved_public(stream_url)
         return stream_url
 
     return url
+
+
+def _assert_resolved_public(url: str) -> None:
+    """Re-run the SSRF guard on a post-resolution URL. Raises RuntimeError (not
+    HTTPException) since this runs in a background thread, where it is logged
+    and aborts the capture cleanly."""
+    from ..net_guard import assert_public_url
+    from fastapi import HTTPException
+
+    try:
+        assert_public_url(url)
+    except HTTPException as e:
+        raise RuntimeError(f"resolved stream URL is not public: {e.detail}") from e
 
 
 def process_stream(
@@ -61,11 +82,15 @@ def process_stream(
     url: str,
     max_duration_sec: float,
     max_frames: int | None = None,
+    enforce_public: bool = False,
 ) -> None:
     """Resolve a public stream URL and run the analysis pipeline on a bounded
-    capture window. Safe to call in a background thread."""
+    capture window. Safe to call in a background thread.
+
+    ``enforce_public`` re-validates the resolved (yt-dlp-extracted) URL against
+    the SSRF guard for untrusted (non-admin) callers."""
     try:
-        resolved = resolve_stream_url(url)
+        resolved = resolve_stream_url(url, enforce_public=enforce_public)
     except Exception as e:
         log.exception("Failed to resolve stream %s", url)
         from ..database import get_conn
@@ -102,7 +127,8 @@ def is_live(video_id: int) -> bool:
     return video_id in _live_sessions
 
 
-def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
+def _run_live(video_id: int, url: str, stop_event: threading.Event,
+              enforce_public: bool = False) -> None:
     """Daemon loop: resolve the feed, then continuously extract + index
     keyframes until stop_event is set."""
     from ..core import ingestion
@@ -111,7 +137,7 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
 
     settings = get_settings()
     try:
-        resolved = resolve_stream_url(url)
+        resolved = resolve_stream_url(url, enforce_public=enforce_public)
     except Exception as e:
         log.exception("Live: failed to resolve %s", url)
         with get_conn() as conn:
@@ -127,7 +153,7 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
     kept = 0
     try:
         for kf in ingestion.extract_keyframes(resolved, stop_event=stop_event):
-            process_keyframe(video_id, kf, thumb_dir)
+            process_keyframe(video_id, kf, thumb_dir, is_live=True)
             kept += 1
             # Update the visible count every frame so the live indicator moves;
             # persist the FAISS indexes less often (every 5) to limit disk I/O.
@@ -153,9 +179,12 @@ def _run_live(video_id: int, url: str, stop_event: threading.Event) -> None:
         log.info("Live session ended for video %s: %d keyframes", video_id, kept)
 
 
-def start_live(url: str, camera_id: str) -> int:
+def start_live(url: str, camera_id: str, enforce_public: bool = False) -> int:
     """Create a feed record and start a continuous live-capture session.
-    Returns the new video_id."""
+    Returns the new video_id.
+
+    ``enforce_public`` re-validates the resolved URL against the SSRF guard for
+    untrusted (non-admin) callers."""
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO videos (filename, path, camera_id, status) "
@@ -168,7 +197,8 @@ def start_live(url: str, camera_id: str) -> int:
     with _live_lock:
         _live_sessions[video_id] = stop_event
     threading.Thread(
-        target=_run_live, args=(video_id, url, stop_event), daemon=True
+        target=_run_live, args=(video_id, url, stop_event, enforce_public),
+        daemon=True,
     ).start()
     return video_id
 
