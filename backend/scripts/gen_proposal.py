@@ -532,6 +532,38 @@ def _live_demo_access() -> list:
     return out
 
 
+def _validation_deployment() -> list:
+    out = [_p("Validation, feedback &amp; deployment economics", "VSH1"),
+           HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6)]
+    out.append(_p(
+        "<b>Independent legal review (in progress).</b> The platform's legal-section "
+        "intelligence — the mapping of incident narratives to Bharatiya Nyaya Sanhita "
+        "2023, BNSS 2023 and BSA 2023 provisions — is undergoing independent review by "
+        "practising advocates, including a qualified lawyer on the extended team. Each "
+        "reviewer receives a structured review document: the full section catalogue with "
+        "its sources, IPC cross-references and explicit “verify-before-use” flags. "
+        "Reviewer feedback is incorporated ahead of any operational use, and every "
+        "suggestion in the product is advisory — the officer always confirms the final "
+        "sections."))
+    out.append(_p(
+        "<b>Practitioner feedback.</b> A serving police officer reviewed the platform and "
+        "responded positively to the concept and its fit with real-world policing "
+        "workflows. Review by a serving senior police officer (IPS) is being arranged, and "
+        "we are continuing to seek structured feedback from serving officers and legal "
+        "practitioners to keep the tool grounded in field reality."))
+    out.append(_p(
+        "<b>Deployment economics — runs at near-zero cost.</b> The live demonstration is "
+        "hosted on a cloud virtual machine provisioned entirely from free platform credits "
+        "(Microsoft Azure for Students), at no infrastructure cost. The stack is "
+        "<b>CPU-only and offline-capable</b> and uses <b>no paid AI APIs</b> — the optional "
+        "Gemini integration degrades gracefully to a fully offline model, so there are no "
+        "per-query charges. In practice this means the department could run the platform "
+        "on a modest virtual machine or commodity on-premise hardware — on-site or in a "
+        "government cloud — with no recurring licensing or API fees, an important factor "
+        "for sustainable, real-world adoption."))
+    return out
+
+
 def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -554,6 +586,8 @@ def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     story += spec["evidence"](bt)
     story.append(PageBreak())
     story += _live_demo_access()
+    story.append(PageBreak())
+    story += _validation_deployment()
     story.append(Spacer(1, 8))
     story += _security_summary(spec.get("security_extra"))
     story += _disclaimer_page()
