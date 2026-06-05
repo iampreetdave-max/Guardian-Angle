@@ -176,6 +176,12 @@ its FIR and statutory documents (CrimeGPT/Arbiter), and surface relevant law
 The full platform is deployed at **https://visionscan.centralindia.cloudapp.azure.com**
 (Azure, Central India, TLS) — open it and sign in with a [demo account](#demo-accounts).
 
+**Test the anomaly detector:** a folder of ready-to-upload CCTV clips (fire, smoke,
+accident, weapon, violence + a normal control, each with its expected detection
+documented) is here →
+[Google Drive](https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz).
+Upload one on the live site and watch Anomaly Watch raise the alert.
+
 ### Option A — One command (recommended)
 
 Verifies Docker, generates a JWT secret into `.env` on first run, builds and

@@ -65,6 +65,7 @@ TEAM = "Team <TBD>"
 DEMO_URL = "https://visionscan.centralindia.cloudapp.azure.com"
 GITHUB_URL = "https://github.com/iampreetdave-max/Guardian-Angle"
 HF_URL = "https://huggingface.co/spaces/iampreetdave/visionscan"
+CLIPS_URL = "https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz"
 DEMO_ACCOUNTS = [
     ["Admin", "admin@city.gov", "admin123"],
     ["Team lead", "lead@city.gov", "lead123"],
@@ -514,6 +515,10 @@ def _live_demo_access() -> list:
               "(Microsoft Azure, Central India region, TLS-secured)"),
            _p(f"<b>Source code:</b> <font color='#1a4fa0'>{GITHUB_URL}</font>"),
            _p(f"<b>Mirror (Hugging Face Space):</b> <font color='#1a4fa0'>{HF_URL}</font>"),
+           _p(f"<b>Test footage for evaluators:</b> <font color='#1a4fa0'>{CLIPS_URL}</font> "
+              "— ready-to-upload CCTV clips (fire, smoke, accident, weapon, violence, plus a "
+              "normal control) to exercise the Anomaly Watch detector on the live demo; each "
+              "clip's expected detection is documented in the folder."),
            Spacer(1, 4),
            _p("<b>Demo accounts</b> — log in with any role to explore its dashboard:")]
     rows = [["Role", "Email", "Password"]] + DEMO_ACCOUNTS

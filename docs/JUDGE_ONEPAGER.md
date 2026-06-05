@@ -63,6 +63,7 @@ passes; app boots and demos **with Wi-Fi unplugged**.
 
 ### Try it / demo accounts
 **Live demo (HTTPS):** https://visionscan.centralindia.cloudapp.azure.com
+**Test footage (upload these):** https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz
 **Local deploy:** `docker compose up -d` → `http://localhost:8080` (or `start.ps1`).
 **Mirror (HF Space):** https://huggingface.co/spaces/iampreetdave/visionscan
 
