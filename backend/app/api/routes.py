@@ -50,7 +50,7 @@ from ..services.stream import process_stream, start_live, stop_live
 router = APIRouter()
 
 # Keep parity with `_VIDEO_EXTS` in upload_validation.py.
-_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
+_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".ogv"}
 
 # Tolerant bearer: never 401s on its own, so endpoints can degrade gracefully
 # (full payload for staff, minimal for anonymous) instead of rejecting probes.

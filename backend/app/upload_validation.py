@@ -18,7 +18,7 @@ from .config import get_settings
 logger = logging.getLogger("visionscan.upload")
 
 # Keep parity with `_VIDEO_EXTS` in api/routes.py.
-_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
+_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".ogv"}
 
 
 def _ext_of(filename: str | None) -> str:
