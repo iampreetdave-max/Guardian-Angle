@@ -34,6 +34,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
+from reportlab.graphics.shapes import Drawing, Line, Polygon, Rect, String
 from reportlab.platypus import (
     HRFlowable,
     PageBreak,
@@ -275,36 +276,138 @@ def _criteria_matrix(intro: str, rows: list[list[str]]) -> list:
     return out
 
 
+def _architecture_diagram() -> list:
+    """A drawn, four-band system-architecture (data-flow) diagram."""
+    W, H = 500, 372
+    d = Drawing(W, H)
+    tint = colors.HexColor("#eef1f7")
+
+    def band(y: float, label: str, items: list[str]) -> None:
+        h = 58
+        d.add(Rect(8, y, 484, h, rx=6, ry=6, fillColor=tint, strokeColor=NAVY, strokeWidth=1))
+        d.add(String(14, y + h - 15, label, fontName="Helvetica-Bold", fontSize=8.5, fillColor=NAVY))
+        x, cy = 96, y + 19
+        for it in items:
+            w = 8 + len(it) * 4.6
+            d.add(Rect(x, cy, w, 17, rx=3, ry=3, fillColor=colors.white,
+                       strokeColor=GOLD_DARK, strokeWidth=0.8))
+            d.add(String(x + w / 2, cy + 5, it, fontName="Helvetica", fontSize=7,
+                         fillColor=INK, textAnchor="middle"))
+            x += w + 10
+
+    band(300, "SOURCES", ["Citizen complaints", "CCTV feeds", "Patrol check-ins", "Gov / RSS feeds"])
+    band(202, "ENGINES", ["CLIP + YOLO anomaly", "Predictive risk", "Patrol optimizer", "Legal RAG (Arbiter)"])
+    band(104, "DATA (SQLite)", ["users · teams", "complaints · cases", "case-pool tables", "videos · anomaly_events"])
+    band(6, "SURFACES", ["GIS dashboard", "Live alerts", "CrimeGPT PDFs", "Exports / reports"])
+
+    def arrow(x: float, ytop: float, ybot: float) -> None:
+        d.add(Line(x, ytop, x, ybot + 6, strokeColor=GOLD_DARK, strokeWidth=1.4))
+        d.add(Polygon([x - 4, ybot + 6, x + 4, ybot + 6, x, ybot],
+                      fillColor=GOLD_DARK, strokeColor=GOLD_DARK))
+
+    for x in (150, 360):
+        arrow(x, 300, 260)   # sources -> engines
+        arrow(x, 202, 162)   # engines -> data
+        arrow(x, 104, 64)    # data -> surfaces
+
+    return [_p("System architecture (data flow)", "VSH1"),
+            HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
+            _p("Untrusted sources are validated, processed by the intelligence engines, "
+               "persisted in a single SQLite data model, and surfaced to each role. The "
+               "full <b>entity-relationship diagram</b> (all tables and foreign keys) is "
+               "in <i>docs/ARCHITECTURE.md</i>, which GitHub renders as a diagram."),
+            Spacer(1, 6), d]
+
+
+# OWASP Top 10 (2021) — condensed from docs/SECURITY_TESTING_REPORT.md, grounded
+# in the real controls in backend/app.
+_OWASP_ROWS = [
+    ["A01 Broken Access Control", "Covered",
+     "Role hierarchy citizen&lt;officer&lt;lead&lt;admin via <font face='Courier'>require_role()</font>; "
+     "admin-only system/export routes; per-case 403 gating; health telemetry officer+ only."],
+    ["A02 Cryptographic Failures", "Covered",
+     "bcrypt + per-hash salt passwords; HS256 JWT; weak/default secret rejected in production; "
+     "HSTS on HTTPS; expiring reset tokens."],
+    ["A03 Injection", "Covered",
+     "Parameterised SQL throughout; prompt-injection fencing + output/citation validation on the LLM; "
+     "upload magic-number sniffing before any decoder."],
+    ["A04 Insecure Design", "Covered",
+     "Fail-soft optional features; emergency lockdown (423) break-glass; per-case message + export-size caps."],
+    ["A05 Security Misconfiguration", "Covered",
+     "CSP, X-Frame-Options DENY, MIME-sniff off, referrer/permissions policy on every response; "
+     "explicit CORS; stack traces never returned to clients."],
+    ["A06 Vulnerable Components", "Partial",
+     "Dependencies pinned; stdlib-first on security paths to shrink attack surface. "
+     "Planned: pip-audit / Dependabot in CI."],
+    ["A07 Auth Failures", "Covered",
+     "Atomic brute-force lockout; token-version revocation (logout-all, password/role change); "
+     "enumeration-safe forgot-password."],
+    ["A08 Data &amp; Integrity Failures", "Covered",
+     "Upload extension + magic + size validation; WAL-safe SQLite online backup; "
+     "AI cites only RAG-retrieved law or falls back to a grounded template."],
+    ["A09 Logging &amp; Monitoring", "Covered",
+     "Central audit trail incl. failed exports; request/error/by-status metrics; "
+     "<font face='Courier'>/admin/security-events</font> review feed."],
+    ["A10 SSRF", "Covered",
+     "<font face='Courier'>assert_public_url</font> blocks private/loopback/cloud-metadata addresses and "
+     "restricts schemes on every caller-supplied stream URL."],
+]
+
+
 def _security_summary(extra: list[str] | None = None) -> list:
     out = [_p("Security &amp; compliance summary", "VSH1"),
            HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
-           _p("The platform was hardened in a dedicated Phase-3 security workstream "
-              "and the controls are pinned by an automated regression suite "
-              "(<b>77 backend tests passing</b>, verified live for this submission).")]
+           _p("Security was a dedicated Phase-3 workstream, not an afterthought. We "
+              "threat-modelled the surface (untrusted media, untrusted free text routed "
+              "through an LLM, a multi-role workforce), built controls against each "
+              "OWASP Top 10 (2021) risk, and pinned every control with an automated "
+              "regression suite (<b>77 backend tests passing</b>, verified live for this "
+              "submission). Fourteen concrete findings were identified and fixed during "
+              "the build; each names the test that now guards it.")]
+
+    out.append(_p("<b>OWASP Top 10 (2021) — how we checked, and what covers each risk</b>"))
+    rows = [["Risk", "Status", "Implemented control (where, in backend/app)"]] + _OWASP_ROWS
+    out.append(_table(rows, [3.7 * cm, 1.8 * cm, 12.3 * cm]))
+
+    out.append(_p("<b>Operational safety nets</b>"))
     out += _bullets([
-        "<b>Access control:</b> JWT auth with token revocation and role-based "
-        "access across citizen &rarr; officer &rarr; lead &rarr; admin; brute-force "
-        "lockout on repeated failed logins.",
-        "<b>Middleware:</b> a four-layer OWASP middleware stack — rate limiting, "
-        "security headers, lockdown mode, and request metrics.",
-        "<b>Input safety:</b> upload content validation before any byte is trusted, "
-        "and an SSRF guard on every server-initiated fetch (e.g. live-stream URLs, "
-        "RSS feeds).",
-        "<b>AI safety:</b> prompt-injection defences and a citation validator wrap "
-        "every LLM call so model output can never be turned against the system or "
-        "invent a legal provision.",
-        "<b>Accountability:</b> an append-only audit log records sensitive actions "
-        "and every data export; offline-first design means no citizen data leaves "
-        "the deployment.",
+        "<b>Fail-soft pipeline:</b> anomaly detection and every AI call are wrapped so "
+        "they degrade to off / offline rather than ever blocking video ingest or a request.",
+        "<b>Break-glass lockdown:</b> one admin switch puts the whole API into "
+        "<font face='Courier'>423 Locked</font> for incident response, while auth and the "
+        "admin console stay reachable.",
+        "<b>Layered middleware</b> (outermost-first): SecurityHeaders &rarr; Metrics &rarr; "
+        "RateLimit &rarr; Lockdown &rarr; route, so hardening headers and rate limits apply "
+        "even to 429/423 error short-circuits.",
+        "<b>Per-class rate limits</b> (login / upload / export / default) with 429 + "
+        "<font face='Courier'>Retry-After</font>; the export bucket is deliberately tight so "
+        "a leaked admin token cannot bulk-exfiltrate the case database.",
     ])
+
+    out.append(_p("<b>Health &amp; self-checks</b>"))
+    out += _bullets([
+        "<b>Liveness endpoint:</b> <font face='Courier'>GET /api/health</font> returns "
+        "<font face='Courier'>{status: ok}</font> to anyone; full device/model telemetry is "
+        "disclosed only to officer+ (no recon value for anonymous probes).",
+        "<b>Container health-gating:</b> the backend image self-probes "
+        "<font face='Courier'>/api/health</font> (with a warm-up start-period and retries) and "
+        "the frontend only starts once the API reports healthy.",
+        "<b>One-command demo reset</b> (<font face='Courier'>demo_reset.py</font>) runs 15 "
+        "self-checks — data seeded, risk endpoint returns all 30 areas, patrol covers the "
+        "top-5 hotspots, and the anomaly / cyber / CrimeGPT / GovIntel health endpoints all "
+        "200 — and refuses to declare “DEMO READY” unless every check passes.",
+        "<b>Reproducible validation:</b> <font face='Courier'>run_all_checks.py</font> runs the "
+        "full suite, smoketests and the backtest, then writes a timestamped "
+        "<i>docs/VALIDATION.md</i> evidence report.",
+    ])
+
     for e in (extra or []):
         out.append(_p(e))
     out.append(_p(
-        "Full detail — OWASP Top-10 coverage matrix, the fourteen concrete "
-        "findings fixed during the build, and the test that guards each control — "
-        "is documented in <i>docs/SECURITY_TESTING_REPORT.md</i>. That report is an "
-        "internal, self-conducted white-box review, not an independent third-party "
-        "audit.", "VSSmall"))
+        "Full detail — the complete OWASP coverage matrix, the fourteen findings with the "
+        "test that guards each, the AI threat model and the middleware stack — is in "
+        "<i>docs/SECURITY_TESTING_REPORT.md</i>. That report is an internal, self-conducted "
+        "white-box review, not an independent third-party audit.", "VSSmall"))
     return out
 
 
@@ -580,6 +683,8 @@ def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     story += _methodology(spec["methodology"])
     story.append(PageBreak())
     story += _architecture(spec["arch_intro"], spec["layers"])
+    story.append(Spacer(1, 10))
+    story += _architecture_diagram()
     story.append(PageBreak())
     story += _criteria_matrix(spec["matrix_intro"], spec["matrix"])
     story.append(PageBreak())

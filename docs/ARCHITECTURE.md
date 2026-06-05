@@ -215,6 +215,79 @@ Every box above traces to a real path. Verified present on disk
 
 ---
 
+## 4.5 Data model — entity-relationship diagram
+
+One SQLite database backs the whole platform; every module's tables hang off the
+shared `users` / `cases` spine, which is what makes the closed loop (a CCTV
+anomaly auto-creating a case) and the CrimeGPT unified case-data pool possible.
+Key entities and their relationships (`PK` primary key, `FK` foreign key, `UK` unique):
+
+```mermaid
+erDiagram
+    users {
+      int id PK
+      text email UK
+      text role
+      int team_id FK
+    }
+    complaints {
+      int id PK
+      int citizen_id FK
+      text category
+      text cyber_category
+      real amount_lost
+    }
+    cases {
+      int id PK
+      int complaint_id FK
+      int created_by FK
+      text status
+      text severity
+    }
+    anomaly_events {
+      int id PK
+      int video_id FK
+      text type
+      real confidence
+      int case_id FK
+    }
+    crimegpt_documents {
+      int id PK
+      int case_id FK
+      text doc_type
+      int version
+      text content_hash
+    }
+    teams ||--o{ users : "has"
+    users ||--o{ complaints : "files"
+    complaints ||--o| cases : "converts to"
+    users ||--o{ cases : "created_by"
+    teams ||--o{ cases : "assigned"
+    cases ||--o{ case_assignments : "staffed by"
+    users ||--o{ case_assignments : "on"
+    cases ||--o{ evidence : "holds"
+    cases ||--o{ case_parties : "involves"
+    cases ||--o{ case_seizures : "seizes"
+    cases ||--o{ case_statements : "records"
+    case_parties ||--o{ case_statements : "attributed to"
+    cases ||--o{ case_diary : "logged in"
+    cases ||--o{ crimegpt_documents : "generates"
+    cases ||--o{ case_documents : "has"
+    cases ||--o| ratings : "rated by"
+    videos ||--o{ anomaly_events : "detected in"
+    cases ||--o{ anomaly_events : "auto-created from"
+    users ||--o{ notifications : "receives"
+    users ||--o{ patrol_logs : "checks in"
+    users ||--o{ broadcasts : "issues"
+```
+
+Schema source of truth: `backend/app/platform/schema.py` (identity, cases,
+complaints, anomaly_events, broadcasts, audit, patrol), `backend/app/crimegpt/schema.py`
+(the case-data pool), `backend/app/database.py` (VisionScan core: videos, frames,
+detections, faces), and `backend/app/govintel/schema.py` (legal-feed corpus).
+
+---
+
 ## 5. Cross-references
 
 - Demo runbook & failure recovery: [`DEMO_DAY.md`](DEMO_DAY.md),
