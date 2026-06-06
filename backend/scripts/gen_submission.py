@@ -24,6 +24,7 @@ from reportlab.lib.units import cm, mm
 from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.platypus import (
     HRFlowable,
+    KeepTogether,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -48,6 +49,7 @@ from scripts.gen_proposal import (
     TEAM,
     TODAY,
     _BAND_H,
+    _about_submitter,
     _architecture_diagram,
     _bullets,
     _criteria_matrix,
@@ -93,14 +95,12 @@ def _render(story: list, title: str) -> tuple[bytes, int]:
 
 def _cover(title: str, tagline: str, extra_rows: list[list[str]]) -> list:
     story = [Spacer(1, 18 * mm),
-             _p("CityShield &middot; VisionScan", "VSCoverSub"),
              HRFlowable(width="40%", color=GOLD, thickness=2, spaceAfter=10),
              _p(title, "VSCoverTitle"),
              _p(tagline, "VSCoverSub"),
              Spacer(1, 9 * mm)]
     rows = [
         ["Hackathon", "Kanad S.H.I.E.L.D. 2026 — Cyber Crime Branch, Ahmedabad City Police"],
-        ["Venue", "Live pitch at i-Hub Gujarat · Submission 20 June 2026"],
         ["Live demo", DEMO_URL],
     ] + extra_rows + [["Team", TEAM], ["Date", TODAY]]
     t = Table(
@@ -184,19 +184,23 @@ def build_combined(bt: dict | None) -> tuple[bytes, int]:
         rows.append([str(i), name, f"{pid}\n({cat})", by])
     story.append(_table(rows, [0.8 * cm, 7.6 * cm, 4.0 * cm, 4.4 * cm]))
 
-    # Per-statement detail
+    # Per-statement detail. KeepTogether keeps each text block and each matrix
+    # intact so no single row orphans onto a near-empty page.
     for i, spec in enumerate(specs, 1):
-        story.append(PageBreak())
-        story.append(_p(f"Statement {i}: {spec['title']}", "VSH1"))
-        story.append(_p(f"{spec['problem_id']} &middot; Category {spec['category']} &middot; "
-                        f"answered by the {spec['tagline'].split('—')[0].strip()} module", "VSSmall"))
-        story.append(HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6))
-        story.append(_p("<b>The problem.</b> " + " ".join(spec["problem"])))
-        story.append(_p("<b>How our platform solves it.</b>"))
-        for para in spec["solution"]:
-            story.append(_p(para))
+        subtitle = (f"{spec['problem_id']} &middot; Category {spec['category']} &middot; "
+                    f"answered by the {spec['tagline'].split('—')[0].strip()} module")
+        block = [
+            _p(f"Statement {i}: {spec['title']}", "VSH1"),
+            _p(subtitle, "VSSmall"),
+            HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
+            _p("<b>The problem.</b> " + " ".join(spec["problem"])),
+            _p("<b>How our platform solves it.</b>"),
+            *[_p(para) for para in spec["solution"]],
+        ]
+        story.append(Spacer(1, 12))
+        story.append(KeepTogether(block))
         story.append(Spacer(1, 4))
-        story += _criteria_matrix(spec["matrix_intro"], spec["matrix"])
+        story.append(KeepTogether(_criteria_matrix(spec["matrix_intro"], spec["matrix"])))
 
     # Shared sections
     story.append(PageBreak())
@@ -206,6 +210,7 @@ def build_combined(bt: dict | None) -> tuple[bytes, int]:
     story.append(PageBreak())
     story += _security_summary()
     story += _disclaimer_page()
+    story += _about_submitter()
 
     return _render(story, "CityShield / VisionScan — Combined Proposal (5 statements)")
 
@@ -278,12 +283,9 @@ def build_roadmap() -> tuple[bytes, int]:
     story.append(_timeline())
     story.append(Spacer(1, 8))
 
+    story.append(PageBreak())
     story.append(_p("Phase detail", "VSH1"))
     story.append(HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6))
-    rows = [["Phase", "Focus", "Status", "Key deliverables"]]
-    for code, name, status, _fill, deliver in _PHASES:
-        rows.append([f"{code}\n{name}", name, status, deliver])
-    # collapse the duplicate name col -> use Phase(code) + deliverables + status
     rows = [["Phase", "Status", "Key deliverables"]]
     for code, name, status, _fill, deliver in _PHASES:
         rows.append([f"<b>{code} · {name}</b>", status, deliver])
@@ -335,6 +337,7 @@ def build_roadmap() -> tuple[bytes, int]:
         "it can run on a modest government VM or commodity on-premise hardware. This makes "
         "sustained, real-world adoption by the department financially realistic."))
     story += _disclaimer_page()
+    story += _about_submitter()
 
     return _render(story, "CityShield / VisionScan — Implementation Roadmap")
 

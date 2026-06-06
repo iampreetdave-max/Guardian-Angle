@@ -34,9 +34,11 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing, Line, Polygon, Rect, String
 from reportlab.platypus import (
     HRFlowable,
+    KeepTogether,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -204,7 +206,6 @@ def _cover(spec: dict) -> list:
         except Exception:
             pass
 
-    story.append(_p("CityShield &middot; VisionScan", "VSCoverSub"))
     story.append(HRFlowable(width="40%", color=GOLD, thickness=2, spaceAfter=10))
     story.append(_p(_esc(spec["title"]), "VSCoverTitle"))
     story.append(_p(_esc(spec["tagline"]), "VSCoverSub"))
@@ -214,7 +215,6 @@ def _cover(spec: dict) -> list:
         ["Problem ID", spec["problem_id"]],
         ["Category", f"Category {spec['category']}"],
         ["Hackathon", "Kanad S.H.I.E.L.D. 2026 — Cyber Crime Branch, Ahmedabad City Police"],
-        ["Venue", "Live pitch at i-Hub Gujarat · Submission 20 June 2026"],
         ["Live demo", DEMO_URL],
         ["Team", TEAM],
         ["Date", TODAY],
@@ -632,7 +632,38 @@ def _live_demo_access() -> list:
         "The recommended first walk-through: log in as Officer &rarr; City Map &rarr; "
         "toggle the Cyber-fraud layer &rarr; open a hotspot's “Why this hotspot?” "
         "breakdown &rarr; Accuracy panel &rarr; generate a patrol route."))
+
+    # Scan-to-explore QR codes (point a phone camera at any code).
+    qsize = 2.7 * cm
+    qitems = [(DEMO_URL, "Live demo"), (GITHUB_URL, "Source code"), (CLIPS_URL, "Test footage")]
+    centre = ParagraphStyle("VSQR", parent=SS["VSCell"], alignment=1, fontSize=8, leading=10)
+    qr_cells = [_qr(u, qsize) for u, _ in qitems]
+    lbl_cells = [Paragraph(
+        f"<b>{lbl}</b><br/><font size=6.5 color='#1a4fa0'>{u.replace('https://', '')}</font>",
+        centre) for u, lbl in qitems]
+    qt = Table([qr_cells, lbl_cells], colWidths=[5.9 * cm] * 3)
+    qt.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+    ]))
+    out.append(KeepTogether([
+        Spacer(1, 8),
+        _p("<b>Scan to explore</b> — point a phone camera at any code:"),
+        qt,
+    ]))
     return out
+
+
+def _qr(url: str, size: float) -> Drawing:
+    """A QR-code Drawing scaled to `size` points square (ReportLab built-in)."""
+    qr = QrCodeWidget(url)
+    x1, y1, x2, y2 = qr.getBounds()
+    w, h = (x2 - x1) or 1, (y2 - y1) or 1
+    d = Drawing(size, size, transform=[size / w, 0, 0, size / h, 0, 0])
+    d.add(qr)
+    return d
 
 
 def _validation_deployment() -> list:
@@ -667,6 +698,38 @@ def _validation_deployment() -> list:
     return out
 
 
+def _about_submitter() -> list:
+    """Final 'about the team' page with submitter details."""
+    out = [PageBreak(),
+           _p("About the team", "VSH1"),
+           HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
+           _p("This platform was designed, built and deployed for the Kanad "
+              "S.H.I.E.L.D. 2026 hackathon (Cyber Crime Branch, Ahmedabad City Police)."),
+           Spacer(1, 6)]
+    rows = [
+        ("Name", "Preet Dave Ghanshyam"),
+        ("Education", "Final-year student, NLJIET"),
+        ("LinkedIn", "linkedin.com/in/iampreetdave"),
+        ("Focus", "AI / ML — computer vision, applied LLMs, and real-world, "
+                  "deployable intelligence systems."),
+    ]
+    t = Table([[Paragraph(f"<b>{k}</b>", SS["VSCoverMeta"]),
+                Paragraph(v, SS["VSCoverMeta"])] for k, v in rows],
+              colWidths=[3.4 * cm, 13.4 * cm])
+    t.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.4, colors.HexColor("#dde1ea")),
+    ]))
+    out.append(t)
+    out.append(Spacer(1, 10))
+    out.append(_p("Thank you for reviewing our submission. The live platform, source code "
+                  "and evaluator test footage are linked on the “Live demo &amp; access” page.",
+                  "VSSmall"))
+    return out
+
+
 def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -696,6 +759,7 @@ def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     story.append(Spacer(1, 8))
     story += _security_summary(spec.get("security_extra"))
     story += _disclaimer_page()
+    story += _about_submitter()
 
     # Count pages via a no-op build pass on a throwaway canvas-counting doc.
     page_counter = {"n": 0}
