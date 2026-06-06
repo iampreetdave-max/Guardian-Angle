@@ -627,6 +627,10 @@ export default function CityMapView() {
             </div>
           )}
           <MapContainer center={[data.center.lat, data.center.lng]} zoom={12} scrollWheelZoom
+            // Tame zoom sensitivity: half-step zoom + far more scroll needed per
+            // level, so a small trackpad scroll nudges instead of leaping levels.
+            zoomSnap={0.5} zoomDelta={0.5} wheelPxPerZoomLevel={220} wheelDebounceTime={80}
+            minZoom={10} maxZoom={17}
             style={{ height: "100%", width: "100%", minHeight: 460, background: "#0a1124" }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
