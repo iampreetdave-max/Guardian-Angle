@@ -54,6 +54,7 @@ from scripts.gen_proposal import (
     _bullets,
     _criteria_matrix,
     _disclaimer_page,
+    _how_prediction_works,
     _live_backtest,
     _live_demo_access,
     _on_page,
@@ -172,6 +173,10 @@ def build_combined(bt: dict | None) -> tuple[bytes, int]:
 
     # Architecture diagram
     story += _architecture_diagram()
+    story.append(PageBreak())
+
+    # Plain-language model explainer
+    story += _how_prediction_works()
     story.append(PageBreak())
 
     # Five-statement mapping

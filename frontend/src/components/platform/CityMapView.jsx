@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MapContainer, TileLayer, CircleMarker, Polyline, Popup, Tooltip,
+  MapContainer, TileLayer, CircleMarker, Polyline, Popup, Tooltip, useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -16,6 +16,31 @@ import { BarList } from "./charts";
  *  predictive model's 0-100 hotspot scores + trend). Filters by category and
  *  time window; the patrol planner draws optimized unit routes over the
  *  current top-risk localities. */
+
+// Leaflet sizes itself once at mount; if the flex/grid container is still
+// growing to its final height at that moment, only the top strip of tiles
+// paints and the rest shows the navy background. invalidateSize() on a
+// ResizeObserver (plus a couple of delayed nudges) makes the map fill its box.
+function AutoResize() {
+  const map = useMap();
+  useEffect(() => {
+    const fix = () => map.invalidateSize();
+    const t1 = setTimeout(fix, 150);
+    const t2 = setTimeout(fix, 500);
+    let ro;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(fix);
+      ro.observe(map.getContainer());
+    }
+    window.addEventListener("resize", fix);
+    return () => {
+      clearTimeout(t1); clearTimeout(t2);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", fix);
+    };
+  }, [map]);
+  return null;
+}
 
 const SEV_COLORS = { low: "#22c55e", medium: "#f4b23c", high: "#fb923c", critical: "#ef4444" };
 const BAND_COLORS = { low: "#324468", guarded: "#f4b23c", elevated: "#fb923c", high: "#ef4444" };
@@ -632,6 +657,7 @@ export default function CityMapView() {
             zoomSnap={0.5} zoomDelta={0.5} wheelPxPerZoomLevel={220} wheelDebounceTime={80}
             minZoom={10} maxZoom={17}
             style={{ height: "100%", width: "100%", minHeight: 460, background: "#0a1124" }}>
+            <AutoResize />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
