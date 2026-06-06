@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MapContainer, TileLayer, CircleMarker, Polyline, Popup, Tooltip,
+  MapContainer, TileLayer, CircleMarker, Polyline, Popup, Tooltip, useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import "leaflet.heat";  // augments L with L.heatLayer (keyless density heatmap)
 import {
   Map as MapIcon, Loader2, Siren, TriangleAlert, Route, X,
   TrendingUp, TrendingDown, Minus, Building2, Brain, Layers, ShieldAlert,
-  Info, Target, ChevronDown, ChevronRight, Download, BarChart3, WifiOff,
+  Info, Target, ChevronDown, ChevronRight, Download, BarChart3, WifiOff, Flame,
 } from "lucide-react";
 import * as API from "../../api";
 import { BarList } from "./charts";
@@ -16,6 +18,23 @@ import { BarList } from "./charts";
  *  predictive model's 0-100 hotspot scores + trend). Filters by category and
  *  time window; the patrol planner draws optimized unit routes over the
  *  current top-risk localities. */
+
+// Smooth density heatmap (leaflet.heat) rendered as a child of MapContainer.
+// `points` is [[lat, lng, intensity0..1], ...]; the layer is rebuilt when they
+// change and torn down on unmount / layer switch. Keyless — no tile provider.
+function HeatLayer({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!points || !points.length) return undefined;
+    const layer = L.heatLayer(points, {
+      radius: 34, blur: 26, maxZoom: 14, minOpacity: 0.25,
+      gradient: { 0.2: "#22c55e", 0.45: "#f4b23c", 0.7: "#fb923c", 1.0: "#ef4444" },
+    });
+    layer.addTo(map);
+    return () => { map.removeLayer(layer); };
+  }, [map, points]);
+  return null;
+}
 
 const SEV_COLORS = { low: "#22c55e", medium: "#f4b23c", high: "#fb923c", critical: "#ef4444" };
 const BAND_COLORS = { low: "#324468", guarded: "#f4b23c", elevated: "#fb923c", high: "#ef4444" };
@@ -480,6 +499,16 @@ export default function CityMapView() {
     return m;
   }, [risk]);
 
+  // Heatmap points: locality centroids weighted by report load (complaints +
+  // cases), normalised against the busiest area so hotspots bloom hottest.
+  const heatPoints = useMemo(() => {
+    const areas = data?.areas || [];
+    const max = maxLoad || 1;
+    return areas
+      .map((a) => [a.lat, a.lng, (a.complaints + a.cases) / max])
+      .filter((p) => p[2] > 0);
+  }, [data, maxLoad]);
+
   // Cyber sizing: drive the circle radius by ₹ lost when any amounts exist,
   // otherwise fall back to victim count (synthetic rows have NULL amounts).
   const cyberSizing = useMemo(() => {
@@ -536,6 +565,8 @@ export default function CityMapView() {
       <p className="mb-3 text-xs text-slate-500">
         {layer === "reports"
           ? `Area-wise load from ${totals.complaints} complaints, ${totals.cases} linked cases and ${totals.anomalies} anomaly detections.`
+          : layer === "heat"
+          ? "Crime-density heatmap — report load smoothed across localities to surface hotspot clusters at a glance."
           : layer === "cyber"
           ? "Victim-location density — where victims live, not where fraudsters operate."
           : "Hotspot forecast — recency-weighted risk model over reports, severity, category and live anomaly signals."}
@@ -549,6 +580,11 @@ export default function CityMapView() {
               layer === "reports" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
             <Layers size={13} /> Reports
           </button>
+          <button onClick={() => setLayer("heat")}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition ${
+              layer === "heat" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
+            <Flame size={13} /> Heatmap
+          </button>
           <button onClick={() => setLayer("risk")}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition ${
               layer === "risk" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
@@ -561,7 +597,7 @@ export default function CityMapView() {
           </button>
         </div>
 
-        {layer === "reports" && (
+        {(layer === "reports" || layer === "heat") && (
           <>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
               className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
@@ -629,14 +665,17 @@ export default function CityMapView() {
           <MapContainer center={[data.center.lat, data.center.lng]} zoom={12} scrollWheelZoom
             style={{ height: "100%", width: "100%", minHeight: 460, background: "#0a1124" }}>
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              subdomains="abcd"
               // A transparent 1x1 PNG for failed tiles -> the navy MapContainer
               // background shows through instead of broken-image gray. The data
               // layers (circles/routes) stay fully visible offline.
               errorTileUrl="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
               eventHandlers={{ tileload: onTileLoad, tileerror: onTileError }}
             />
+
+            {layer === "heat" && <HeatLayer points={heatPoints} />}
 
             {layer === "reports" && data.areas.map((a) => {
               const total = a.complaints + a.cases;
