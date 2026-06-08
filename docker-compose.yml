@@ -13,6 +13,9 @@ services:
       # Persist downloaded model weights so subsequent runs are fully offline:
       - model-cache:/root/.cache
       - insightface-cache:/root/.insightface
+      # Specialized fire/smoke YOLO (if fetched) — config auto-detects it at
+      # /app/models, giving fire/smoke alerts a localized box. Harmless if empty.
+      - ./backend/models:/app/models:ro
     environment:
       VISIONSCAN_DEVICE: ${VISIONSCAN_DEVICE:-cpu}
       VISIONSCAN_DATA_DIR: /data

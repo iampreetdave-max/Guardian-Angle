@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS anomaly_events (
     type        TEXT NOT NULL,             -- fire|smoke|accident|weapon|violence
     confidence  REAL NOT NULL,
     source      TEXT NOT NULL,             -- clip|yolo|clip+yolo
-    x1 REAL, y1 REAL, x2 REAL, y2 REAL,    -- optional bbox (object signals)
+    x1 REAL, y1 REAL, x2 REAL, y2 REAL,    -- optional bbox, 0..1 frame fractions (YOLO signals)
     status      TEXT NOT NULL DEFAULT 'new',   -- new|acknowledged|dismissed
     peak_count  INTEGER NOT NULL DEFAULT 1,    -- frames merged into this event
     last_ts_sec REAL,                      -- newest grouped frame timestamp

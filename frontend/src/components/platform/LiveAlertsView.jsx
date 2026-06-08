@@ -5,14 +5,41 @@ import {
 } from "lucide-react";
 import * as API from "../../api";
 
-// Visual identity per anomaly type — icon + Tailwind badge classes.
+// Visual identity per anomaly type — icon + Tailwind badge classes + the CSS
+// color used to draw the detection box overlay (YOLO signals only).
 const TYPE_META = {
-  fire: { icon: Flame, badge: "bg-signal-red/15 text-signal-red border-signal-red/40", label: "Fire" },
-  smoke: { icon: Cloud, badge: "bg-amber-500/15 text-amber-400 border-amber-500/40", label: "Smoke" },
-  accident: { icon: CarFront, badge: "bg-amber-500/15 text-amber-400 border-amber-500/40", label: "Accident" },
-  weapon: { icon: Sword, badge: "bg-accent/15 text-accent border-accent/40", label: "Weapon" },
-  violence: { icon: Swords, badge: "bg-signal-red/15 text-signal-red border-signal-red/40", label: "Violence" },
+  fire: { icon: Flame, badge: "bg-signal-red/15 text-signal-red border-signal-red/40", label: "Fire", box: "#ef4444" },
+  smoke: { icon: Cloud, badge: "bg-amber-500/15 text-amber-400 border-amber-500/40", label: "Smoke", box: "#f59e0b" },
+  accident: { icon: CarFront, badge: "bg-amber-500/15 text-amber-400 border-amber-500/40", label: "Accident", box: "#f59e0b" },
+  weapon: { icon: Sword, badge: "bg-accent/15 text-accent border-accent/40", label: "Weapon", box: "#22d3ee" },
+  violence: { icon: Swords, badge: "bg-signal-red/15 text-signal-red border-signal-red/40", label: "Violence", box: "#ef4444" },
 };
+
+// A localized box exists only for YOLO signals (CLIP scores the whole frame).
+// Coords are stored as 0..1 frame fractions, so we render them as percentages.
+function DetectionBox({ alert, color, label }) {
+  const { x1, y1, x2, y2 } = alert;
+  if ([x1, y1, x2, y2].some((v) => v == null)) return null;
+  const left = Math.min(x1, x2) * 100;
+  const top = Math.min(y1, y2) * 100;
+  const width = Math.abs(x2 - x1) * 100;
+  const height = Math.abs(y2 - y1) * 100;
+  if (width <= 0 || height <= 0) return null;
+  return (
+    <div
+      className="pointer-events-none absolute rounded-sm"
+      style={{
+        left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%`,
+        border: `2px solid ${color}`, boxShadow: `0 0 0 1px rgba(0,0,0,0.5)`,
+      }}>
+      <span
+        className="absolute -top-[1px] left-0 -translate-y-full rounded-t-sm px-1 text-[9px] font-bold uppercase leading-tight text-white"
+        style={{ backgroundColor: color }}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 const TABS = [
   { key: "new", label: "New" },
@@ -45,6 +72,7 @@ function AlertCard({ alert, onAck, onDismiss, busy }) {
             <Siren size={28} />
           </div>
         )}
+        <DetectionBox alert={alert} color={meta.box || "#22d3ee"} label={meta.label} />
         <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${meta.badge}`}>
           <Icon size={12} /> {meta.label}
         </span>

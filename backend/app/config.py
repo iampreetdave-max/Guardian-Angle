@@ -17,6 +17,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_DIR = BACKEND_ROOT.parent / "data"
 
+# Fire/smoke YOLO weights drop here (fetch_fire_smoke_model.py downloads to it).
+# Auto-used if present so neither local nor Docker runs need any env edit — in
+# the image this resolves to /app/models, which docker-compose mounts.
+_FIRE_SMOKE_WEIGHTS = BACKEND_ROOT / "models" / "fire_smoke_yolo.pt"
+
+
+def _default_specialized_weights() -> str:
+    return str(_FIRE_SMOKE_WEIGHTS) if _FIRE_SMOKE_WEIGHTS.exists() else ""
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -105,9 +114,11 @@ class Settings(BaseSettings):
     anomaly_notify_threshold: float = 0.70
     # YOLO 'knife' (COCO) minimum confidence to register a weapon signal.
     anomaly_weapon_yolo_conf: float = 0.40
-    # Optional path to a specialized .pt (e.g. a fire/weapon YOLO). Loaded
-    # fail-soft: if missing/broken the CLIP layer still covers every class.
-    anomaly_specialized_weights: str = ""
+    # Optional path to a specialized .pt (e.g. a fire/smoke YOLO). Defaults to
+    # backend/models/fire_smoke_yolo.pt when that file exists (gives fire/smoke
+    # alerts a localized box); override via env. Loaded fail-soft: if missing or
+    # broken the CLIP layer still covers every class.
+    anomaly_specialized_weights: str = _default_specialized_weights()
     # Per-class margin overrides, env as JSON:
     # VISIONSCAN_ANOMALY_CLASS_THRESHOLDS={"weapon": 0.32}
     anomaly_class_thresholds: dict[str, float] = {}

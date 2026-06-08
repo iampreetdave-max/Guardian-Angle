@@ -86,7 +86,20 @@ class AnomalySignal:
     type: str
     confidence: float
     source: str  # "clip" | "yolo"
+    # Bounding box as fractions of frame size (x1, y1, x2, y2 in 0..1), so the
+    # UI can overlay it as percentages without knowing the source resolution.
+    # None for CLIP signals — CLIP scores the whole frame and cannot localize.
     bbox: tuple[float, float, float, float] | None = None
+
+
+def _norm_bbox(bbox: tuple[float, float, float, float] | None,
+               w: int, h: int) -> tuple[float, float, float, float] | None:
+    """Convert a pixel-space (x1,y1,x2,y2) box to 0..1 fractions, clamped."""
+    if bbox is None or w <= 0 or h <= 0:
+        return None
+    x1, y1, x2, y2 = bbox
+    clamp = lambda v: min(max(float(v), 0.0), 1.0)
+    return (clamp(x1 / w), clamp(y1 / h), clamp(x2 / w), clamp(y2 / h))
 
 
 # ---------------- CLIP text bank (lazy process-wide singleton) ----------------
@@ -210,11 +223,12 @@ def score_yolo(frame_bgr: np.ndarray | None,
     optional specialized model pass when weights are configured."""
     s = get_settings()
     out: list[AnomalySignal] = []
+    h, w = (frame_bgr.shape[:2] if frame_bgr is not None else (0, 0))
     for det in detections:
         cls = _YOLO_LABEL_MAP.get(det.label.lower())
         if cls and det.confidence >= s.anomaly_weapon_yolo_conf:
             out.append(AnomalySignal(cls, round(det.confidence, 4), "yolo",
-                                     det.bbox))
+                                     _norm_bbox(det.bbox, w, h)))
 
     model = _ensure_specialized()
     if model is not None and frame_bgr is not None:
@@ -228,7 +242,7 @@ def score_yolo(frame_bgr: np.ndarray | None,
                         x1, y1, x2, y2 = [float(v) for v in box.xyxy[0]]
                         out.append(AnomalySignal(
                             cls, round(float(box.conf[0]), 4), "yolo",
-                            (x1, y1, x2, y2)))
+                            _norm_bbox((x1, y1, x2, y2), w, h)))
         except Exception:  # pragma: no cover
             log.warning("Specialized anomaly inference failed", exc_info=True)
     return out
