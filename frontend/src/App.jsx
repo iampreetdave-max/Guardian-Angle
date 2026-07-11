@@ -145,6 +145,16 @@ function Workbench() {
       } else if (mode === "object") {
         res = await API.searchObject({ label: query, min_confidence: 0.35, ...opts });
         lastQuery.current = { query, type: "object" };
+        if (!res.hits?.length) {
+          // "red car" isn't a YOLO class — fall back to per-object CLIP (region)
+          // search so attribute queries still return results instead of nothing.
+          res = await API.searchRegion({
+            query,
+            top_k: 60,
+            video_id: selectedVideo || undefined,
+          });
+          res.fallback_from = "object";
+        }
       } else if (mode === "image") {
         res = await API.searchImage(file, opts);
         lastQuery.current = { query: `[image] ${file.name}`, type: "image" };
@@ -435,6 +445,12 @@ function Workbench() {
                     <span className="font-bold text-white">{results.count}</span>{" "}
                     matches for{" "}
                     <span className="text-accent">{results.query}</span>
+                    {results.fallback_from === "object" && (
+                      <span className="ml-2 text-xs text-amber-400/90">
+                        not an exact object label — showing per-object visual
+                        matches (CLIP) instead
+                      </span>
+                    )}
                   </p>
                   {results.count > 0 && (
                     <button
