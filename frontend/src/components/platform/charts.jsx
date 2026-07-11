@@ -81,7 +81,7 @@ export function TrendBars({ data, accent = "#f4b23c", empty = "No data yet" }) {
   return (
     <div className="flex h-32 items-end gap-1">
       {data.map((d) => (
-        <div key={d.date} className="group relative flex flex-1 flex-col items-center justify-end">
+        <div key={d.date} className="group relative flex h-full flex-1 flex-col items-center justify-end">
           <div
             className="w-full rounded-t transition-all"
             style={{ height: `${(d.count / max) * 100}%`, backgroundColor: accent, minHeight: d.count ? "3px" : "1px" }}
