@@ -1,0 +1,22 @@
+# The backend image is built with `build: ./backend` (docker-compose.yml), so the
+# build context is this directory — the repo-root .dockerignore does NOT apply
+# here. Without this file the daemon receives the whole venv and the 546MB
+# fire/smoke weights on every build, which is slow and has OOM'd Docker Desktop.
+.venv
+venv
+__pycache__
+**/__pycache__
+**/*.pyc
+
+# Specialized fire/smoke weights are bind-mounted read-only at runtime
+# (docker-compose.yml: ./backend/models:/app/models:ro), never baked in.
+models/
+
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.faiss
+*.counter
+.pytest_cache
+tests/

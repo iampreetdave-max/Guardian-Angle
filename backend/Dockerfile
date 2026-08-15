@@ -23,9 +23,22 @@ RUN pip install --no-cache-dir numpy==1.26.4 cython && \
 
 COPY app ./app
 
-# Pre-bundling weights into the image keeps the container fully offline.
-# (Optional) uncomment to bake YOLO weights at build time:
-# RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+# Operator scripts (demo_reset, smoke tests, accuracy eval). Without these in
+# the image there is no way to reset or verify the demo against the database the
+# container actually uses — the host-side copy points at a different file.
+COPY scripts ./scripts
+
+# Bake the YOLO weights in. ultralytics resolves the bare name "yolov8n.pt"
+# (config.py) by checking the working directory first, so landing it at
+# /app/yolov8n.pt means it is never fetched over the network.
+#
+# This matters more than it looks: without it ultralytics downloads the file
+# into /app, which is the container's *writable layer*, not a volume. Every
+# `docker compose down` (stop.ps1) discards it, and the next start re-downloads
+# from github.com. Offline, that download fails, detection.py catches the error
+# and disables object detection *silently* — object search and weapon alerts go
+# dead with nothing but a log line to show for it.
+COPY yolov8n.pt ./yolov8n.pt
 
 ENV VISIONSCAN_DATA_DIR=/data
 VOLUME ["/data"]
