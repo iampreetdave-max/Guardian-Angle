@@ -24,6 +24,20 @@ _yolo_lock = threading.Lock()
 _yolo = None
 _yolo_failed = False
 
+# An ultralytics YOLO instance is NOT thread-safe. The first predict() call
+# lazily builds a predictor and fuses Conv+BatchNorm *in place* on the shared
+# model; a second thread arriving mid-fuse crashes with
+# "'Conv' object has no attribute 'bn'" (the first fuse already deleted it), and
+# even after warm-up the predictor keeps mutable per-call batch/results state.
+# Uploading several videos at once put every ingest worker on one model and blew
+# this up. Serializing inference is the fix that covers every caller at once.
+#
+# ponytail: one global inference lock — CPU inference is the bottleneck and torch
+# already parallelizes internally, so the throughput cost is small. If detection
+# ever needs true concurrency, give each worker thread its own YOLO instance
+# (costs one model copy per thread) instead of widening this lock.
+YOLO_INFER_LOCK = threading.Lock()
+
 
 @dataclass
 class Detection:
@@ -69,9 +83,10 @@ def detect_objects(frame_bgr: np.ndarray) -> list[Detection]:
     model = _ensure_yolo()
     if model is None:
         return []
-    results = model.predict(
-        frame_bgr, conf=s.yolo_conf_threshold, verbose=False
-    )
+    with YOLO_INFER_LOCK:
+        results = model.predict(
+            frame_bgr, conf=s.yolo_conf_threshold, verbose=False
+        )
     out: list[Detection] = []
     for r in results:
         names = r.names

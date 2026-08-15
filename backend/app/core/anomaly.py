@@ -24,7 +24,7 @@ import numpy as np
 
 from ..config import get_settings
 from . import embedding
-from .detection import Detection
+from .detection import YOLO_INFER_LOCK, Detection
 
 log = logging.getLogger("visionscan.anomaly")
 
@@ -233,8 +233,12 @@ def score_yolo(frame_bgr: np.ndarray | None,
     model = _ensure_specialized()
     if model is not None and frame_bgr is not None:
         try:
-            for r in model.predict(frame_bgr, conf=s.anomaly_weapon_yolo_conf,
-                                   verbose=False):
+            # Same non-thread-safe first-predict fuse as the base detector —
+            # see detection.YOLO_INFER_LOCK.
+            with YOLO_INFER_LOCK:
+                results = list(model.predict(
+                    frame_bgr, conf=s.anomaly_weapon_yolo_conf, verbose=False))
+            for r in results:
                 for box in r.boxes:
                     label = r.names[int(box.cls[0])].lower()
                     cls = _YOLO_LABEL_MAP.get(label, label)

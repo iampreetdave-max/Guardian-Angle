@@ -104,9 +104,20 @@ if ($Rebuild) {
 }
 
 Step "Starting the stack..."
-Warn "First run pulls base images, downloads AI models and compiles the face engine."
-Warn "That can take 10-15 minutes. Subsequent starts are seconds."
-docker compose up -d --build
+
+# Demo-day safety: "--build" reaches out to the npm and PyPI registries the
+# moment any layer is stale, so on a venue network (or no network) it can fail
+# a launch that would otherwise have worked. If the images already exist, start
+# from them. Pass -Rebuild to pick up code changes.
+$built = @(docker compose images -q 2>$null | Where-Object { $_ })
+if ($built.Count -ge 2) {
+    Ok "Using the images already built (no network needed). Use -Rebuild after code changes."
+    docker compose up -d
+} else {
+    Warn "First run pulls base images, downloads AI models and compiles the face engine."
+    Warn "That can take 10-15 minutes and needs internet. Subsequent starts are seconds."
+    docker compose up -d --build
+}
 if ($LASTEXITCODE -ne 0) { Die "docker compose up failed. See: docker compose logs" }
 
 # ---------------------------------------------------------------------------

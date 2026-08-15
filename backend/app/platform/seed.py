@@ -24,10 +24,30 @@ _DEMO = [
 ]
 
 
+def _seed_synthetic() -> None:
+    """Lay down the high-volume, deterministic synthetic incident stream.
+
+    Self-gating (app_settings marker + complaints row-count < ~100 + the
+    VISIONSCAN_SEED_SYNTHETIC override), so it is safe to call on every boot.
+    """
+    try:
+        from .seed_synthetic import maybe_seed_synthetic
+        maybe_seed_synthetic()
+    except Exception:  # never block startup on demo data
+        log.warning("synthetic incident seeding skipped", exc_info=True)
+
+
 def seed_demo() -> None:
     with get_conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
         if n > 0:
+            # Accounts exist, but a database created before the synthetic layer
+            # landed — an upgraded Docker volume, a redeployed VM, a judge's
+            # machine that ran an older build — still has no incident volume,
+            # which leaves the map, analytics and backtest empty. The synthetic
+            # seed gates itself, so back-filling here is idempotent and costs
+            # one COUNT(*) per boot.
+            _seed_synthetic()
             return  # already seeded / has users
         tid = conn.execute(
             "INSERT INTO teams (name, station) VALUES "
@@ -104,11 +124,5 @@ def _seed_incidents(citizen_id: int | None, lead_id: int | None, team_id: int) -
              len(SEED_INCIDENTS), n_cases)
 
     # Lay down the high-volume, deterministic synthetic stream UNDER the ~20
-    # labeled incidents above (which stay as the distinguishable overlay). Its
-    # own gating (row-count < ~100 OR VISIONSCAN_SEED_SYNTHETIC) + an
-    # app_settings marker make this safe to call every run.
-    try:
-        from .seed_synthetic import maybe_seed_synthetic
-        maybe_seed_synthetic()
-    except Exception:  # never block startup on demo data
-        log.warning("synthetic incident seeding skipped", exc_info=True)
+    # labeled incidents above (which stay as the distinguishable overlay).
+    _seed_synthetic()

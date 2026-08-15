@@ -36,3 +36,6 @@ frontend/.vite/
 .DS_Store
 .idea/
 .vscode/
+
+# Claude Code local settings (can contain tokens) — never commit
+.claude/settings.local.json
