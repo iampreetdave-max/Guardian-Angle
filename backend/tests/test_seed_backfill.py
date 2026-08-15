@@ -60,6 +60,31 @@ def test_seed_demo_backfills_synthetic_on_existing_users(monkeypatch):
     assert _count(database, "users") == users_after_first, "must not duplicate users"
 
 
+def test_backfill_ignores_force_flag(monkeypatch):
+    """VISIONSCAN_SEED_SYNTHETIC must not make every boot re-seed.
+
+    demo_reset.py sets that flag for the whole process, then calls init_db()
+    twice and opens a TestClient (a third startup). If the boot-time back-fill
+    honoured the flag, each of those stacked another ~2,000 complaints —
+    inflating the row count and every metric derived from it.
+    """
+    database = _fresh_db(monkeypatch)
+    monkeypatch.setenv("VISIONSCAN_SEED_SYNTHETIC", "1")
+    from app.platform import seed
+
+    seed.seed_demo()
+    first = _count(database, "complaints")
+    assert first > 100
+
+    # Subsequent boots in the same process, flag still set.
+    seed.seed_demo()
+    seed.seed_demo()
+    assert _count(database, "complaints") == first, (
+        "boot-time back-fill must not re-seed when the force flag is set; "
+        f"grew from {first} to {_count(database, 'complaints')}"
+    )
+
+
 def test_seed_demo_is_idempotent(monkeypatch):
     database = _fresh_db(monkeypatch)
     from app.platform import seed

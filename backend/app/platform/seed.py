@@ -37,6 +37,31 @@ def _seed_synthetic() -> None:
         log.warning("synthetic incident seeding skipped", exc_info=True)
 
 
+def _backfill_synthetic() -> None:
+    """Top up a database that has users but no incident volume.
+
+    Deliberately does NOT honour VISIONSCAN_SEED_SYNTHETIC. That flag means
+    "force a reseed" and belongs to explicit tooling such as demo_reset, which
+    sets it for the whole process — honouring it here would re-seed on every
+    subsequent init_db() in that process (demo_reset calls init_db twice and
+    then opens a TestClient, which fires startup a third time), stacking
+    duplicate streams and inflating every metric derived from them.
+
+    The row-count gate is the only condition that matters for a back-fill.
+    """
+    try:
+        from ..database import get_conn
+        from .seed_synthetic import AUTO_SEED_BELOW, seed_synthetic
+
+        with get_conn() as conn:
+            n = conn.execute("SELECT COUNT(*) c FROM complaints").fetchone()["c"]
+        if n >= AUTO_SEED_BELOW:
+            return
+        seed_synthetic(force=True)
+    except Exception:  # never block startup on demo data
+        log.warning("synthetic incident back-fill skipped", exc_info=True)
+
+
 def seed_demo() -> None:
     with get_conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
@@ -47,7 +72,7 @@ def seed_demo() -> None:
             # which leaves the map, analytics and backtest empty. The synthetic
             # seed gates itself, so back-filling here is idempotent and costs
             # one COUNT(*) per boot.
-            _seed_synthetic()
+            _backfill_synthetic()
             return  # already seeded / has users
         tid = conn.execute(
             "INSERT INTO teams (name, station) VALUES "

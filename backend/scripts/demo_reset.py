@@ -246,10 +246,30 @@ def self_verify() -> None:
         vj = v.json() if v.status_code == 200 else {}
         check("backtest evaluated folds", vj.get("folds", 0) >= 4,
               f"folds={vj.get('folds')}")
+        # Assert the invariant, not a knife edge. A planted surge may name more
+        # than one area (the cyber-fraud ramp covers SG Highway AND Satellite),
+        # and whether a *marginal* second area lands at rank 10 or 11 of 30 moves
+        # with the calendar for the same reason the complaint count does: the
+        # 180-day window slides with datetime.now(), so the weekend uplift
+        # (seed_synthetic.py: date.weekday() -> _WEEKEND_UPLIFT) lands on
+        # different area/category/day combinations. What must hold every day is
+        # that each planted surge is DETECTED — at least one of its areas rises
+        # into the top-10 while the surge is running.
         surges = vj.get("surge_detection", [])
-        check("planted surges all caught in top-10",
-              bool(surges) and all(s["in_top10_during"] for s in surges),
-              f"{sum(s['in_top10_during'] for s in surges)}/{len(surges)} caught")
+        by_surge: dict[str, list] = {}
+        for s in surges:
+            by_surge.setdefault(s["surge"], []).append(s)
+        caught_surges = sum(
+            1 for rows in by_surge.values() if any(r["in_top10_during"] for r in rows))
+        n_areas_caught = sum(1 for s in surges if s["in_top10_during"])
+        check("every planted surge caught in top-10",
+              bool(by_surge) and caught_surges == len(by_surge),
+              f"{caught_surges}/{len(by_surge)} surges "
+              f"({n_areas_caught}/{len(surges)} surge-areas)")
+        for s in surges:
+            mark = "in top-10" if s["in_top10_during"] else "OUTSIDE top-10"
+            print(DIM(f"        {s['area']:<14} rank {s['rank_before_surge']}"
+                      f" -> {s['rank_during_surge']}  ({mark})"))
 
         # 5) Module health endpoints answer (200) — offline-friendly probes.
         for label, path in (
