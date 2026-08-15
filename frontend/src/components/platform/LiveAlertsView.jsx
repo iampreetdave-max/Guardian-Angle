@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Siren, Flame, Cloud, CarFront, Sword, Swords, Check, X, Inbox, Loader2,
-  RadioTower, Layers, Briefcase,
+  RadioTower, Layers, Briefcase, AlertTriangle,
 } from "lucide-react";
 import * as API from "../../api";
 
@@ -123,6 +123,7 @@ export default function LiveAlertsView() {
   const [tab, setTab] = useState("new");
   const [typeFilter, setTypeFilter] = useState("");
   const [alerts, setAlerts] = useState(null);
+  const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
   const refresh = useCallback(() => {
@@ -130,12 +131,19 @@ export default function LiveAlertsView() {
       status_filter: tab,
       ...(typeFilter ? { type: typeFilter } : {}),
     })
-      .then(setAlerts)
-      .catch(() => {});
+      .then((data) => { setAlerts(data); setError(null); })
+      // Swallowing this used to leave `alerts` null forever, so a 403, a 500 and
+      // a backend still warming up all rendered as the same endless spinner.
+      .catch((e) => setError(
+        e?.response?.status === 403
+          ? "You do not have permission to view live alerts."
+          : "Could not load alerts. Retrying every 5s…"
+      ));
   }, [tab, typeFilter]);
 
   useEffect(() => {
     setAlerts(null);
+    setError(null);
     refresh();
     const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
@@ -182,7 +190,12 @@ export default function LiveAlertsView() {
         </select>
       </div>
 
-      {alerts === null ? (
+      {alerts === null && error ? (
+        <div className="flex flex-col items-center py-20 text-amber-400">
+          <AlertTriangle size={28} />
+          <p className="mt-3 text-sm">{error}</p>
+        </div>
+      ) : alerts === null ? (
         <div className="flex flex-col items-center py-20 text-slate-400">
           <Loader2 size={26} className="animate-spin text-accent" />
         </div>

@@ -10,7 +10,7 @@ import {
   govInsights, govSavedSearches, govAddSavedSearch, govRunSavedSearch,
   govRemoveSavedSearch,
 } from "./govApi";
-import { useAuth, isStaff } from "../../auth";
+import { useAuth, isStaff, isLead } from "../../auth";
 
 // Category → colour + icon, shared by chips and result badges.
 const CATS = {
@@ -33,6 +33,10 @@ const LANGS = [
 export default function GovIntelPanel() {
   const { user } = useAuth();
   const staff = isStaff(user);
+  // POST /api/gov/refresh is require_role("lead") server-side (govintel/routes.py),
+  // and require_role is a minimum-rank gate — so an officer seeing this button
+  // only gets a 403. Match the server rank instead of showing a dead control.
+  const canRefresh = isLead(user);
 
   const [health, setHealth] = useState(null);
   const [q, setQ] = useState("");
@@ -369,7 +373,7 @@ export default function GovIntelPanel() {
           className="rounded-lg bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none" title="Summary language">
           {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
-        {staff && (
+        {canRefresh && (
           <button onClick={doRefresh} disabled={refreshing}
             className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-accent-600 hover:text-white disabled:opacity-40"
             title="Pull the latest updates from government feeds">

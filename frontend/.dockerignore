@@ -1,0 +1,11 @@
+# The frontend image is built with `build: ./frontend` (docker-compose.yml), so
+# the build context is this directory and the repo-root .dockerignore does NOT
+# apply. Without this, node_modules (and the prebuilt dist, which the image
+# regenerates in its builder stage anyway) is uploaded to the daemon on every
+# build — minutes of dead air before a single layer is evaluated.
+node_modules
+dist
+.vite
+*.log
+.env
+.env.local
