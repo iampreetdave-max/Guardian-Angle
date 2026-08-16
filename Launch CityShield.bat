@@ -13,6 +13,10 @@ cd /d "%~dp0"
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1"
 
+REM Open the demo console: logins, the searches that are known to work,
+REM the six-minute route, and the endpoints.
+start "" "%~dp0DEMO.html"
+
 echo.
 echo ------------------------------------------------------------
 echo  This window can be closed - the app keeps running in Docker.

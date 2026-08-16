@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CityShield — Demo Console</title>
+<style>
+  :root{
+    --navy:#0A1124; --navy2:#111a35; --card:#151f3d; --line:#26325a;
+    --gold:#F4B23C; --ink:#e8ecf7; --dim:#94a2c4; --green:#3ddc97; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--ink);
+       font:15px/1.6 "Segoe UI",system-ui,-apple-system,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+  header{border-bottom:2px solid var(--gold);padding-bottom:18px;margin-bottom:28px}
+  h1{margin:0 0 4px;font-size:30px;letter-spacing:-.3px}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--dim);font-size:14px;margin:0}
+  h2{font-size:19px;margin:36px 0 12px;color:var(--gold);
+     border-left:3px solid var(--gold);padding-left:10px}
+  h3{font-size:15px;margin:22px 0 8px;color:var(--ink)}
+  a{color:var(--gold)}
+  .grid{display:grid;gap:14px}
+  .cols2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .big{display:inline-block;background:var(--gold);color:#0A1124;font-weight:700;
+       font-size:18px;text-decoration:none;padding:16px 34px;border-radius:10px;
+       margin:6px 10px 6px 0}
+  .big.ghost{background:transparent;color:var(--gold);border:2px solid var(--gold)}
+  code{background:#0b1330;border:1px solid var(--line);border-radius:5px;
+       padding:2px 7px;font-family:Consolas,monospace;font-size:13px;color:#cfe3ff}
+  pre{background:#0b1330;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+      overflow-x:auto;margin:8px 0}
+  pre code{border:0;background:none;padding:0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  tbody tr:hover{background:#18234a}
+  .q{font-family:Consolas,monospace;color:#8fe3ff;font-weight:600;white-space:nowrap}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;
+       background:#1d2b52;color:var(--dim);border:1px solid var(--line)}
+  .tag.obj{color:#8fe3ff;border-color:#2b5f7a}
+  .tag.txt{color:#c3a6ff;border-color:#4a3a75}
+  .ok{color:var(--green);font-weight:600}
+  .warn{color:var(--gold)}
+  .bad{color:var(--red);font-weight:600}
+  ul{margin:8px 0;padding-left:20px} li{margin:5px 0}
+  .note{border-left:3px solid var(--gold);background:#191f38;
+        padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;color:#dfe6f7;font-size:14px}
+  .danger{border-left-color:var(--red);background:#2a1620}
+  #status{font-size:14px;margin-top:10px;color:var(--dim)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;
+       background:#5a678f;margin-right:6px;vertical-align:middle}
+  .dot.up{background:var(--green)} .dot.down{background:var(--red)}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);
+         color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>City<span>Shield</span> — Demo Console</h1>
+  <p class="sub">Unified AI Policing · Cyber Crime Branch, Ahmedabad — everything below runs on this laptop, offline.</p>
+</header>
+
+<!-- ───────────────────────── LAUNCH ───────────────────────── -->
+<h2>1 · Start it</h2>
+<div class="card">
+  <p style="margin-top:0">Double-click <code>Launch CityShield.bat</code> in the project folder, wait for the
+  green <em>“CityShield is up and running!”</em> line, then click below.</p>
+
+  <a class="big" href="http://localhost:8080" target="_blank">▶ Open the application</a>
+  <a class="big ghost" href="http://localhost:8000/docs" target="_blank">API docs</a>
+
+  <div id="status"><span class="dot" id="dot"></span><span id="msg">checking whether the app is already running…</span></div>
+
+  <h3>If you prefer the terminal</h3>
+<pre><code>cd C:\Users\PREET\OneDrive\Desktop\VisionScan
+.\start.ps1
+</code></pre>
+  <p style="margin-bottom:0">To put it on a <strong>public HTTPS link</strong> (no account, no card — for remote judges):
+  <code>.\deploy\share.ps1</code> prints and copies a <code>trycloudflare.com</code> URL. The URL changes every run,
+  so generate it on the day.</p>
+</div>
+
+<div class="note danger">
+  <strong>Three things never to do at the venue:</strong>
+  <ul style="margin-bottom:0">
+    <li>Never pass <code>-Rebuild</code> and never run <code>make rebuild</code> — a rebuild needs the npm and PyPI registries.</li>
+    <li>Never run <code>.\stop.ps1 -Wipe</code> or <code>make clean</code> — those delete the volumes holding ~1.3&nbsp;GB of cached CLIP/Chroma weights and the ArcFace pack.</li>
+    <li>Stop your other Docker projects first: <code>docker stop $(docker ps -q)</code>. Several stacks alongside this one starve the daemon on 16&nbsp;GB.</li>
+  </ul>
+</div>
+
+<!-- ───────────────────────── LOGINS ───────────────────────── -->
+<h2>2 · Sign in</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Role</th><th>Email</th><th>Password</th><th>What it shows</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Admin</strong></td><td class="q">admin@city.gov</td><td class="q">admin123</td><td>Everything, incl. the Admin tab</td></tr>
+      <tr><td><strong>Team Lead</strong></td><td class="q">lead@city.gov</td><td class="q">lead123</td><td>All modules; can refresh Legal Feed</td></tr>
+      <tr><td><strong>Officer</strong></td><td class="q">officer@city.gov</td><td class="q">officer123</td><td>Field view — no admin, no feed refresh</td></tr>
+      <tr><td><strong>Citizen</strong></td><td class="q">citizen@example.com</td><td class="q">citizen123</td><td>Citizen portal only — proves RBAC</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-bottom:0"><strong>Use Admin</strong> for the main run-through. Log in as <strong>Citizen</strong> for
+  ten seconds at the end — showing that the same URL exposes a completely different surface is the fastest way to
+  prove role-based access control is real.</p>
+</div>
+
+<!-- ───────────────────────── PRELOADED ───────────────────────── -->
+<h2>3 · What is already loaded</h2>
+<div class="grid cols2">
+  <div class="card">
+    <h3 style="margin-top:0">Footage — 16 HD clips, indexed</h3>
+    <p style="color:var(--dim);font-size:14px;margin-top:0">All 1920×1080 except two at 1280×720. Already ingested:
+    <strong>417 keyframes</strong>, <strong>3,362 objects</strong>, 956 faces. Nothing to upload on the day.</p>
+    <table>
+      <thead><tr><th>Cam</th><th>Clip</th><th>Contains</th></tr></thead>
+      <tbody>
+        <tr><td class="q">CAM-14</td><td>traffic_redcar_06</td><td><strong>Bright red sedan, centre-frame</strong></td></tr>
+        <tr><td class="q">CAM-15</td><td>traffic_taxi_kolkata_03</td><td>Yellow Ambassador taxis, red scooter</td></tr>
+        <tr><td class="q">CAM-12</td><td>traffic_bus_kolkata_02</td><td>Buses, yellow taxi, motorcycles, crowd</td></tr>
+        <tr><td class="q">CAM-16</td><td>traffic_truck_highway_04</td><td>Semis, U-Haul, red pickup</td></tr>
+        <tr><td class="q">CAM-13</td><td>traffic_motorbike_05</td><td>Dense two-wheeler street</td></tr>
+        <tr><td class="q">CAM-04</td><td>cctv_overhead_india_04</td><td><strong>Indian junction, static CCTV angle</strong></td></tr>
+        <tr><td class="q">CAM-03</td><td>cctv_overhead_05</td><td>Aerial junction, buses, JCB</td></tr>
+        <tr><td class="q">CAM-01/02/05</td><td>cctv_crosswalk / overhead / streetmonitor</td><td>True fixed-camera angles</td></tr>
+        <tr><td class="q">CAM-07/08/09</td><td>market_crowded_01–03</td><td>Delhi &amp; Mumbai bazaars, dense crowds</td></tr>
+        <tr><td class="q">CAM-06</td><td>market_bazaar_lucknow_04</td><td>Lucknow bazaar, many motorcycles</td></tr>
+        <tr><td class="q">CAM-10/11</td><td>pedestrian_crossing / street</td><td>Pedestrians, mixed-colour cars</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Case &amp; crime data</h3>
+    <ul>
+      <li><strong>1,996 complaints</strong> over a rolling 180-day window, 30 Ahmedabad localities</li>
+      <li><strong>9 active cases</strong> with assignments</li>
+      <li><strong>25 legal documents</strong> in the GovIntel corpus</li>
+      <li>Backtest: <strong>Hit-Rate@10 0.79</strong>, PAI@10 2.37× vs a 2.53× oracle ceiling, 8 weekly folds</li>
+    </ul>
+    <h3>Reset to this exact state</h3>
+    <p style="color:var(--dim);font-size:14px;margin-top:0">If a rehearsal leaves the data messy, restore it in ~30 s.
+    It backs the database up first and self-verifies 15 checks.</p>
+<pre><code>docker compose exec backend sh -c ^
+ "cd /app &amp;&amp; PYTHONPATH=. python scripts/demo_reset.py"</code></pre>
+    <p style="margin-bottom:0">Wait for <span class="ok">DEMO READY — all 15 checks passed</span>.
+    <br><span class="warn">Note:</span> this must run <em>inside</em> the container — the Docker stack uses its own
+    volume, not the <code>data\</code> folder on disk.</p>
+  </div>
+</div>
+
+<!-- ───────────────────────── SEARCHES ───────────────────────── -->
+<h2>4 · Searches that are known to work</h2>
+<p style="color:var(--dim);margin-top:0">Every query below was measured against hand-verified ground truth on this
+exact footage. <strong>Macro recall 84.6%, zero false positives.</strong> Pick from this list and you will not be
+surprised on stage.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">The one to open with</h3>
+  <table>
+    <thead><tr><th>Mode</th><th>Type this</th><th>What appears</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag obj">Object</span></td>
+        <td class="q">red car</td>
+        <td><strong>CAM-14</strong> first, score 0.31 — the red sedan, <strong>boxed in green</strong>.
+        <br><span style="color:var(--dim);font-size:13px">“red car” is not one of YOLO’s 80 classes, so the app
+        automatically falls back to per-object CLIP and shows an amber hint saying so. That fallback <em>is</em> the
+        story: it is searching the <em>appearance</em> of every detected object, not a label.</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Colour + type (per-object CLIP)</h3>
+  <table>
+    <thead><tr><th>Mode</th><th>Type this</th><th>Expect</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">yellow taxi</td><td>CAM-15 Kolkata Ambassador taxis — <span class="ok">found every clip that has one</span></td></tr>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">auto rickshaw</td><td>CAM-09 Mumbai market — <span class="ok">found every clip that has one</span></td></tr>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">white car</td><td>CAM-04 Indian junction — <span class="ok">all three target clips</span></td></tr>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">bus</td><td>CAM-04/12/03 — <span class="ok">all three target clips</span></td></tr>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">truck</td><td>CAM-16 highway semis, top hit correct</td></tr>
+      <tr><td><span class="tag obj">Object</span></td><td class="q">motorcycle</td><td>CAM-06 Lucknow bazaar, top hit correct</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Plain object labels (instant — pure database match, no AI wait)</h3>
+  <p style="color:var(--dim);font-size:14px;margin-top:0">Good for showing speed. These <em>are</em> YOLO classes, so
+  they answer immediately without the CLIP fallback: <span class="q">person</span> ·
+  <span class="q">car</span> · <span class="q">truck</span> · <span class="q">bus</span> ·
+  <span class="q">motorcycle</span> · <span class="q">bicycle</span> · <span class="q">backpack</span> ·
+  <span class="q">handbag</span></p>
+
+  <h3>Whole-scene description (Text mode)</h3>
+  <table>
+    <thead><tr><th>Mode</th><th>Type this</th><th>Expect</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag txt">Text</span></td><td class="q">crowded market with many people</td><td>CAM-07 Old Delhi bazaar — <span class="ok">every market clip</span></td></tr>
+      <tr><td><span class="tag txt">Text</span></td><td class="q">pedestrian crossing the street</td><td>CAM-01 zebra crossing — <span class="ok">correct top hit</span></td></tr>
+      <tr><td><span class="tag txt">Text</span></td><td class="q">busy highway traffic</td><td>CAM-04 / CAM-16 — <span class="ok">correct clips</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note danger">
+  <strong>Do not demo these.</strong> Anything phrased as a <em>negation</em> — e.g.
+  <span class="q">empty street with no people</span> — fails. CLIP has no reliable notion of “not”, so it returns
+  the busiest scene instead. This is a known property of the model, not a bug in the app, but it will look like one.
+  If a judge asks, say exactly that: <em>“CLIP scores similarity, so negation is a known weak spot — we don’t claim it.”</em>
+</div>
+
+<!-- ───────────────────────── ROUTE ───────────────────────── -->
+<h2>5 · Six-minute route</h2>
+<div class="card">
+  <table>
+    <thead><tr><th style="width:52px">Min</th><th>Tab</th><th>Do this</th></tr></thead>
+    <tbody>
+      <tr><td class="q">0:00</td><td>Dashboard</td><td>Open on Admin. 1,996 complaints, 9 cases, live KPIs — “this is a working command centre, not a mock-up.”</td></tr>
+      <tr><td class="q">0:45</td><td>City Map</td><td>Show the hotspot layer, then <strong>Risk forecast</strong>, then <strong>Plan patrol routes</strong>. The forecast turns into an actual route — that is the differentiator.</td></tr>
+      <tr><td class="q">2:00</td><td>VisionScan</td><td>Object mode → <span class="q">red car</span>. Point at the green box and the amber CLIP-fallback hint. Then <span class="q">yellow taxi</span>.</td></tr>
+      <tr><td class="q">3:15</td><td>Live Alerts</td><td>Anomaly feed; fire/smoke alerts carry a localised box.</td></tr>
+      <tr><td class="q">4:00</td><td>CrimeGPT</td><td>Open a case → generate a document → show the <strong>SHA-256 integrity footer</strong> on the PDF.</td></tr>
+      <tr><td class="q">5:00</td><td>Arbiter / Legal Feed</td><td>Section lookup. Say plainly it runs <strong>offline</strong> on a cited corpus — no internet, no API key.</td></tr>
+      <tr><td class="q">5:40</td><td>Citizen login</td><td>Sign out, sign in as citizen. Same URL, completely different surface. RBAC proven.</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-bottom:0"><strong>The closing line:</strong> <em>“From the camera to the chargesheet — offline.”</em></p>
+</div>
+
+<!-- ───────────────────────── ENDPOINTS ───────────────────────── -->
+<h2>6 · Endpoints (if a judge wants to poke the API)</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Endpoint</th><th>Does what</th></tr></thead>
+    <tbody>
+      <tr><td class="q">GET /api/health</td><td>Liveness — no auth</td></tr>
+      <tr><td class="q">POST /api/auth/login</td><td><code>{"email":"admin@city.gov","password":"admin123"}</code> → JWT</td></tr>
+      <tr><td class="q">POST /api/search/region</td><td><strong>The “red car” path.</strong> CLIP over per-object crops; returns each instance + its box</td></tr>
+      <tr><td class="q">POST /api/search/object</td><td>Pure YOLO-label match. <span class="warn">“red car” returns 0 here</span> — not a class. The fallback lives in the UI</td></tr>
+      <tr><td class="q">POST /api/search/text</td><td>Whole-frame CLIP, natural language</td></tr>
+      <tr><td class="q">GET /api/predict/risk</td><td>Recency-weighted risk surface, 30 localities</td></tr>
+      <tr><td class="q">GET /api/predict/validation</td><td>The backtest — HR@10, PAI, CIs, surge detection</td></tr>
+      <tr><td class="q">GET /api/predict/patrol-routes</td><td>Optimised patrol plan from the risk surface</td></tr>
+      <tr><td class="q">GET /api/analytics/summary</td><td>Dashboard KPIs</td></tr>
+      <tr><td class="q">GET /api/videos</td><td>The 16 loaded cameras</td></tr>
+      <tr><td class="q">GET /api/legal/health</td><td>Arbiter — reports <code>offline (RAG + templates)</code></td></tr>
+    </tbody>
+  </table>
+  <p style="margin-bottom:0;color:var(--dim);font-size:14px">Full interactive list:
+  <a href="http://localhost:8000/docs" target="_blank">localhost:8000/docs</a></p>
+</div>
+
+<!-- ───────────────────────── HONEST ───────────────────────── -->
+<h2>7 · If they push on the numbers</h2>
+<div class="card">
+  <ul style="margin-top:0">
+    <li><strong>Search accuracy:</strong> macro recall 84.6%, top-1 61.5%, <strong>zero false positives</strong> on
+      hard negatives — measured on the 16 clips against ground truth checked frame by frame.
+      Reproduce: <code>python backend\scripts\search_accuracy_eval.py</code></li>
+    <li><strong>Prediction:</strong> HR@10 0.79 (90% CI 0.76–0.83), PAI@10 2.37× against a 2.53× oracle ceiling —
+      so we are at <strong>94% of what any predictor could achieve</strong> on this data. We publish the ceiling on
+      purpose, so the number is interpretable rather than inflated.</li>
+    <li><strong>Surges:</strong> both planted surges are detected; 2 of the 3 surge <em>areas</em> land in the top-10.
+      The third sits on the boundary at rank 10→11 and moves with the calendar. We say so rather than rounding up.</li>
+    <li><strong>The data is synthetic and we say so on the slide.</strong> It demonstrates methodology, not
+      real-world operational accuracy. Judges respect that far more than a number you cannot defend.</li>
+  </ul>
+  <p style="margin-bottom:0">Everything runs on <strong>CPU, offline</strong>: CLIP ViT-B/32 + YOLOv8n + ArcFace +
+  FAISS + SQLite. No GPU, no cloud, no API key. That is the deployability argument for an Indian police station.</p>
+</div>
+
+<footer>
+  CityShield / VisionScan · demo console generated 16 Aug 2026 ·
+  full status in <code>docs\DEMO_WEEK_STATUS.md</code> · runbook in <code>docs\DEMO_DAY.md</code>
+</footer>
+
+</div>
+
+<script>
+  // Reachability ping only. no-cors gives an opaque response, which is enough to
+  // tell "something is serving that port" from "nothing is" when this file is
+  // opened straight off the disk (file://), where a normal fetch would be
+  // blocked by CORS.
+  (function () {
+    var dot = document.getElementById('dot'), msg = document.getElementById('msg');
+    fetch('http://localhost:8080/', { mode: 'no-cors', cache: 'no-store' })
+      .then(function () {
+        dot.className = 'dot up';
+        msg.innerHTML = '<span class="ok">The app is running.</span> Click “Open the application” above.';
+      })
+      .catch(function () {
+        dot.className = 'dot down';
+        msg.innerHTML = 'Not running yet — double-click <code>Launch CityShield.bat</code>, then refresh this page.';
+      });
+  })();
+</script>
+</body>
+</html>

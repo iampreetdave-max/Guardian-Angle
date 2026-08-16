@@ -72,7 +72,12 @@ QUERIES = [
     ("empty street with no people", "text", ["CAM-05"], ["CAM-07"]),
 ]
 
-TOP_K = 20
+# Matches what the UI actually requests for region search (frontend/src/App.jsx),
+# and it matters more than it looks: region search returns individual OBJECT
+# INSTANCES, not one row per clip. A single clip can hold 40+ matching crops for
+# "red car", so a small top_k lets one clip crowd every other camera out of the
+# list and understates recall badly.
+TOP_K = 60
 
 
 def _post(base: str, path: str, payload: dict) -> dict:
