@@ -169,9 +169,10 @@ def process_video(
             meta = ingestion.probe(video_path)
             with get_conn() as conn:
                 conn.execute(
-                    "UPDATE videos SET fps = ?, frame_count = ?, duration_sec = ? "
-                    "WHERE id = ?",
-                    (meta.fps, meta.frame_count, meta.duration_sec, video_id),
+                    "UPDATE videos SET fps = ?, frame_count = ?, duration_sec = ?, "
+                    "width = ?, height = ? WHERE id = ?",
+                    (meta.fps, meta.frame_count, meta.duration_sec,
+                     meta.width, meta.height, video_id),
                 )
 
         thumb_dir = settings.thumbnails_dir / str(video_id)

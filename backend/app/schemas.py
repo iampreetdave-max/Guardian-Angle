@@ -115,6 +115,9 @@ class SearchHit(BaseModel):
     # instead of only the representative best frame. Empty for single-frame hits.
     event_frames: list[EventFrame] = []
     # Region-level (instance) search: the specific detected object that matched.
+    # match_bbox is expressed as FRACTIONS of the frame (0-1), not pixels, so it
+    # overlays correctly on the scaled thumbnail. None when the source video's
+    # dimensions are unknown.
     match_label: Optional[str] = None
     match_bbox: Optional[BBox] = None
 

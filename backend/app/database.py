@@ -114,6 +114,16 @@ def _migrate(conn: sqlite3.Connection) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(detections)")}
     if "obj_faiss_id" not in cols:
         conn.execute("ALTER TABLE detections ADD COLUMN obj_faiss_id INTEGER")
+
+    # Detection boxes are stored in the video's native pixel space, so the API
+    # needs the frame size to return resolution-independent coordinates the UI
+    # can overlay on a scaled thumbnail. Backfilled from the file by
+    # scripts/backfill_video_dims.py — no re-ingest required.
+    vcols = {r["name"] for r in conn.execute("PRAGMA table_info(videos)")}
+    if "width" not in vcols:
+        conn.execute("ALTER TABLE videos ADD COLUMN width INTEGER")
+    if "height" not in vcols:
+        conn.execute("ALTER TABLE videos ADD COLUMN height INTEGER")
     # Safe now that the column is guaranteed to exist (fresh + migrated DBs).
     conn.execute("CREATE INDEX IF NOT EXISTS idx_det_obj ON detections(obj_faiss_id)")
 

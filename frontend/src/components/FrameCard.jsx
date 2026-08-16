@@ -23,6 +23,24 @@ export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
         >
           {scorePct(hit.score)}
         </span>
+        {/* Instance search: box the specific object that matched, so "red car"
+            points at the car instead of just returning the frame it is in.
+            match_bbox arrives as fractions of the frame (see schemas.py), which
+            map straight onto the thumbnail. Positioning assumes the source is
+            16:9 like the aspect-video container — true for CCTV and for all the
+            test footage; a 4:3 source would be cropped by object-cover and the
+            box would sit slightly off. */}
+        {hit.match_bbox && (
+          <div
+            className="pointer-events-none absolute rounded-[3px] border-2 border-signal-green shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+            style={{
+              left: `${Math.min(hit.match_bbox.x1, hit.match_bbox.x2) * 100}%`,
+              top: `${Math.min(hit.match_bbox.y1, hit.match_bbox.y2) * 100}%`,
+              width: `${Math.abs(hit.match_bbox.x2 - hit.match_bbox.x1) * 100}%`,
+              height: `${Math.abs(hit.match_bbox.y2 - hit.match_bbox.y1) * 100}%`,
+            }}
+          />
+        )}
         {/* matched-object badge (region/instance search) */}
         {hit.match_label && (
           <span className="absolute bottom-1.5 right-1.5 rounded bg-signal-green/85 px-1.5 py-0.5 text-[10px] font-semibold text-ink-900">

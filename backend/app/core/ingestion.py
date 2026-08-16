@@ -29,6 +29,10 @@ class VideoMeta:
     fps: float
     frame_count: int
     duration_sec: float
+    # Native frame size. Detection boxes are stored in this pixel space, so the
+    # API needs it to hand the UI resolution-independent coordinates.
+    width: int = 0
+    height: int = 0
 
 
 @dataclass
@@ -44,9 +48,12 @@ def probe(video_path: str) -> VideoMeta:
         raise ValueError(f"Cannot open video: {video_path}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
     cap.release()
     duration = frame_count / fps if fps else 0.0
-    return VideoMeta(fps=fps, frame_count=frame_count, duration_sec=duration)
+    return VideoMeta(fps=fps, frame_count=frame_count, duration_sec=duration,
+                     width=width, height=height)
 
 
 def _hist(frame_bgr: np.ndarray) -> np.ndarray:

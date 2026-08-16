@@ -276,7 +276,7 @@ def search_regions(
     sql = (
         "SELECT d.obj_faiss_id, d.label, d.x1, d.y1, d.x2, d.y2, "
         "f.id AS frame_id, f.video_id, f.timestamp_sec, f.thumbnail_path, "
-        "v.camera_id, v.filename "
+        "v.camera_id, v.filename, v.width AS vid_w, v.height AS vid_h "
         "FROM detections d JOIN frames f ON f.id = d.frame_id "
         "JOIN videos v ON v.id = f.video_id "
         f"WHERE d.obj_faiss_id IN ({placeholders})"
@@ -299,7 +299,15 @@ def search_regions(
             score = id_to_score.get(r["obj_faiss_id"], 0.0)
             hit = _frame_row_to_hit(conn, r, score, "object")
             hit.match_label = r["label"]
-            hit.match_bbox = BBox(x1=r["x1"], y1=r["y1"], x2=r["x2"], y2=r["y2"])
+            # Detections are stored in the video's native pixel space, but the UI
+            # overlays the box on a thumbnail scaled to a 480px long edge. Emit
+            # fractions of the frame instead, so the box lands correctly at any
+            # render size. Left as None when the source dimensions are unknown
+            # (pre-migration rows) — a wrong box is worse than no box.
+            w, h = r["vid_w"], r["vid_h"]
+            if w and h:
+                hit.match_bbox = BBox(x1=r["x1"] / w, y1=r["y1"] / h,
+                                      x2=r["x2"] / w, y2=r["y2"] / h)
             hits.append(hit)
     # one hit per object instance, ranked by similarity (no temporal grouping —
     # the whole point is to surface every instance). Apply the relevance floor
