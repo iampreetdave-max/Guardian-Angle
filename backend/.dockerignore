@@ -19,4 +19,7 @@ models/
 *.faiss
 *.counter
 .pytest_cache
-tests/
+
+# tests/ is deliberately NOT excluded: scripts/run_all_checks.py runs pytest as
+# its first suite, and the whole point of that script is to prove the build on
+# the machine it will be demoed from.

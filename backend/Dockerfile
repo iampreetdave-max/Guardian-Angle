@@ -28,6 +28,11 @@ COPY app ./app
 # container actually uses — the host-side copy points at a different file.
 COPY scripts ./scripts
 
+# The test suite ships too: scripts/run_all_checks.py runs pytest as its first
+# suite, and its purpose is to prove the build on the machine being demoed from.
+COPY tests ./tests
+COPY pytest.ini ./pytest.ini
+
 # Bake the YOLO weights in. ultralytics resolves the bare name "yolov8n.pt"
 # (config.py) by checking the working directory first, so landing it at
 # /app/yolov8n.pt means it is never fetched over the network.

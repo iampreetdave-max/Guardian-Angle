@@ -313,11 +313,35 @@ def render_markdown(pytest_info: dict, backtest: dict) -> str:
         surges = backtest.get("surge_detection") or []
         if surges:
             caught = sum(1 for s in surges if s.get("in_top10_during"))
+            # A planted surge can name several areas (the cyber-fraud ramp covers
+            # SG Highway AND Satellite). Lead with the invariant that holds on
+            # every run -- each surge is detected -- and report the area tally
+            # alongside it, because whether a *marginal* second area lands at
+            # rank 10 or 11 of 30 shifts with the seed timestamp.
+            by_surge: dict = {}
+            for s in surges:
+                by_surge.setdefault(s.get("surge"), []).append(s)
+            surges_caught = sum(
+                1 for rows in by_surge.values()
+                if any(r.get("in_top10_during") for r in rows))
             lines.append("### 3.3 Surge detection")
             lines.append("")
-            lines.append(f"Caught **{caught}/{len(surges)}** planted, time-boxed "
-                         "surge-areas in the live top-10 during their surge week.")
+            lines.append(
+                f"Detected **{surges_caught}/{len(by_surge)}** planted, time-boxed "
+                f"surges — at least one area of each rose into the live top-10 "
+                f"during its surge week ({caught} of {len(surges)} surge-*areas* "
+                f"individually).")
             lines.append("")
+            if caught < len(surges):
+                lines.append(
+                    "> An area sitting on the top-10 boundary can fall either side "
+                    "between runs. The synthetic window is 180 days ending at seed "
+                    "time, so as it slides the weekend uplift "
+                    "(`date.weekday()` → `_WEEKEND_UPLIFT`) lands on different "
+                    "area/category/day combinations — the same effect that moves "
+                    "the complaint count run to run. The per-surge result above is "
+                    "the claim that reproduces; the per-area tally is not.")
+                lines.append("")
             lines.append("| Area | Category | Rank before → during | In top-10 | Surge |")
             lines.append("|---|---|---|---|---|")
             for s in surges:

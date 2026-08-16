@@ -265,8 +265,10 @@ surprised on stage.</p>
     <li><strong>Prediction:</strong> HR@10 0.79 (90% CI 0.76–0.83), PAI@10 2.37× against a 2.53× oracle ceiling —
       so we are at <strong>94% of what any predictor could achieve</strong> on this data. We publish the ceiling on
       purpose, so the number is interpretable rather than inflated.</li>
-    <li><strong>Surges:</strong> both planted surges are detected; 2 of the 3 surge <em>areas</em> land in the top-10.
-      The third sits on the boundary at rank 10→11 and moves with the calendar. We say so rather than rounding up.</li>
+    <li><strong>Surges:</strong> <strong>both</strong> planted surges are detected in the live top-10 during the
+      weeks they run. The cyber-fraud ramp's second area, Satellite, sits exactly on the top-10 boundary and lands
+      on either side of it between runs — the 180-day window slides with the seed time, so the weekend uplift shifts.
+      We therefore quote the result <em>per surge</em>, which reproduces, not per area, which does not.</li>
     <li><strong>The data is synthetic and we say so on the slide.</strong> It demonstrates methodology, not
       real-world operational accuracy. Judges respect that far more than a number you cannot defend.</li>
   </ul>

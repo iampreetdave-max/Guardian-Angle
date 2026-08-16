@@ -44,8 +44,8 @@ PYTHONPATH=. python scripts/predictive_backtest.py
 
 > **Hit-Rate@10: 0.79 | PAI@10: 2.4x (oracle ceiling 2.5x) | capture 79% of
 > next-week crime in 33% of the city (90% CI hit-rate@10 [0.76, 0.83], 8 weekly
-> folds) | caught both planted surges (2 of 3 surge-areas) in the live top-10
-> during their surge week**
+> folds) | detected both planted surges in the live top-10 during their surge
+> week**
 
 | Metric (mean over 8 weekly folds, 30 areas) | Model | 90% CI | Oracle ceiling |
 |---|---|---|---|
@@ -63,15 +63,17 @@ prior-only 0.634, random 0.382 (a **+40.8 pt** lift over the random floor).
 **Surge detection:** the model surfaced **both** planted, time-boxed surges into
 the live top-10 during the weeks they were active — Maninagar chain-snatching
 (rank 5) and the SG Highway + Satellite cyber-fraud ramp, where SG Highway climbs
-**7 → 4**. The ramp's second area, Satellite, sits on the boundary at rank
-**10 → 11**, so 2 of the 3 surge-*areas* land inside the top-10.
+**7 → 4**.
 
-That boundary case moves with the calendar and is expected to: the synthetic
-window is 180 days ending *today*, so as it slides, the weekend uplift
-(`date.weekday()` → `_WEEKEND_UPLIFT` in `seed_synthetic.py`) falls on different
-area/category/day combinations. The same effect makes the complaint count drift
-run to run (~1,970–2,000). What is stable, and what the self-check asserts, is
-that **every planted surge is detected**.
+The ramp's second area, **Satellite, sits exactly on the top-10 boundary** and
+lands on either side of it between runs (observed at both 10 → 11 and 11 → 10).
+That is expected rather than flaky: the synthetic window is 180 days ending at
+seed time, so as it slides the weekend uplift (`date.weekday()` →
+`_WEEKEND_UPLIFT` in `seed_synthetic.py`) falls on different area/category/day
+combinations — the same effect that drifts the complaint count run to run
+(~1,970–2,000). So we quote the result **per surge**, which reproduces, and not
+per area, which does not. The self-check asserts the same invariant: **every
+planted surge is detected.**
 
 > Computed on fully synthetic, deterministic demo data (see
 > [docs/AHMEDABAD_CRIME_DATA.md](docs/AHMEDABAD_CRIME_DATA.md)). The numbers

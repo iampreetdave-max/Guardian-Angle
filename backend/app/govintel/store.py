@@ -156,7 +156,10 @@ def retrieve(query: str, k: int = 12, filters: dict | None = None) -> list[dict]
     metas = res.get("metadatas", [[]])[0]
     dists = res.get("distances", [[]])[0]
     ids = res.get("ids", [[]])[0]
-    return [_hit(m, i, d) for m, i, d in zip(metas, dists, ids)]
+    # zip order must match _hit(meta, _id, dist). Zipping dists before ids bound
+    # the distance to _id and the id to dist, so every semantic search raised
+    # ValueError: could not convert string to float -> HTTP 500.
+    return [_hit(m, i, d) for m, i, d in zip(metas, ids, dists)]
 
 
 def list_all(filters: dict | None = None, limit: int = 200) -> list[dict]:

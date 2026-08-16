@@ -414,11 +414,23 @@ def run_validation(folds: int = DEFAULT_FOLDS, compare: bool = False) -> dict:
     ci = ms.get("hit_rate@10_ci90", [0.0, 0.0])
     city_share = round(100.0 * 10 / n_areas)
     # Surge-detection one-liner — the genuinely strong, judge-friendly result.
+    # Counted per SURGE, not per area: a surge can name several areas (the
+    # cyber-fraud ramp covers SG Highway and Satellite), and whether a marginal
+    # second area lands at rank 10 or 11 of 30 shifts with the seed timestamp,
+    # because the 180-day window slides and the weekend uplift then falls on
+    # different area/category/day combinations. Per-surge reproduces; per-area
+    # does not, and a headline that changes between runs is worse than useless.
     caught = [s for s in surges if s.get("in_top10_during")]
     surge_line = ""
     if surges:
-        surge_line = (f" | caught {len(caught)}/{len(surges)} planted "
-                      f"surge-areas in the live top-10 during their surge week")
+        by_surge: dict[str, list] = {}
+        for s in surges:
+            by_surge.setdefault(s.get("surge"), []).append(s)
+        n_caught = sum(1 for rows in by_surge.values()
+                       if any(r.get("in_top10_during") for r in rows))
+        surge_line = (f" | detected {n_caught}/{len(by_surge)} planted surges "
+                      f"in the live top-10 during their surge week "
+                      f"({len(caught)}/{len(surges)} surge-areas)")
     headline = (
         f"Hit-Rate@10: {hr10:.2f} | PAI@10: {pai10:.1f}x "
         f"(oracle ceiling {oracle_pai.get(10, 0.0):.1f}x) | "

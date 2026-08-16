@@ -22,7 +22,7 @@ Rolling-origin temporal cross-validation — no future data leaks into a predict
 | **Hit-Rate@10** | **0.790** (90% CI 0.77–0.81) | — |
 | **PAI@10** (Predictive Accuracy Index) | **2.37×** | oracle ceiling **2.53×** (94% of perfect) |
 | **Crime captured in top-10 zones** (33% of city) | **79.0%** of next-week crime | — |
-| **Planted surges caught in live top-10** | **2 / 2 surges** (2 of 3 surge-*areas*) during their surge week | — |
+| **Planted surges detected in live top-10** | **2 / 2 surges** during their surge week | third surge-*area* sits on the top-10 boundary and moves between runs |
 | Beats baselines (HR@10) | model 0.790 | frequency 0.762 · prior 0.634 · random 0.382 |
 
 > We publish the **oracle ceiling** (the best any predictor could do on this data)
