@@ -42,27 +42,36 @@ cd backend
 PYTHONPATH=. python scripts/predictive_backtest.py
 ```
 
-> **Hit-Rate@10: 0.77 | PAI@10: 2.3x (oracle ceiling 2.5x) | capture 77% of
-> next-week crime in 33% of the city (90% CI hit-rate@10 [0.74, 0.80], 8 weekly
-> folds) | caught 3/3 planted surge-areas in the live top-10 during their surge
-> week**
+> **Hit-Rate@10: 0.79 | PAI@10: 2.4x (oracle ceiling 2.5x) | capture 79% of
+> next-week crime in 33% of the city (90% CI hit-rate@10 [0.76, 0.83], 8 weekly
+> folds) | caught both planted surges (2 of 3 surge-areas) in the live top-10
+> during their surge week**
 
 | Metric (mean over 8 weekly folds, 30 areas) | Model | 90% CI | Oracle ceiling |
 |---|---|---|---|
-| Hit-Rate@5 | **0.541** | [0.495, 0.585] | — |
-| Hit-Rate@10 | **0.771** | [0.738, 0.803] | — |
-| PAI@5 (Prediction Accuracy Index) | **3.25×** | [2.97, 3.51] | 3.54× |
-| PAI@10 | **2.31×** | [2.22, 2.41] | 2.51× |
+| Hit-Rate@5 | **0.521** | [0.489, 0.550] | — |
+| Hit-Rate@10 | **0.790** | [0.767, 0.813] | — |
+| PAI@5 (Prediction Accuracy Index) | **3.12×** | [2.94, 3.30] | 3.40× |
+| PAI@10 | **2.37×** | [2.30, 2.44] | 2.53× |
 
 **Capture-rate curve** — share of next-week crime that lands inside the model's
-top-k localities: top-5 (17% of the city) captures **54.1%**; **top-10 (33% of
-the city) captures 77.1%**; top-15 (50%) captures 89.3%.
+top-k localities: top-5 (17% of the city) captures **52.1%**; **top-10 (33% of
+the city) captures 79.0%**; top-15 (50%) captures 90.1%.
 
-**Beats every baseline** at Hit-Rate@10 — model **0.771** vs. frequency 0.733,
-prior-only 0.629, random 0.370 (a **+40.0 pt** lift over the random floor).
-**Surge detection:** the model surfaced all 3 planted, time-boxed hotspots
-(Maninagar chain-snatching, SG Highway + Satellite cyber-fraud ramp) into the
-live top-10 during the weeks they were active.
+**Beats every baseline** at Hit-Rate@10 — model **0.790** vs. frequency 0.762,
+prior-only 0.634, random 0.382 (a **+40.8 pt** lift over the random floor).
+**Surge detection:** the model surfaced **both** planted, time-boxed surges into
+the live top-10 during the weeks they were active — Maninagar chain-snatching
+(rank 5) and the SG Highway + Satellite cyber-fraud ramp, where SG Highway climbs
+**7 → 4**. The ramp's second area, Satellite, sits on the boundary at rank
+**10 → 11**, so 2 of the 3 surge-*areas* land inside the top-10.
+
+That boundary case moves with the calendar and is expected to: the synthetic
+window is 180 days ending *today*, so as it slides, the weekend uplift
+(`date.weekday()` → `_WEEKEND_UPLIFT` in `seed_synthetic.py`) falls on different
+area/category/day combinations. The same effect makes the complaint count drift
+run to run (~1,970–2,000). What is stable, and what the self-check asserts, is
+that **every planted surge is detected**.
 
 > Computed on fully synthetic, deterministic demo data (see
 > [docs/AHMEDABAD_CRIME_DATA.md](docs/AHMEDABAD_CRIME_DATA.md)). The numbers
@@ -79,7 +88,7 @@ file that implements it:
 
 | # | Evaluation criterion | How we meet it | Where in the code |
 |---|---|---|---|
-| 1 | Accuracy of hotspot detection & prediction | Recency-weighted risk + priors + anomaly boost; backtested HR@10 0.771 / PAI@10 2.31× via rolling-origin CV | `backend/app/platform/predictive.py`, `backend/app/platform/validation.py` |
+| 1 | Accuracy of hotspot detection & prediction | Recency-weighted risk + priors + anomaly boost; backtested HR@10 0.790 / PAI@10 2.37× via rolling-origin CV | `backend/app/platform/predictive.py`, `backend/app/platform/validation.py` |
 | 2 | Effectiveness of patrol-route optimization | Nearest-neighbour + 2-opt over live top-risk hotspots, haversine ETAs, balanced unit assignment | `backend/app/platform/patrol.py` |
 | 3 | Integration of cyber + physical crime data | NCRP/1930-aligned cyber-fraud taxonomy + victim-location layer on the same GIS as physical crime | `backend/app/constants/cyber.py`, `backend/app/platform/seed_ahmedabad.py` |
 | 4 | Performance & scalability | FastAPI + SQLite, CPU-only, additive schema, exact + lazy models; one-command Docker | `backend/app/main.py`, `docker-compose.yml` |
