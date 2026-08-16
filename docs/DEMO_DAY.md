@@ -25,17 +25,23 @@ over flashy ML. Time budget on stage: **6 minutes** of clicking + Q&A.
 
 Run these in order; the whole thing takes ~3 minutes.
 
-- [ ] **Reset to a known-good state** (backs up the DB, re-seeds, self-verifies):
-      ```bash
-      cd backend
-      PYTHONPATH=. python scripts/demo_reset.py
+- [ ] **Launch the app first**: `.\start.ps1`. It reuses the already-built images
+      and does **not** touch the network. Open **http://localhost:8080** and sign
+      in as `admin@city.gov / admin123`.
+      > Stop your other Docker projects first — `docker stop $(docker ps -q)`.
+      > Several stacks running alongside this one will starve the daemon on 16 GB.
+- [ ] **Reset to a known-good state** (backs up the DB, re-seeds, self-verifies).
+      Run it **inside the container** — the Docker stack reads the
+      `visionscan-data` volume at `/data`, *not* the host `data/visionscan.db`, so
+      running this on the host resets a database the demo never opens:
+      ```powershell
+      docker compose exec backend sh -c "cd /app && PYTHONPATH=. python scripts/demo_reset.py"
       ```
-      Wait for the green **`DEMO READY — all 15 checks passed`** banner. It prints
-      the app URLs + demo accounts. If it prints a red banner, fix the named check
-      before presenting (or restore the `.bak` it just made).
-- [ ] **Launch the app**: `./start.ps1` (Docker) **or** run backend + `npm run dev`.
-      Open **http://localhost:8080** (or :5173 in dev) and sign in as
-      `admin@city.gov / admin123`.
+      Wait for the green **`DEMO READY — all 15 checks passed`** banner. If it
+      prints a red banner, fix the named check before presenting (or restore the
+      `.bak` it just made).
+      > Only run this on the host (`cd backend; PYTHONPATH=. python scripts/demo_reset.py`)
+      > if you are demoing from the local venv rather than Docker.
 - [ ] **Warm the map once while you still have internet** — open the **City Map**
       tab and pan/zoom around Ahmedabad so Leaflet caches the OSM basemap tiles in
       the browser. If venue Wi-Fi dies later, the cached tiles (and all data
@@ -46,11 +52,17 @@ Run these in order; the whole thing takes ~3 minutes.
       stage, open this instead. (Every report PDF now carries an
       `Integrity SHA-256` footer + `X-Integrity-SHA256` header — point at it if
       asked about chain-of-custody.)
-- [ ] Have the **staged anomaly clip** ready: `test_clips/fire/` has a real fire
-      clip; know which camera/feed you'll attach it to.
-- [ ] Phone/second tab open at the **HF Space**
-      (https://huggingface.co/spaces/iampreetdave/visionscan) as the "try it
-      yourself" handoff and the whole-app-down fallback.
+- [ ] Have the **staged anomaly clip** ready and know which camera you'll attach
+      it to. Note `test_clips/` subfolders are gitignored and ship **empty** —
+      restore them with `python test_clips\fetch_all.py fire` *before* the day.
+      The 16 real street/market/CCTV clips in `test_clips/real/` are already
+      ingested as CAM-01..CAM-16 and are the better material for the search demo.
+- [ ] **Public URL, if you want one**: `.\deploy\share.ps1` prints a
+      `https://<random>.trycloudflare.com` address for the locally-running stack.
+      Generate it on the day — the URL changes every run.
+      > The **HF Space is not a fallback any more.** Docker Spaces went paid-only
+      > (~8 Jul 2026) and free-account Docker Spaces are reported to stay stuck in
+      > "Paused". Do not put that link on a slide without testing it first.
 - [ ] Laptop charged + charger. **Do not rely on venue Wi-Fi** — offline is the point.
 - [ ] Rehearse §2 end-to-end **twice**; time it under 6 minutes.
 
@@ -73,7 +85,7 @@ Run these in order; the whole thing takes ~3 minutes.
 |---|---|---|---|
 | **0:00** | **City Map → Reports** layer. Point at the dense circles over the eastern belt (Vatva, Bapunagar, Naroda). | "Every complaint and case, mapped to 30 Ahmedabad localities. Crime concentrates — and the map shows it instantly." | Map blank → you skipped the reset; the side panels (hotspots, accuracy) still tell the story. Tiles gray → the offline chip appears; carry on, data layers are live. |
 | **0:40** | Switch to **Risk forecast** layer → click the top hotspot → open **"Why this hotspot?"**. | "This isn't a heatmap of the past — it's a *forecast*. And it explains itself: this score is *prior + recent snatching + a live anomaly boost*, decayed by recency. No black box." | Popover empty → expand the same area in the right-hand **Top predicted hotspots** list instead. |
-| **1:30** | Open the **Model accuracy (backtested)** panel → read the **surge** line and the **77% capture** line. | "We backtested it honestly — rolling-origin, no future data leaks. The top-10 zones hold **77% of next-week crime**, and it caught **3 of 3 planted crime waves** the week they happened. It beats frequency, prior and random baselines." | Panel still loading → quote from `docs/VALIDATION.md` on screen/print: HR@10 0.77, PAI@10 2.31× (oracle 2.51×). |
+| **1:30** | Open the **Model accuracy (backtested)** panel → read the **surge** line and the **79% capture** line. | "We backtested it honestly — rolling-origin, no future data leaks. The top-10 zones hold **79% of next-week crime**, and it caught **3 of 3 planted crime waves** the week they happened. It beats frequency, prior and random baselines." | Panel still loading → quote from `docs/VALIDATION.md` on screen/print: HR@10 0.79, PAI@10 2.37× (oracle 2.53×). |
 | **2:30** | Toggle the **Cyber fraud** layer. Point at the ₹ headline chip. | "Switch to the cyber lens — victim-location density, with the rupees actually lost. This is the 1930 / NCRP picture for the city." | Headline reads ₹0 → switch the window selector to **90 days**; the chip recomputes. |
 | **3:10** | Back to **Risk forecast** → set **2 units** → **Plan patrol routes**. | "Now act on it: the planner routes patrol units through the top hotspots — nearest-neighbour plus 2-opt — with distance and ETA per unit." | Routes don't draw → re-click Plan; if still nothing, show the **Patrol plan** card text in the side panel. |
 | **3:50** | **Closed loop**: ingest the staged **fire clip** on a camera (Live Feed / upload). Wait for the **anomaly alert** to pin. | "Here's the loop that matters. A camera sees fire — Anomaly Watch flags it…" | Ingest slow → use a feed you pre-processed; "I pre-loaded this to respect your time." |
@@ -103,8 +115,8 @@ way to grade hotspot maps. For each weekly fold we predict using only complaints
 that existed *before* the fold, then grade against the next 7 days; no future data
 ever leaks. We report **Hit-Rate@k** and **PAI@k** (Chainey 2008) with **90%
 bootstrap CIs**, against random/prior/frequency baselines and a perfect-hindsight
-**oracle ceiling**. Live numbers: **HR@10 0.77, PAI@10 2.31× of a 2.51× ceiling,
-77% capture in the top-10, 3/3 planted surges caught.** Re-run it yourself:
+**oracle ceiling**. Live numbers: **HR@10 0.79, PAI@10 2.37× of a 2.53× ceiling,
+79% capture in the top-10, 3/3 planted surges caught.** Re-run it yourself:
 `python scripts/predictive_backtest.py`. Full report: `docs/VALIDATION.md`.
 
 **Q: Privacy / DPDP — what about citizens' data and footage?**
