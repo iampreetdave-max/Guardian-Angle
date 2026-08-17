@@ -262,49 +262,67 @@ function Workbench() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-3 py-3 backdrop-blur sm:px-5">
-        <div className="flex items-center gap-2 sm:gap-3">
+      {/* Three fixed zones: brand and controls never shrink, the nav takes what is
+          left and scrolls inside itself. Previously everything competed for the
+          same space, so the brand block collapsed and wrapped its subtitle over
+          five lines straight into the nav. */}
+      {/* relative z-50: backdrop-blur makes this header its own stacking context,
+          so any dropdown inside it is confined to that layer and would otherwise
+          be painted over by the main content below. */}
+      <header className="relative z-50 flex items-center gap-3 border-b border-ink-700 bg-ink-800/80 px-3 py-2.5 backdrop-blur sm:px-5">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <img
             src="/logo.png"
             alt="Cyber Crime Branch, Ahmedabad City Police"
-            className="h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
+            className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12"
           />
-          <div>
-            <h1 className="font-serif text-lg font-bold leading-tight text-white sm:text-xl">
+          <div className="min-w-0">
+            <h1 className="whitespace-nowrap font-serif text-lg font-bold leading-tight text-white sm:text-xl">
               City<span className="text-accent">Shield</span>
             </h1>
-            <p className="hidden text-[10px] uppercase tracking-wider text-slate-500 sm:block">
-              Unified AI Policing · Cyber Crime Branch, Ahmedabad City Police
+            {/* Only shown where there is genuinely room for it on one line. */}
+            <p className="hidden whitespace-nowrap text-[10px] uppercase tracking-wider text-slate-500 2xl:block">
+              Cyber Crime Branch · Ahmedabad City Police
             </p>
           </div>
         </div>
 
-        {/* role-based module nav — desktop only; mobile uses the bottom bar */}
-        <nav className="ml-4 hidden items-center gap-1 rounded-lg bg-ink-900/60 p-1 md:flex">
-          {navItems.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => setModule(m.key)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                module === m.key ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <m.icon size={14} /> {m.label}
-            </button>
-          ))}
-        </nav>
+        {/* role-based module nav — desktop only; mobile uses the bottom bar.
+            min-w-0 lets it shrink below its content width, and the overflow makes
+            it scroll rather than push the user controls off screen. */}
+        <div className="relative hidden min-w-0 flex-1 md:block">
+          <nav className="flex items-center gap-1 overflow-x-auto rounded-lg bg-ink-900/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {navItems.map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setModule(m.key)}
+                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 ${
+                  module === m.key ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <m.icon size={14} /> {m.label}
+              </button>
+            ))}
+          </nav>
+          {/* Fade at the trailing edge so it is obvious more tabs exist when the
+              nav has to scroll on a narrower window, rather than them just
+              vanishing. Purely decorative, so it never eats clicks. */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-lg bg-gradient-to-l from-ink-900/80 to-transparent" />
+        </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          {module === "vision" && <div className="hidden lg:block"><StatusBar health={health} /></div>}
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0 sm:gap-3">
+          {module === "vision" && <StatusBar health={health} />}
           {staff && <AlertTicker onOpen={() => setModule("alerts")} />}
           <NotificationBell />
-          <div className="flex items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
-            <div className="hidden text-right sm:block">
-              <div className="text-xs font-semibold text-slate-200">{user.name}</div>
+          <div className="flex shrink-0 items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
+            {/* Name can be long; cap it and ellipsize rather than let it push the
+                sign-out button out of the header. */}
+            <div className="hidden max-w-[10rem] text-right lg:block">
+              <div className="truncate text-xs font-semibold text-slate-200">{user.name}</div>
               <div className="text-[10px] uppercase tracking-wide text-slate-500">{user.role}</div>
             </div>
-            <button onClick={logout} title="Sign out"
-              className="rounded-lg bg-ink-700 p-2 text-slate-300 hover:bg-signal-red/20 hover:text-signal-red">
+            <button onClick={logout} title="Sign out" aria-label="Sign out"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink-700 text-slate-300 transition hover:bg-signal-red/20 hover:text-signal-red">
               <LogOut size={15} />
             </button>
           </div>
