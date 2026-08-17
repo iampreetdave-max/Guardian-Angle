@@ -88,12 +88,20 @@ try {
 
 Step "Opening the public tunnel (Ctrl+C to close it)"
 Warn "The URL below is live only while this window stays open."
+Warn "It also dies if the laptop sleeps, closes, or drops Wi-Fi - everything is"
+Warn "served from this machine. And it is a NEW random URL every run, so"
+Warn "generate it on the day rather than putting it on a slide in advance."
 Write-Host ""
 
 # cloudflared writes the assigned hostname to stderr; surface it prominently
 # rather than making the user spot it in the banner.
 $found = $false
-& $exe tunnel --url "http://localhost:$Port" --no-autoupdate 2>&1 | ForEach-Object {
+# --protocol http2 is deliberate. The default QUIC transport failed here in a
+# retry loop ("control stream encountered a failure while serving" /
+# "failed to run the datagram handler: context canceled") — UDP is throttled on
+# some networks, and cloudflared reports the tunnel as registered while it
+# actually serves HTTP 530. http2 connects first try.
+& $exe tunnel --url "http://localhost:$Port" --protocol http2 --no-autoupdate 2>&1 | ForEach-Object {
     $line = "$_"
     if (-not $found -and $line -match 'https://[a-z0-9-]+\.trycloudflare\.com') {
         $found = $true
