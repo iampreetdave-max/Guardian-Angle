@@ -68,6 +68,21 @@ def _esc(v) -> str:
 
 
 # ----------------------------------------------------------------- translation
+def _language_label(language: str) -> str:
+    """What language the document is ACTUALLY in, not what was requested.
+
+    Narrative translation is delegated to the Arbiter LLM bridge, which is offline
+    unless a Gemini key is configured. Stamping "Language: HI" on a document whose
+    body is English is a false statement on an evidentiary record, so say what was
+    delivered and why it differs.
+    """
+    if language == "en":
+        return "EN"
+    if llm.is_online():
+        return language.upper()
+    return f"EN (requested {language.upper()} — translation needs an LLM key)"
+
+
 def _localize(paragraph: str, language: str) -> str:
     """Return the narrative in the requested language.
 
@@ -123,7 +138,7 @@ def _header_block(styles, case: dict, doc_title: str, version: int,
         f"<b>{_esc(fir_str)}</b><br/>"
         f"<b>Police Station:</b> {_esc(station)}<br/>"
         f"<b>Document:</b> {_esc(doc_title)} &nbsp;·&nbsp; <b>Version:</b> v{version} "
-        f"&nbsp;·&nbsp; <b>Language:</b> {language.upper()}<br/>"
+        f"&nbsp;·&nbsp; <b>Language:</b> {_language_label(language)}<br/>"
         f"<b>Generated:</b> {_now()}"
     )
     story.append(Paragraph(meta, styles["CGMeta"]))
@@ -204,7 +219,18 @@ def _signature_block(styles, role_label: str = "Investigating Officer") -> list:
     t = Table(data, colWidths=[9 * cm, 8 * cm])
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
                            ("TOPPADDING", (0, 0), (-1, -1), 14)]))
-    return [Spacer(1, 18), t]
+    # A station seal is a physical rubber stamp roughly 4-5cm across, so the label
+    # alone is useless — leave a boxed area it can actually be struck into.
+    seal = Table([[""]], colWidths=[4.6 * cm], rowHeights=[2.6 * cm])
+    seal.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#9aa4bb")),
+        ("LINESTYLE", (0, 0), (-1, -1), "dashed"),
+    ]))
+    placer = Table([["", seal]], colWidths=[9 * cm, 8 * cm])
+    placer.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                                ("LEFTPADDING", (1, 0), (1, 0), 0)]))
+    return [Spacer(1, 18), t, placer]
 
 
 def _disclaimer(styles) -> list:

@@ -244,7 +244,7 @@ export default function GovIntelPanel() {
   const counts = results?.categories || {};
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden p-5">
+        <div className="mx-auto flex max-w-6xl flex-col p-5">
       {/* header */}
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-600">
@@ -434,7 +434,7 @@ export default function GovIntelPanel() {
       )}
 
       {/* results */}
-      <div className="-mr-2 mt-4 flex-1 overflow-y-auto pr-2">
+      <div className="-mr-2 mt-4 flex-1 pr-2">
         {error && (
           <div className="rounded-lg border border-signal-red/30 bg-signal-red/10 p-3 text-sm text-signal-red">{error}</div>
         )}
@@ -545,7 +545,7 @@ function Insight({ icon: Icon, label, value, sub, onClick }) {
 function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveSaved }) {
   const t = useT();
   return (
-    <div className="-mr-2 flex-1 overflow-y-auto pr-2">
+    <div className="-mr-2 flex-1 pr-2">
       {/* saved searches */}
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-300">
         <Search size={13} className="text-accent" /> {t("govintel.savedSearches")}
