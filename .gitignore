@@ -16,6 +16,9 @@ data/
 
 # ---- Models / weights ----
 *.pt
+# ...except the 6MB base YOLO weights: backend/Dockerfile COPYs them, so without
+# this exception a fresh clone cannot build the backend image at all.
+!backend/yolov8n.pt
 ~/.insightface/
 
 # ---- Node / frontend ----
