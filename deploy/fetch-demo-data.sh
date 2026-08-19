@@ -21,7 +21,29 @@ dockerx() { MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker "$@"; }
 REPO="${DEMO_DATA_REPO:-iampreetdave-max/Guardian-Angle}"
 TAG="${DEMO_DATA_TAG:-demo-data-v1}"
 ASSET="visionscan-demo-data.tgz"
-VOLUME="${DEMO_DATA_VOLUME:-visionscan_visionscan-data}"
+# Ask Docker which volume the backend actually mounts at /data rather than
+# guessing the name. Compose derives the volume prefix from the project name,
+# which is the directory basename — "visionscan" on a dev laptop but
+# "guardian-angle" in a Codespace (/workspaces/Guardian-Angle). Hardcoding the
+# laptop's name silently restored into a volume nothing used, and the app came up
+# with zero cameras.
+detect_volume() {
+  local cid
+  cid=$(docker compose ps -aq backend 2>/dev/null | head -1)
+  if [ -n "$cid" ]; then
+    docker inspect "$cid"       --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}'       2>/dev/null | head -1
+  fi
+}
+
+VOLUME="${DEMO_DATA_VOLUME:-}"
+if [ -z "$VOLUME" ]; then
+  VOLUME="$(detect_volume || true)"
+fi
+if [ -z "$VOLUME" ]; then
+  # No container yet — fall back to the compose project convention.
+  proj=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')
+  VOLUME="${proj}_visionscan-data"
+fi
 URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
 # Published digest of the release asset; overridable for a new bundle.
 EXPECT_SHA256="${DEMO_DATA_SHA256:-cd8471a31b016e61b55855e81c2248c6b13645e49495ab1e6d226d75762a64e6}"
