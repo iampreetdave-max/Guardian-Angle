@@ -22,6 +22,8 @@ from pathlib import Path
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+from .fonts import register_indic_fonts, rich
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
@@ -314,10 +316,13 @@ def _build_report_pdf(
     # otherwise live, as before.
     _integ = _INTEGRITY_CTX.get()
     now = _integ[1] if _integ else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # case_title / investigator / query are typed by the officer and may be in
+    # Hindi or Gujarati; rich() wraps those runs in a font that can draw them.
+    register_indic_fonts()
     meta = (
-        f"<b>Case:</b> {case_title}<br/>"
-        f"<b>Investigator:</b> {investigator or 'N/A'}<br/>"
-        f"<b>Query ({query_type}):</b> {query or 'N/A'}<br/>"
+        f"<b>Case:</b> {rich(case_title)}<br/>"
+        f"<b>Investigator:</b> {rich(investigator) or 'N/A'}<br/>"
+        f"<b>Query ({query_type}):</b> {rich(query) or 'N/A'}<br/>"
         f"<b>Generated:</b> {now}<br/>"
         f"<b>Frames in report:</b> {len(frame_ids)}"
     )
@@ -356,7 +361,7 @@ def _build_report_pdf(
 
                 caption = (
                     f"<b>{r['camera_id']}</b> @ {format_timestamp(r['timestamp_sec'])}<br/>"
-                    f"Frame #{r['frame_id']} · {r['filename']}<br/>"
+                    f"Frame #{r['frame_id']} · {rich(r['filename'])}<br/>"
                     f"Objects: {det_str}"
                 )
                 cell = [img, Paragraph(caption, styles["VSCell"])]

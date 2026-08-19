@@ -19,6 +19,7 @@ from datetime import datetime
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from ..services.fonts import register_indic_fonts, rich
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
@@ -53,11 +54,17 @@ def _styles():
 
 
 def _esc(v) -> str:
-    """Escape user-supplied text for ReportLab's mini-markup (it parses <…>)."""
+    """Escape user-supplied text for ReportLab's mini-markup (it parses <…>) and
+    wrap any Devanagari/Gujarati runs in a font that can draw them.
+
+    Every string in this module already goes through here, so routing the font
+    handling through it covers the whole document — including the hi/gu
+    narratives this module generates by design, which previously came out of the
+    exporter as blank boxes. rich() leaves pure-Latin text byte-identical.
+    """
     if v is None:
         return ""
-    s = str(v)
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return rich(v)
 
 
 # ----------------------------------------------------------------- translation
