@@ -17,6 +17,7 @@ transformers==4.46.3
 tokenizers==0.20.3
 faiss-cpu==1.9.0.post1
 ultralytics==8.3.55
+supervision==0.25.1
 
 # Face matching (ArcFace). insightface builds from source and needs a C/C++
 # toolchain — fine in Docker (Linux) but requires MS C++ Build Tools on Windows.

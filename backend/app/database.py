@@ -115,6 +115,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "obj_faiss_id" not in cols:
         conn.execute("ALTER TABLE detections ADD COLUMN obj_faiss_id INTEGER")
 
+    # Multi-object tracking: a stable id linking the same physical object across
+    # keyframes. Assigned by core/tracking.py from the stored boxes, so it can be
+    # (re)computed without re-running detection or re-ingesting video.
+    if "track_id" not in cols:
+        conn.execute("ALTER TABLE detections ADD COLUMN track_id INTEGER")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_det_track ON detections(track_id)")
+
     # Per-user interface language (en|hi|gu). The platform already speaks these
     # three for CrimeGPT documents and Arbiter answers; this makes the UI itself
     # follow the same set, chosen per user rather than per deployment.

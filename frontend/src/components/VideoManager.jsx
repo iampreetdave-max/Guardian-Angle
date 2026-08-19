@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { Upload, Trash2, Video, Camera, Radio, Info, Loader2, Globe, Boxes } from "lucide-react";
+import { Upload, Trash2, Video, Camera, Radio, Info, Loader2, Globe, Boxes, Scan } from "lucide-react";
 import { statusBadge, fmtDuration } from "../utils";
 import { useT } from "../i18n";
+import SceneAnalytics from "./SceneAnalytics";
 
 export default function VideoManager({
   videos,
@@ -16,6 +17,7 @@ export default function VideoManager({
 }) {
   const t = useT();
   const [reindexing, setReindexing] = useState(false);
+  const [sceneVideo, setSceneVideo] = useState(null); // video row whose scene panel is open
   const fileRef = useRef(null);
   const [mode, setMode] = useState("upload"); // upload | live
   const [cameraId, setCameraId] = useState("CAM-1");
@@ -284,21 +286,41 @@ export default function VideoManager({
                   {t("vision.keyframes", { n: v.keyframe_count })} ·{" "}
                   {fmtDuration(v.duration_sec)}
                 </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(v.id);
-                  }}
-                  className="opacity-0 transition group-hover:opacity-100 hover:text-signal-red"
-                  title={t("vision.deleteFeed")}
-                >
-                  <Trash2 size={13} />
-                </button>
+                <span className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSceneVideo(v);
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-300 transition hover:bg-ink-600 hover:text-accent"
+                    title={t("scene.open")}
+                  >
+                    <Scan size={11} /> {t("scene.open")}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(v.id);
+                    }}
+                    className="opacity-0 transition group-hover:opacity-100 hover:text-signal-red"
+                    title={t("vision.deleteFeed")}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </span>
               </div>
             </div>
           );
         })}
       </div>
+
+      {sceneVideo && (
+        <SceneAnalytics
+          videoId={sceneVideo.id}
+          cameraId={sceneVideo.camera_id}
+          onClose={() => setSceneVideo(null)}
+        />
+      )}
     </div>
   );
 }

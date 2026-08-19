@@ -116,6 +116,10 @@ app.include_router(router, prefix="/api")
 from .api.anomaly_routes import anomaly_router  # noqa: E402
 app.include_router(anomaly_router, prefix="/api")
 
+# Scene analytics: tracking, zone occupancy, line crossings.
+from .api.analytics_routes import router as scene_router  # noqa: E402
+app.include_router(scene_router, prefix="/api")
+
 # Admin ops: server monitoring + emergency lockdown, and data export/backup
 from .api.admin_system import admin_system_router  # noqa: E402
 from .api.export_routes import export_router  # noqa: E402

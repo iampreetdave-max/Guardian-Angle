@@ -19,10 +19,11 @@ import crimegpt from "./crimegpt";
 import govintel from "./govintel";
 import admin from "./admin";
 import enums from "./enums";
+import scene from "./scene";
 
 export const SECTIONS = {
   common, nav, login, header, vision, alerts, citymap,
-  dashboard, cases, complaints, arbiter, crimegpt, govintel, admin, enums,
+  dashboard, cases, complaints, arbiter, crimegpt, govintel, admin, enums, scene,
 };
 
 /** Build a flat per-language dictionary namespaced by section name. */

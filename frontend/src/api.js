@@ -174,6 +174,18 @@ export const searchRegion = (payload) =>
 
 export const reindexObjects = () => api.post("/reindex").then((r) => r.data);
 
+// ---- scene analytics (tracking / zone occupancy / line crossings) ----
+// All coordinates crossing these calls are 0..1 fractions of the frame, never
+// pixels — same convention as SearchHit.match_bbox.
+export const getTracks = (videoId) =>
+  api.get(`/videos/${videoId}/tracks`).then((r) => r.data);
+
+export const zoneAnalytics = (videoId, payload) =>
+  api.post(`/videos/${videoId}/zone-analytics`, payload).then((r) => r.data);
+
+export const lineCrossings = (videoId, payload) =>
+  api.post(`/videos/${videoId}/line-crossings`, payload).then((r) => r.data);
+
 const searchWithImage = (endpoint, file, { top_k, camera_id, video_id, group_events }) => {
   const form = new FormData();
   form.append("file", file);
