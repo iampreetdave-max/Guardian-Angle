@@ -17,9 +17,20 @@ GitHub simply **blocks further use at the quota** rather than charging you.
 
 ## Before you present
 
-- **Raise the idle timeout.** Default is 30 minutes, and a stopped codespace
-  means a dead link mid-demo. github.com/settings/codespaces → *Default idle
-  timeout* → **240 minutes**.
+- **Raise the idle timeout to the maximum.** github.com/settings/codespaces →
+  *Default idle timeout* → **240 minutes**. 240 is the ceiling; you cannot go
+  higher.
+- **Know what "idle" actually means.** Codespaces counts inactivity by connection
+  to the **editor**, not by traffic to a forwarded port. Judges hitting your link
+  does **not** reset the timer. So:
+  - **Keep the codespace browser tab open** for the whole session. That is the
+    single thing that keeps it alive.
+  - Belt and braces: run `.\deploy\keepalive.ps1 -Url <your-url>` in its own
+    terminal. It polls every 3 minutes, which also keeps the models warm so a
+    judge's click is never the request that pays for a cold start. It cannot
+    *restart* a stopped codespace — only keep a live one from going idle.
+  - A stopped codespace loses nothing: the volume and data survive, it just takes
+    a minute or two to come back.
 - **Open the URL ~20 minutes beforehand.** Never let a judge's click be the
   request that wakes it.
 - Quota maths: a 4-core machine spends **4 core-hours per wall-clock hour**, so
