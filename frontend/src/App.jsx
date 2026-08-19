@@ -168,7 +168,7 @@ function Workbench() {
       setResults(res);
     } catch (e) {
       if (!silent) {
-        setError(e?.response?.data?.detail || "Search failed. Is footage processed?");
+        setError(e?.response?.data?.detail || t("vision.searchFailed"));
         setResults(null);
       }
     } finally {
@@ -456,7 +456,7 @@ function Workbench() {
             {searching && (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <Loader2 size={28} className="animate-spin text-accent" />
-                <p className="mt-3 text-sm">Scanning footage…</p>
+                <p className="mt-3 text-sm">{t("vision.scanning")}</p>
               </div>
             )}
 
@@ -469,8 +469,7 @@ function Workbench() {
                     <span className="text-accent">{results.query}</span>
                     {results.fallback_from === "object" && (
                       <span className="ml-2 text-xs text-amber-400/90">
-                        not an exact object label — showing per-object visual
-                        matches (CLIP) instead
+                        {t("vision.clipFallback")}
                       </span>
                     )}
                   </p>
@@ -487,9 +486,9 @@ function Workbench() {
                         setModule("arbiter");
                       }}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-accent-600 hover:text-white"
-                      title="Send this evidence to Arbiter to draft an FIR"
+                      title={t("vision.draftFirTitle")}
                     >
-                      <Scale size={14} /> Draft FIR in Arbiter
+                      <Scale size={14} /> {t("vision.draftFir")}
                     </button>
                   )}
                 </div>
@@ -499,8 +498,8 @@ function Workbench() {
                   <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-slate-300">
                     <Lightbulb size={14} className="text-accent" />
                     <span>
-                      {results.count === 0 ? "No strong text matches." : "Few text matches."}{" "}
-                      Looking for a specific object? <span className="font-semibold text-accent">Find every object</span> scores each detected object and is far more precise.
+                      {results.count === 0 ? t("vision.nudgeNone") : t("vision.nudgeFew")}{" "}
+                      {t("vision.nudgeLead")} <span className="font-semibold text-accent">{t("vision.findEveryObject")}</span> {t("vision.nudgeTail")}
                     </span>
                     <button
                       onClick={() => runSearch({ mode: "region", query: results.query })}
@@ -536,8 +535,8 @@ function Workbench() {
                 <ShieldCheck size={36} className="text-ink-500" />
                 <p className="mt-4 max-w-sm text-sm">
                   {readyCount > 0
-                    ? "Search your footage by natural language, object, reference image, or suspect face."
-                    : "Upload CCTV footage, or open the Live Feed tab on the left to load a public feed in one click. Processing runs automatically."}
+                    ? t("vision.emptyReady")
+                    : t("vision.emptyUpload")}
                 </p>
               </div>
             )}

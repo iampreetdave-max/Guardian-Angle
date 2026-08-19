@@ -9,7 +9,7 @@ import {
   Info, Target, ChevronDown, ChevronRight, Download, BarChart3, WifiOff,
 } from "lucide-react";
 import * as API from "../../api";
-import { useT } from "../../i18n";
+import { useT, useEnumLabel } from "../../i18n";
 import { BarList } from "./charts";
 
 /** City Map — GIS crime intelligence for Ahmedabad.
@@ -434,6 +434,7 @@ function AccuracyPanel({ data, loading }) {
 }
 
 export default function CityMapView() {
+  const enumLabel = useEnumLabel();
   const t = useT();
   const [layer, setLayer] = useState("reports"); // reports | risk | cyber
   const [category, setCategory] = useState("");
@@ -613,7 +614,7 @@ export default function CityMapView() {
               className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
               <option value="">{t("citymap.allCategories")}</option>
               {(data.categories || []).map((c) => (
-                <option key={c} value={c}>{c.replace(/_/g, " ")}</option>
+                <option key={c} value={c}>{enumLabel("category", c)}</option>
               ))}
             </select>
             <select value={days} onChange={(e) => setDays(Number(e.target.value))}
@@ -715,7 +716,7 @@ export default function CityMapView() {
                       <div className="mb-1 text-sm font-bold">{a.area}</div>
                       <div className="space-y-0.5">
                         <div>{t("citymap.complaints")}: <b>{a.complaints}</b> · {t("citymap.cases")}: <b>{a.cases}</b></div>
-                        {a.top_category && <div>{t("citymap.topCategory")}: <b>{a.top_category.replace(/_/g, " ")}</b></div>}
+                        {a.top_category && <div>{t("citymap.topCategory")}: <b>{enumLabel("category", a.top_category)}</b></div>}
                         {r && (
                           <div className="flex items-center gap-1">
                             {t("citymap.risk")}: <b style={{ color: BAND_COLORS[r.risk_band] }}>{r.risk_score}</b>
@@ -860,7 +861,7 @@ export default function CityMapView() {
                     {ch.map((c) => (
                       <div key={c.label} className="flex items-center gap-2">
                         <span className="w-20 shrink-0 truncate text-xs capitalize text-slate-400" title={c.label}>
-                          {c.label.replace(/_/g, " ")}
+                          {enumLabel("category", c.label)}
                         </span>
                         <div className="h-4 flex-1 overflow-hidden rounded bg-ink-900/70">
                           <div className="h-full rounded"

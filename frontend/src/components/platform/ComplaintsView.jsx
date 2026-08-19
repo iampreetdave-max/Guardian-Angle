@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Loader2, Megaphone, ShieldAlert, PhoneCall, ScrollText } from "lucide-react";
 import * as API from "../../api";
 import { useAuth, isLead } from "../../auth";
-import { useT } from "../../i18n";
+import { useT, useEnumLabel } from "../../i18n";
 
 // Fraud channels mirror the controlled vocabulary in backend constants/cyber.py.
 // The taxonomy itself is fetched from /complaints/cyber/categories at mount.
@@ -21,6 +21,7 @@ const STATUS_COLORS = {
 };
 
 export default function ComplaintsView({ onOpenCase }) {
+  const enumLabel = useEnumLabel();
   const t = useT();
   const { user } = useAuth();
   const citizen = user.role === "citizen";
@@ -182,7 +183,7 @@ export default function ComplaintsView({ onOpenCase }) {
             <div key={c.id} className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-100">{c.title}</span>
-                <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${STATUS_COLORS[c.status] || "bg-ink-700 text-slate-300"}`}>{c.status}</span>
+                <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${STATUS_COLORS[c.status] || "bg-ink-700 text-slate-300"}`}>{enumLabel("status", c.status)}</span>
               </div>
               <p className="mt-1 text-xs text-slate-400">{c.description}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
@@ -191,7 +192,7 @@ export default function ComplaintsView({ onOpenCase }) {
                     {cyberLabel(c.cyber_category)}
                   </span>
                 )}
-                {c.category && <span>{c.category}</span>}
+                {c.category && <span>{enumLabel("category", c.category)}</span>}
                 {c.amount_lost != null && <span>· ₹{Number(c.amount_lost).toLocaleString("en-IN")} {t("complaints.lost")}</span>}
                 {c.fraud_channel && <span>· {t("complaints.via")} {chLabel(c.fraud_channel)}</span>}
                 {c.location && <span>· {c.location}</span>}

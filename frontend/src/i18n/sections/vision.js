@@ -98,6 +98,13 @@ export default {
 
     // results header (rendered from App.jsx — keys live here with the rest of
     // the vision workspace)
+    searchFailed: "Search failed. Is the footage processed?",
+    draftFir: "Draft FIR in Arbiter",
+    draftFirTitle: "Send this evidence to Arbiter to draft an FIR",
+    nudgeNone: "No strong text matches.",
+    nudgeFew: "Few text matches.",
+    emptyReady: "Search your footage by natural language, object, reference image, or suspect face.",
+    emptyUpload: "Upload CCTV footage, or open the Live Feed tab on the left to load a public feed in one click. Processing runs automatically.",
     scanning: "Scanning footage…",
     matchesFor: "matches for",
     clipFallback:
@@ -187,6 +194,13 @@ export default {
     playbackFailed:
       "लाइव प्रीव्यू उपलब्ध नहीं (स्ट्रीम ने प्लेबैक रोक दिया), पर सर्वर पर कैप्चर व इंडेक्सिंग जारी है।",
 
+    searchFailed: "खोज विफल। क्या फुटेज संसाधित है?",
+    draftFir: "आर्बिटर में FIR बनाएँ",
+    draftFirTitle: "FIR का प्रारूप बनाने के लिए यह साक्ष्य आर्बिटर को भेजें",
+    nudgeNone: "कोई सटीक टेक्स्ट मिलान नहीं।",
+    nudgeFew: "कम टेक्स्ट मिलान।",
+    emptyReady: "प्राकृतिक भाषा, वस्तु, संदर्भ छवि या संदिग्ध चेहरे से फुटेज खोजें।",
+    emptyUpload: "CCTV फुटेज अपलोड करें, या बाईं ओर लाइव फ़ीड टैब खोलकर एक क्लिक में सार्वजनिक फ़ीड लोड करें। प्रोसेसिंग स्वतः चलती है।",
     scanning: "फुटेज स्कैन हो रही है…",
     matchesFor: "मिलान —",
     clipFallback:
@@ -276,6 +290,13 @@ export default {
     playbackFailed:
       "લાઇવ પ્રીવ્યૂ ઉપલબ્ધ નથી (સ્ટ્રીમે પ્લેબૅક રોક્યું), પણ સર્વર પર કૅપ્ચર અને ઇન્ડેક્સિંગ ચાલુ છે.",
 
+    searchFailed: "શોધ નિષ્ફળ. શું ફૂટેજ પ્રોસેસ થયું છે?",
+    draftFir: "આર્બિટરમાં FIR બનાવો",
+    draftFirTitle: "FIR નો મુસદ્દો બનાવવા આ પુરાવો આર્બિટરને મોકલો",
+    nudgeNone: "કોઈ મજબૂત ટેક્સ્ટ મેચ નથી.",
+    nudgeFew: "થોડા ટેક્સ્ટ મેચ.",
+    emptyReady: "કુદરતી ભાષા, વસ્તુ, સંદર્ભ છબી અથવા શંકાસ્પદ ચહેરાથી ફૂટેજ શોધો.",
+    emptyUpload: "CCTV ફૂટેજ અપલોડ કરો, અથવા ડાબી બાજુ લાઇવ ફીડ ટૅબ ખોલીને એક ક્લિકમાં જાહેર ફીડ લોડ કરો. પ્રોસેસિંગ આપમેળે ચાલે છે.",
     scanning: "ફૂટેજ સ્કૅન થઈ રહ્યું છે…",
     matchesFor: "મેચ —",
     clipFallback:

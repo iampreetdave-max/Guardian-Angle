@@ -3,11 +3,13 @@
 // and the dashboard works fully offline.
 
 import { useT } from "../../i18n";
+import { useEnumLabel } from "../../i18n";
 
 const PALETTE = ["#f4b23c", "#3b82f6", "#22c55e", "#ef4444", "#a855f7", "#14b8a6", "#f59e0b", "#64748b"];
 
 // Horizontal labelled bars — good for category / status breakdowns.
-export function BarList({ data, accent = "#f4b23c", empty }) {
+export function BarList({ labelKind, data, accent = "#f4b23c", empty }) {
+  const enumLabel = useEnumLabel();
   const t = useT();
   if (!data || data.length === 0)
     return <p className="py-6 text-center text-xs text-slate-500">{empty || t("dashboard.noDataYet")}</p>;
@@ -16,8 +18,9 @@ export function BarList({ data, accent = "#f4b23c", empty }) {
     <div className="space-y-2">
       {data.map((d) => (
         <div key={d.label} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 truncate text-xs capitalize text-slate-400" title={d.label}>
-            {d.label}
+          <span className="w-28 shrink-0 truncate text-xs capitalize text-slate-400"
+            title={labelKind ? enumLabel(labelKind, d.label) : d.label}>
+            {labelKind ? enumLabel(labelKind, d.label) : d.label}
           </span>
           <div className="h-4 flex-1 overflow-hidden rounded bg-ink-900/70">
             <div
@@ -35,7 +38,8 @@ export function BarList({ data, accent = "#f4b23c", empty }) {
 }
 
 // Donut with legend — good for case status / severity split.
-export function Donut({ data, empty, size = 132 }) {
+export function Donut({ labelKind, data, empty, size = 132 }) {
+  const enumLabel = useEnumLabel();
   const t = useT();
   const items = (data || []).filter((d) => d.count > 0);
   const total = items.reduce((s, d) => s + d.count, 0);
@@ -66,7 +70,7 @@ export function Donut({ data, empty, size = 132 }) {
         {items.map((d, i) => (
           <div key={d.label} className="flex items-center gap-2 text-xs">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: PALETTE[i % PALETTE.length] }} />
-            <span className="capitalize text-slate-300">{d.label}</span>
+            <span className="capitalize text-slate-300">{labelKind ? enumLabel(labelKind, d.label) : d.label}</span>
             <span className="font-semibold tabular-nums text-slate-400">
               {d.count} ({Math.round((d.count / total) * 100)}%)
             </span>

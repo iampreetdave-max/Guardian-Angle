@@ -81,6 +81,30 @@ export function I18nProvider({ children, user }) {
   return <I18nCtx.Provider value={value}>{children}</I18nCtx.Provider>;
 }
 
+
+/** Translate an API enum value (complaint category, status, cyber-fraud type).
+
+    The backend returns raw values like "cyber_fraud" or "under_review". Left
+    alone they make a Hindi/Gujarati dashboard look half-translated. Unknown
+    values — anything added on the backend after this dictionary was written —
+    degrade to prettified English ("some_new_type" -> "Some new type") rather
+    than showing a raw key or an empty cell. */
+export function useEnumLabel() {
+  const { t } = useContext(I18nCtx);
+  return useCallback(
+    (kind, value) => {
+      if (value == null || value === "") return "";
+      const key = `enums.${kind}_${value}`;
+      const out = t(key);
+      if (out !== key) return out;
+      return String(value)
+        .replace(/_/g, " ")
+        .replace(/^\w/, (c) => c.toUpperCase());
+    },
+    [t]
+  );
+}
+
 export const useI18n = () => useContext(I18nCtx);
 /** Shorthand for components that only need the translate function. */
 export const useT = () => useContext(I18nCtx).t;

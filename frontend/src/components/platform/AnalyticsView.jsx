@@ -96,16 +96,16 @@ export default function AnalyticsView() {
           <TrendBars data={data.complaints_over_time} />
         </Card>
         <Card title={t("dashboard.casesByStatus")} icon={FolderOpen}>
-          <Donut data={data.cases_by_status} />
+          <Donut labelKind="status" data={data.cases_by_status} />
         </Card>
         <Card title={t("dashboard.complaintsByCategory")} icon={Megaphone}>
-          <BarList data={data.complaints_by_category} />
+          <BarList labelKind="category" data={data.complaints_by_category} />
         </Card>
         <Card title={t("dashboard.complaintsByStatus")} icon={CheckCircle2}>
-          <BarList data={data.complaints_by_status} accent="#3b82f6" />
+          <BarList labelKind="status" data={data.complaints_by_status} accent="#3b82f6" />
         </Card>
         <Card title={t("dashboard.casesBySeverity")} icon={ShieldAlert}>
-          <BarList data={data.cases_by_severity} accent="#ef4444" />
+          <BarList labelKind="severity" data={data.cases_by_severity} accent="#ef4444" />
         </Card>
         <Card title={t("dashboard.topLocations")} icon={FolderOpen}>
           <BarList data={data.top_locations} accent="#22c55e" />
