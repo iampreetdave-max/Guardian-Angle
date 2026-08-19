@@ -1,0 +1,7 @@
+# Overnight QA artefacts: screenshots and raw dumps. Hundreds of MB, all regenerable
+# by re-running the test workflow. The runbook itself (RUNBOOK.html) is committed.
+shots/
+*.png
+*.json
+!testdata.json
+patrol-plan.csv
