@@ -5,7 +5,11 @@
   // docker-compose stack, so the codespace only has to be able to run it.
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": { "version": "latest" }
+    "ghcr.io/devcontainers/features/docker-in-docker:2": { "version": "latest" },
+    // sshd so `gh codespace ssh` works. Without it the codespace can only be
+    // driven from a browser terminal, which means nobody can fix it remotely
+    // when the stack is down — exactly when you need to.
+    "ghcr.io/devcontainers/features/sshd:1": { "version": "latest" }
   },
 
   // 4 cores keeps the first image build (torch + insightface compile) tolerable.
