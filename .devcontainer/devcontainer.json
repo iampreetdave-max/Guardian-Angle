@@ -21,7 +21,7 @@
 
   // Build and start in the background so the codespace is usable immediately.
   // First run pulls base images and compiles ArcFace — 10-15 minutes.
-  "postCreateCommand": "cp -n .env.example .env 2>/dev/null || true; docker compose up -d --build",
+  "postCreateCommand": "cp -n .env.example .env 2>/dev/null || true; bash deploy/fetch-demo-data.sh; docker compose up -d --build",
 
   "customizations": {
     "vscode": {

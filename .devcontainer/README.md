@@ -26,17 +26,20 @@ GitHub simply **blocks further use at the quota** rather than charging you.
   the free 120 is about **30 hours** of running time per month. Stop the
   codespace when you are not using it.
 
-## What is and is not there
+## What is there
 
-The synthetic case data seeds itself on first boot, so the **dashboard, City Map,
-predictive forecast, patrol routing, Cases, Complaints, Arbiter, CrimeGPT and
-Legal Feed all work immediately**.
+**Everything.** All 16 test clips arrive pre-indexed.
 
-**Video footage does not ship with the repo** — the 16 test clips are ~282 MB and
-are gitignored, and the specialised fire/smoke weights are ~520 MB. So a fresh
-codespace starts with **no cameras**, and VisionScan search will be empty until
-you upload something.
+`deploy/fetch-demo-data.sh` runs on create and restores a published data bundle
+(~306 MB) straight into the Docker volume: the 16 videos, 417 keyframes, 3,362
+detections with tracking ids, 434 thumbnails, the FAISS indexes and the seeded
+SQLite database. That is deliberate — *ingesting* those clips takes 30-60 minutes
+of CPU, so the bundle ships the finished index rather than the raw work.
 
-To demo video search here, upload a clip or two through the VisionScan tab and
-wait for processing. Otherwise demo video search on the laptop, where all 16
-clips are already indexed.
+So a fresh codespace can immediately do the full demo, including
+`red car` -> CAM-14 with the bounding box, suspect-face re-identification, and
+scene analytics.
+
+If the download fails for any reason the script **does not fail the codespace** —
+the app still self-seeds complaints, cases, the map and the predictive forecast.
+Only video search would be empty, and uploading one clip fixes it.

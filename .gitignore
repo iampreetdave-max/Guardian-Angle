@@ -46,3 +46,6 @@ frontend/.vite/
 # cloudflared is downloaded on demand by deploy/share.ps1 (52MB binary, not source)
 deploy/tools/cloudflared.exe
 deploy/tunnel.log
+
+# Build artefacts (demo-data bundle is published as a GitHub Release asset)
+dist/
