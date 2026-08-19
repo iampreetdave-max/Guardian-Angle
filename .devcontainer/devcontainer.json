@@ -23,6 +23,12 @@
   // First run pulls base images and compiles ArcFace — 10-15 minutes.
   "postCreateCommand": "bash .devcontainer/setup.sh",
 
+  // postCreateCommand runs ONLY on create. A restarted codespace would come
+  // back with the stack down and, if the restore had ever failed, still empty —
+  // so heal on every start too. setup.sh is idempotent: the restore skips a
+  // populated volume and compose up is a no-op when already running.
+  "postStartCommand": "bash .devcontainer/setup.sh >/tmp/cityshield-start.log 2>&1 || true",
+
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "ms-azuretools.vscode-docker"]
