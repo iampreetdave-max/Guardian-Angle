@@ -319,7 +319,7 @@ function Workbench() {
           {module === "vision" && <StatusBar health={health} />}
           <LanguageSwitcher />
           {staff && <AlertTicker onOpen={() => setModule("alerts")} />}
-          <NotificationBell />
+          <NotificationBell module={module} />
           <div className="flex shrink-0 items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
             {/* Name can be long; cap it and ellipsize rather than let it push the
                 sign-out button out of the header. */}
@@ -557,7 +557,8 @@ function Workbench() {
               module === m.key ? "text-accent" : "text-slate-500"
             }`}
           >
-            <m.icon size={18} /> {m.label}
+            <m.icon size={18} />
+            <span className="max-w-full truncate leading-none">{t(`nav.short.${m.key}`)}</span>
           </button>
         ))}
       </nav>

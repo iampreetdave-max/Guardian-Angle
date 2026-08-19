@@ -41,3 +41,35 @@ def test_login_burst_triggers_rate_limit(client):
                     json={"email": f"rl_{uuid.uuid4().hex[:10]}@example.com",
                           "password": "nope-nope-123"})
     assert r.status_code == 401, f"after reset expected 401, got {r.status_code}"
+
+
+def test_static_thumbnails_do_not_spend_the_api_budget(client):
+    """A search grid loads up to 60 thumbnails per page; those static requests
+    must not consume the API bucket (they used to, and 429'd the demo)."""
+    s = get_settings()
+    security_mw.reset_rate_limits()
+
+    n = s.rate_limit_default_per_min * 2
+    statuses = {client.get("/thumbnails/nope.jpg").status_code for _ in range(n)}
+    assert 429 not in statuses, f"thumbnails were rate limited: {statuses}"
+
+    # And the API budget is untouched afterwards.
+    assert client.get("/api/health").status_code == 200
+
+
+def test_buckets_are_per_user_not_per_ip(client, auth_headers):
+    """Every browser behind the nginx proxy shares one client IP, so buckets
+    key on the authenticated user: one operator cannot starve another."""
+    s = get_settings()
+    security_mw.reset_rate_limits()
+
+    admin, officer = auth_headers["admin"], auth_headers["officer"]
+    got_429 = False
+    for _ in range(s.rate_limit_default_per_min + 40):
+        if client.get("/api/health", headers=admin).status_code == 429:
+            got_429 = True
+            break
+    assert got_429, "admin should have exhausted its own default bucket"
+
+    # Same IP, different user -> untouched bucket.
+    assert client.get("/api/health", headers=officer).status_code == 200

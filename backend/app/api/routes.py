@@ -156,7 +156,7 @@ async def upload_video(
 
 
 @router.get("/feeds", response_model=list[PublicFeed], tags=["videos"])
-def list_public_feeds() -> list[PublicFeed]:
+def list_public_feeds(_user: dict | None = Depends(auth_gate)) -> list[PublicFeed]:
     """Bundled catalog of intentionally-public, click-to-load live feeds."""
     return [PublicFeed(**f) for f in load_feeds()]
 

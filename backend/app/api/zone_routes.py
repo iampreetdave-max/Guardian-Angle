@@ -6,10 +6,11 @@ fractions of the frame, matching the `match_bbox` convention.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..core.zones import line_crossings, zone_analytics
+from ..platform.security import auth_gate
 
 router = APIRouter(tags=["analytics"])
 
@@ -44,7 +45,8 @@ def _points(raw: list[list[float]], what: str) -> list[tuple[float, float]]:
 
 
 @router.post("/videos/{video_id}/zone-analytics")
-def post_zone_analytics(video_id: int, body: ZoneRequest) -> dict:
+def post_zone_analytics(video_id: int, body: ZoneRequest,
+                        _user: dict | None = Depends(auth_gate)) -> dict:
     """Occupancy of a polygon over time (bottom-centre of each box counts)."""
     pts = _points(body.polygon, "polygon")
     if len(pts) < 3:
@@ -59,7 +61,8 @@ def post_zone_analytics(video_id: int, body: ZoneRequest) -> dict:
 
 
 @router.post("/videos/{video_id}/line-crossings")
-def post_line_crossings(video_id: int, body: LineRequest) -> dict:
+def post_line_crossings(video_id: int, body: LineRequest,
+                        _user: dict | None = Depends(auth_gate)) -> dict:
     """Directional crossing counts for a line segment. Needs track ids."""
     pts = _points(body.line, "line")
     if len(pts) != 2:

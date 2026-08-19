@@ -99,7 +99,15 @@ class _Bucket:
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Per-(client IP, class) continuous-refill token bucket.
+    """Per-(caller, class) continuous-refill token bucket.
+
+    Requests for static assets (anything not under ``/api`` — keyframe
+    thumbnails, the React bundle) are exempt: they are images on a page, not
+    API calls, and one search grid loads up to 60 of them. The same carve-out
+    LockdownMiddleware already makes for non-``/api`` paths.
+
+    The caller is the authenticated user when the request carries a valid JWT,
+    otherwise the client IP (see :meth:`_identity`).
 
     Three classes, each with its own per-minute limit from settings:
 
@@ -138,6 +146,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return "export"
         return "default"
 
+    @staticmethod
+    def _identity(request: Request) -> str:
+        """Who owns the bucket: the authenticated user, else the client IP.
+
+        Behind nginx every browser reports the same client IP, so an IP-only
+        key lets one operator's page load starve every other operator. The
+        token must actually verify — keying on an unchecked header would let
+        anyone mint a fresh bucket per request and walk around the limit.
+        """
+        auth = request.headers.get("authorization") or ""
+        if auth.lower().startswith("bearer "):
+            try:
+                import jwt
+                payload = jwt.decode(
+                    auth[7:].strip(), get_settings().jwt_secret,
+                    algorithms=["HS256"],
+                )
+                sub = payload.get("sub")
+                if sub:
+                    return f"u:{sub}"
+            except Exception:
+                pass  # forged/expired token -> fall back to the IP bucket
+        return "ip:" + (request.client.host if request.client else "unknown")
+
     def _limit_for(self, cls: str, settings) -> int:
         if cls == "login":
             return settings.rate_limit_login_per_min
@@ -152,6 +184,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.enable_rate_limit:
             return await call_next(request)
 
+        # Static assets (/thumbnails/..., the React bundle) never spend the API
+        # budget: a 60-result search grid plus its event strip is one page load,
+        # not 60 API calls.
+        if not request.url.path.startswith("/api"):
+            return await call_next(request)
+
         cls = self._classify(request)
         limit = self._limit_for(cls, settings)
         # Guard against a misconfigured non-positive limit (would lock everyone
@@ -159,8 +197,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if limit <= 0:
             return await call_next(request)
 
-        ip = request.client.host if request.client else "unknown"
-        key = (ip, cls)
+        key = (self._identity(request), cls)
         refill_per_sec = limit / 60.0
         now = time.monotonic()
 

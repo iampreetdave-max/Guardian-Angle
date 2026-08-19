@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, ExternalLink } from "lucide-react";
 import * as API from "../../api";
 import { useT } from "../../i18n";
 
-export default function NotificationBell() {
+export default function NotificationBell({ module }) {
   const t = useT();
   const [data, setData] = useState({ unread: 0, items: [] });
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
   const refresh = () => API.getNotifications().then(setData).catch(() => {});
   useEffect(() => {
@@ -14,6 +15,24 @@ export default function NotificationBell() {
     const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
   }, []);
+
+  // Same dismissal pattern as LanguageSwitcher/StatusBar: outside click + Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Never let the panel hang over the next screen after a module switch.
+  useEffect(() => { setOpen(false); }, [module]);
 
   const openPanel = async () => {
     setOpen((o) => !o);
@@ -24,8 +43,8 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative">
-      <button onClick={openPanel} className="relative rounded-lg bg-ink-700 p-2 text-slate-300 hover:bg-ink-600">
+    <div className="relative" ref={ref}>
+      <button onClick={openPanel} aria-expanded={open} className="relative rounded-lg bg-ink-700 p-2 text-slate-300 hover:bg-ink-600">
         <Bell size={16} />
         {data.unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal-red px-1 text-[10px] font-bold text-white">

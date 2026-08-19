@@ -15,6 +15,14 @@ from .security import get_current_user, require_role
 
 analytics_router = APIRouter()
 
+# The DB stores created_at in UTC (datetime('now')), but the deployment and the
+# people reading the dashboard are in IST. Bucketing days in UTC blanks "today"
+# between 05:30 IST (when the UTC day rolls over) and the first complaint filed
+# after it. Shift into local time before taking the calendar date.
+# ponytail: one deployment, one timezone. Promote to a setting if CityShield
+# ever runs outside IST.
+_LOCAL = "+330 minutes"  # IST = UTC+5:30
+
 
 def _counts(conn, sql: str, params: tuple = ()) -> list[dict]:
     """Run a `SELECT <label>, COUNT(*) ...` and return [{label, count}]."""
@@ -81,14 +89,16 @@ def summary(_: dict = Depends(require_role("officer"))) -> dict:
         raw = {
             r[0]: r[1]
             for r in conn.execute(
-                "SELECT date(created_at) d, COUNT(*) FROM complaints "
-                "WHERE created_at >= date('now','-13 days') GROUP BY d"
+                "SELECT date(created_at, ?) d, COUNT(*) FROM complaints "
+                "WHERE date(created_at, ?) >= date('now', ?, '-13 days') "
+                "GROUP BY d",
+                (_LOCAL, _LOCAL, _LOCAL),
             ).fetchall()
         }
         complaints_over_time = []
         for offset in range(13, -1, -1):
             day = conn.execute(
-                "SELECT date('now', ?)", (f"-{offset} days",)
+                "SELECT date('now', ?, ?)", (_LOCAL, f"-{offset} days")
             ).fetchone()[0]
             complaints_over_time.append({"date": day, "count": raw.get(day, 0)})
 

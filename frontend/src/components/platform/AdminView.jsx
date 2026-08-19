@@ -208,6 +208,7 @@ function SecurityPanel() {
   const [confirming, setConfirming] = useState(false); // inline confirm before enabling
   const [busy, setBusy] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false); // inline confirm — this ends the session
   const [events, setEvents] = useState({ login_attempts: [], audit: [] });
 
   const refresh = () => {
@@ -230,7 +231,7 @@ function SecurityPanel() {
   };
 
   const signOutAll = async () => {
-    setSigningOut(true);
+    setSigningOut(true); setConfirmingSignOut(false);
     try {
       await API.logoutAll();
       setToken(null);
@@ -283,10 +284,26 @@ function SecurityPanel() {
           <p className="mb-2 text-[11px] text-slate-500">
             {t("admin.secSessionsHelp")}
           </p>
-          <button onClick={signOutAll} disabled={signingOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-ink-600 disabled:opacity-50">
-            {signingOut ? <Loader2 size={13} className="animate-spin" /> : <Power size={13} />} {t("admin.secSignOutAll")}
-          </button>
+          {confirmingSignOut ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-slate-300">{t("admin.secSignOutConfirmQ")}</span>
+              <button onClick={signOutAll} disabled={signingOut}
+                title={t("admin.secSignOutConfirmTitle")}
+                className="inline-flex items-center gap-1 rounded-lg bg-signal-red px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50">
+                {signingOut ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} {t("admin.secConfirm")}
+              </button>
+              <button onClick={() => setConfirmingSignOut(false)} disabled={signingOut}
+                title={t("common.cancel")}
+                className="rounded-lg bg-ink-700 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-50">
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmingSignOut(true)} disabled={signingOut}
+              className="inline-flex items-center gap-2 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-ink-600 disabled:opacity-50">
+              <Power size={13} /> {t("admin.secSignOutAll")}
+            </button>
+          )}
         </div>
       </div>
 
