@@ -80,9 +80,36 @@
 <pre><code>cd C:\Users\PREET\OneDrive\Desktop\VisionScan
 .\start.ps1
 </code></pre>
-  <p style="margin-bottom:0">To put it on a <strong>public HTTPS link</strong> (no account, no card — for remote judges):
-  <code>.\deploy\share.ps1</code> prints and copies a <code>trycloudflare.com</code> URL. The URL changes every run,
-  so generate it on the day.</p>
+</div>
+
+<h2>1b · The hosted copy (for judges to click)</h2>
+<div class="card">
+  <p style="margin-top:0">Run this <strong>alongside</strong> the laptop, not instead of it. The laptop is the
+  demo; this is the link judges can open themselves.</p>
+
+  <a class="big ghost" href="https://github.com/codespaces/new?repo=iampreetdave-max%2FGuardian-Angle&ref=main" target="_blank">Create the Codespace</a>
+
+  <p>All 16 clips arrive <strong>pre-indexed</strong> — 417 keyframes, 3,362 detections, tracking ids — restored
+  from a published 306&nbsp;MB bundle. Verified working: checksum matches, <code>integrity_check ok</code>,
+  16 cameras ready. First boot takes <strong>10–15 minutes</strong>; after that, seconds.</p>
+
+  <div class="note danger" style="margin-bottom:0">
+    <strong>Two settings, or the link silently fails:</strong>
+    <ul style="margin-bottom:0">
+      <li><strong>Ports tab → port 8080 → Visibility → Public.</strong> Otherwise a judge clicking your link gets
+        a GitHub sign-in page, not the app.</li>
+      <li><strong>Idle timeout 30 → 240 min</strong> at
+        <code>github.com/settings/codespaces</code>. Otherwise it sleeps mid-presentation.</li>
+      <li>Open the URL <strong>20 minutes before</strong> you present. Never let a judge's click be the request
+        that wakes it.</li>
+    </ul>
+  </div>
+
+  <p style="margin-bottom:0;color:var(--dim);font-size:13.5px">Quota: 120 core-hours/month free, about
+  <strong>30 hours</strong> on the 4-core machine. No card is on file, so GitHub simply blocks further use at the
+  limit rather than charging you — stop the Codespace when you are not demoing.
+  <br>Alternative with no GitHub at all: <code>.\deploy\share.ps1</code> opens a Cloudflare tunnel to the
+  laptop, but it dies when the laptop sleeps and the URL changes every run.</p>
 </div>
 
 <div class="note danger">
