@@ -262,6 +262,7 @@ def search_regions(
     camera_id: Optional[str] = None,
     video_id: Optional[int] = None,
     label: Optional[str] = None,
+    group: bool = True,
 ) -> list[SearchHit]:
     """Instance-level search: match the query against individual detected-object
     crops (not whole frames), so 'red car' returns every matching car as its own
@@ -274,7 +275,7 @@ def search_regions(
     id_to_score = {fid: score for fid, score in faiss_hits}
     placeholders = ",".join("?" for _ in id_to_score)
     sql = (
-        "SELECT d.obj_faiss_id, d.label, d.x1, d.y1, d.x2, d.y2, "
+        "SELECT d.obj_faiss_id, d.label, d.track_id, d.x1, d.y1, d.x2, d.y2, "
         "f.id AS frame_id, f.video_id, f.timestamp_sec, f.thumbnail_path, "
         "v.camera_id, v.filename, v.width AS vid_w, v.height AS vid_h "
         "FROM detections d JOIN frames f ON f.id = d.frame_id "
@@ -308,14 +309,66 @@ def search_regions(
             if w and h:
                 hit.match_bbox = BBox(x1=r["x1"] / w, y1=r["y1"] / h,
                                       x2=r["x2"] / w, y2=r["y2"] / h)
+            hit.track_id = r["track_id"]
             hits.append(hit)
-    # one hit per object instance, ranked by similarity (no temporal grouping —
-    # the whole point is to surface every instance). Apply the relevance floor
-    # so weak crops don't pad the list.
+
     hits.sort(key=lambda h: h.score, reverse=True)
     s = get_settings()
     hits = _filter_relevance(hits, s.region_min_score, s.region_rel_ratio)
+
+    if group:
+        hits = _group_by_track(hits)
     return hits[:top_k]
+
+
+def _group_by_track(hits: list[SearchHit]) -> list[SearchHit]:
+    """Collapse instance hits that are the same physical object.
+
+    Region search deliberately returns one hit per detected crop, which is what
+    makes "find every red car" work. But a single car sitting in frame for five
+    seconds is re-detected in every keyframe, so the raw list is mostly
+    near-duplicates of one object — ten cards of the same car reads as a bug.
+
+    Tracking already tells us which detections are the same object, so we group on
+    track_id rather than on time. Time-clustering would be wrong here: two
+    different red cars visible in the same second are two results, not one.
+
+    Detections with no track_id (pre-tracking rows) are left ungrouped rather than
+    lumped together, since we cannot know whether they are the same object.
+    """
+    best: dict[tuple, SearchHit] = {}
+    out: list[SearchHit] = []
+    for h in hits:
+        if h.track_id is None:
+            out.append(h)
+            continue
+        key = (h.video_id, h.match_label, h.track_id)
+        cur = best.get(key)
+        if cur is None:
+            h.event_count = 1
+            h.event_start_hms = h.timestamp_hms
+            h.event_end_hms = h.timestamp_hms
+            best[key] = h
+            out.append(h)
+            continue
+        # Keep the strongest crop as the representative; widen the time span and
+        # count the frames this object was seen in.
+        cur.event_count += 1
+        if h.timestamp_sec < _hms_to_sec(cur.event_start_hms):
+            cur.event_start_hms = h.timestamp_hms
+        if h.timestamp_sec > _hms_to_sec(cur.event_end_hms):
+            cur.event_end_hms = h.timestamp_hms
+    out.sort(key=lambda x: x.score, reverse=True)
+    return out
+
+
+def _hms_to_sec(hms: Optional[str]) -> float:
+    if not hms:
+        return 0.0
+    parts = [float(p) for p in hms.split(":")]
+    while len(parts) < 3:
+        parts.insert(0, 0.0)
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
 
 
 def search_object(

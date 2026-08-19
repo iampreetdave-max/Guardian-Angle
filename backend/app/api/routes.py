@@ -326,7 +326,8 @@ def search_region(body: RegionQueryIn, _user: dict | None = Depends(auth_gate)) 
     """Instance-level search: returns every matching detected object (e.g. all
     five red cars) as its own hit with its bounding box."""
     hits = qr.search_regions(
-        body.query, body.top_k, body.camera_id, body.video_id, body.label
+        body.query, body.top_k, body.camera_id, body.video_id, body.label,
+        body.group_events,
     )
     return SearchResponse(
         query=body.query, query_type="object", count=len(hits), hits=hits

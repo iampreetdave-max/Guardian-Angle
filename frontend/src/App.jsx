@@ -143,6 +143,7 @@ function Workbench() {
           query,
           top_k: 60,
           video_id: selectedVideo || undefined,
+          group_events: group,
         });
         lastQuery.current = { query, type: "object" };
       } else if (mode === "object") {
@@ -155,6 +156,7 @@ function Workbench() {
             query,
             top_k: 60,
             video_id: selectedVideo || undefined,
+            group_events: group,
           });
           res.fallback_from = "object";
         }

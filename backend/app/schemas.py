@@ -75,6 +75,9 @@ class RegionQueryIn(BaseModel):
     camera_id: Optional[str] = None
     video_id: Optional[int] = None
     label: Optional[str] = Field(None, description="Optional YOLO label filter")
+    group_events: bool = Field(
+        True,
+        description="Collapse repeat sightings of the same tracked object into one hit")
 
 
 class ObjectQueryIn(BaseModel):
@@ -120,6 +123,9 @@ class SearchHit(BaseModel):
     # dimensions are unknown.
     match_label: Optional[str] = None
     match_bbox: Optional[BBox] = None
+    # Tracking id of the matched object, when tracking has run. Lets the UI
+    # collapse repeat sightings of one physical object into a single result.
+    track_id: Optional[int] = None
 
 
 class SearchResponse(BaseModel):
