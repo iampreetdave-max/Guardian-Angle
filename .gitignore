@@ -39,3 +39,7 @@ frontend/.vite/
 
 # Claude Code local settings (can contain tokens) — never commit
 .claude/settings.local.json
+
+# cloudflared is downloaded on demand by deploy/share.ps1 (52MB binary, not source)
+deploy/tools/cloudflared.exe
+deploy/tunnel.log
