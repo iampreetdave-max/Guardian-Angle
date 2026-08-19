@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { FileText, X, Loader2, FolderOpen } from "lucide-react";
 import { useAuth } from "../auth";
 import * as API from "../api";
+import { useT } from "../i18n";
 
 export default function ReportTray({ selectedHits, query, queryType, onClear, onGenerate }) {
+  const t = useT();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -58,17 +60,17 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
     <>
       <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-ink-500 bg-ink-800/95 px-4 py-2.5 shadow-2xl backdrop-blur">
         <span className="text-sm text-slate-300">
-          <span className="font-bold text-accent">{selectedHits.length}</span> frame
-          {selectedHits.length > 1 ? "s" : ""} selected
+          <span className="font-bold text-accent">{selectedHits.length}</span>{" "}
+          {t("vision.framesSelected")}
         </span>
         <button
           onClick={() => setOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-full bg-accent-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-700"
         >
           <FileText size={14} />
-          Generate Report
+          {t("vision.generateReport")}
         </button>
-        <button onClick={onClear} className="text-slate-400 hover:text-white" title="Clear">
+        <button onClick={onClear} className="text-slate-400 hover:text-white" title={t("common.clear")}>
           <X size={16} />
         </button>
       </div>
@@ -84,12 +86,13 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
           >
             <div className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-100">
               <FileText size={18} className="text-accent" />
-              Forensic PDF Report
+              {t("vision.forensicPdf")}
             </div>
             {cases.length > 0 && (
               <>
                 <label className="mb-1 block text-xs text-slate-400">
-                  Link to one of your cases <span className="text-slate-600">(optional)</span>
+                  {t("vision.linkCase")}{" "}
+                  <span className="text-slate-600">{t("vision.optional")}</span>
                 </label>
                 <div className="relative mb-3">
                   <FolderOpen size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -98,7 +101,7 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
                     onChange={(e) => pickCase(e.target.value)}
                     className="w-full appearance-none rounded-lg bg-ink-900/60 py-2 pl-9 pr-3 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
                   >
-                    <option value="">— none —</option>
+                    <option value="">{t("vision.noneOption")}</option>
                     {cases.map((c) => (
                       <option key={c.id} value={c.id}>
                         #{c.id} · {c.title} ({c.status})
@@ -108,21 +111,21 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
                 </div>
               </>
             )}
-            <label className="mb-1 block text-xs text-slate-400">Case title</label>
+            <label className="mb-1 block text-xs text-slate-400">{t("vision.caseTitle")}</label>
             <input
               value={caseTitle}
               onChange={(e) => setCaseTitle(e.target.value)}
               className="mb-3 w-full rounded-lg bg-ink-900/60 px-3 py-2 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
             />
-            <label className="mb-1 block text-xs text-slate-400">Investigator</label>
+            <label className="mb-1 block text-xs text-slate-400">{t("vision.investigator")}</label>
             <input
               value={investigator}
               onChange={(e) => setInvestigator(e.target.value)}
-              placeholder="Officer name / ID"
+              placeholder={t("vision.investigatorPh")}
               className="mb-4 w-full rounded-lg bg-ink-900/60 px-3 py-2 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
             />
             <div className="mb-4 rounded-lg bg-ink-900/50 p-3 text-xs text-slate-400">
-              {selectedHits.length} timestamped frames · query:{" "}
+              {t("vision.reportSummary", { n: selectedHits.length })}{" "}
               <span className="text-slate-200">{query || "—"}</span>
             </div>
             <div className="flex justify-end gap-2">
@@ -131,7 +134,7 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
                 disabled={busy}
                 className="rounded-lg bg-ink-700 px-4 py-2 text-sm text-slate-300 hover:bg-ink-600"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={generate}
@@ -139,7 +142,7 @@ export default function ReportTray({ selectedHits, query, queryType, onClear, on
                 className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-700 disabled:opacity-50"
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-                Download PDF
+                {t("vision.downloadPdf")}
               </button>
             </div>
           </div>

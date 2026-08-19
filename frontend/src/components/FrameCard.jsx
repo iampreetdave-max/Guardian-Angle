@@ -1,7 +1,9 @@
 import { Check, Clock, Camera, Layers } from "lucide-react";
 import { scorePct, scoreColor } from "../utils";
+import { useT } from "../i18n";
 
 export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
+  const t = useT();
   return (
     <div
       className={`group relative overflow-hidden rounded-lg border bg-ink-800 transition ${
@@ -11,7 +13,7 @@ export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
       <div className="relative aspect-video cursor-pointer" onClick={() => onOpen(hit)}>
         <img
           src={hit.thumbnail_url}
-          alt={`frame ${hit.frame_id}`}
+          alt={t("vision.frameAlt", { id: hit.frame_id })}
           loading="lazy"
           className="h-full w-full object-cover"
         />
@@ -58,7 +60,7 @@ export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
               ? "border-accent bg-accent text-white"
               : "border-white/50 bg-ink-900/60 text-transparent group-hover:border-white"
           }`}
-          title="Add to report"
+          title={t("vision.addToReport")}
         >
           <Check size={13} />
         </button>
@@ -66,7 +68,11 @@ export default function FrameCard({ hit, selected, onToggleSelect, onOpen }) {
         {hit.event_count > 1 && (
           <span
             className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded bg-ink-900/85 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-            title={`${hit.event_count} frames in this event (${hit.event_start_hms}–${hit.event_end_hms})`}
+            title={t("vision.eventFramesTitle", {
+              n: hit.event_count,
+              start: hit.event_start_hms,
+              end: hit.event_end_hms,
+            })}
           >
             <Layers size={11} />
             {hit.event_count}

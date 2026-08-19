@@ -44,6 +44,12 @@ class CreateUserIn(BaseModel):
     phone: Optional[str] = None
 
 
+class UpdatePreferencesIn(BaseModel):
+    """A user's own interface preferences. Self-service — no admin rights needed,
+    and deliberately cannot touch role, team or active status."""
+    language: Optional[str] = None
+
+
 class UpdateUserIn(BaseModel):
     """Partial update of a staff user. Only fields present in the request body
     are changed (team_id may be set to null to remove from a team).

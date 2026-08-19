@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_d4d907469be8a6daff380e69f6159d60 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdn.jsdelivr.net/gh/python-visualization/folium@main/folium/templates/leaflet_heat.min.js"></script>
+</head>
+<body>
+    
+    
+    <div style="position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+                background: white; padding: 10px 18px;
+                border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+                font-family: -apple-system, Segoe UI, sans-serif;
+                z-index: 9999; text-align: center; max-width: 90%;">
+    <div style="font-size: 16px; font-weight: 700; color: #1B4F72;">
+        foodDROP Barbados — Zone Map
+    </div>
+    <div style="font-size: 12px; color: #555; margin-top: 2px;">
+        15 zones identified from 6 months of orders ·
+        Click any zone for full stats and geographic anchors
+    </div>
+    </div>
+    
+    
+    <div style="position: fixed; bottom: 30px; left: 12px;
+                background: white; padding: 14px 16px;
+                border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+                font-family: -apple-system, Segoe UI, sans-serif;
+                z-index: 9999; font-size: 12px; max-width: 260px;">
+    <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1B4F72;">
+        Zone type
+    </div>
+    
+    <div style="margin: 4px 0; display: flex; align-items: center;">
+        <span style="display: inline-block; width: 16px; height: 16px; background: #F39C12;
+                     border: 1px solid #F39C12; opacity: 0.55; margin-right: 6px;"></span>
+        <span>Mixed (split supply)</span>
+    </div>
+    
+    <div style="margin: 4px 0; display: flex; align-items: center;">
+        <span style="display: inline-block; width: 16px; height: 16px; background: #E74C3C;
+                     border: 1px solid #E74C3C; opacity: 0.55; margin-right: 6px;"></span>
+        <span>Cross-zone dependent</span>
+    </div>
+    
+    
+    <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
+    
+    <div style="font-size: 11px; color: #666; line-height: 1.5;">
+        <div><b>Heavy border</b> = top 10 priority zone</div>
+        <div><b>Numbered marker</b> = acquisition priority rank</div>
+        <div style="margin-top: 6px;">Use the layer control (top-right) to toggle basemap, density heatmap, and zone labels.</div>
+    </div>
+    </div>
+    
+    
+            <div class="folium-map" id="map_d4d907469be8a6daff380e69f6159d60" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_d4d907469be8a6daff380e69f6159d60 = L.map(
+                "map_d4d907469be8a6daff380e69f6159d60",
+                {
+                    center: [13.1, -59.58],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+            L.control.scale().addTo(map_d4d907469be8a6daff380e69f6159d60);
+
+            
+
+        
+    
+            var tile_layer_82bff7de7f23def40e99a43c5ffc96a9 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u00a9 OpenStreetMap contributors \u00a9 CARTO",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_82bff7de7f23def40e99a43c5ffc96a9.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var tile_layer_c974347f5b92b123d1399cf95e30c0dc = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_c974347f5b92b123d1399cf95e30c0dc.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var tile_layer_bf253e66eac10ba6e729c2888298901f = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u00a9 CartoDB",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_bf253e66eac10ba6e729c2888298901f.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var tile_layer_39c61cc5c02678fa2cf96971c5213fc7 = L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "Esri, Maxar, GeoEye, Earthstar Geographics",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_39c61cc5c02678fa2cf96971c5213fc7.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var tile_layer_abef7f96e905cbe86a0bbfa194193e7e = L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "Esri",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            var feature_group_b738cb727f9f47f3cc4c2c2c91a893ff = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var polygon_cda2bcd28a6309e82e8192f2a890f5d9 = L.polygon(
+                [[13.064388, -59.564811], [13.065945, -59.553901], [13.0691025, -59.551928], [13.07269789, -59.55082632], [13.076291, -59.552026], [13.09480744, -59.5667531], [13.1109676, -59.57999522], [13.11097818, -59.58004211], [13.11290556, -59.60470096], [13.1134584, -59.6212096], [13.1129836, -59.62293824], [13.1123625, -59.6236883], [13.11141596, -59.62446688], [13.10907874, -59.62553955], [13.10549096, -59.62422001], [13.078508, -59.6119908], [13.07441588, -59.59950224], [13.064388, -59.564811]],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_b7864e77d28dc91cc90a539aa6a88355 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_837b42c73b023c971cda4d8430e1ad9b = $(`<div id="html_837b42c73b023c971cda4d8430e1ad9b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #F39C12; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #1</div>             <div style="font-size: 16px; font-weight: 600;">Zone 11</div>             <div style="font-size: 13px; margin-top: 4px;">Bridgetown · Hastings · Worthing · Rockley · Welches · St Lawrence Gap</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Mixed (split supply) · 27.4 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">362</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$23,916</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">68</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">New York Pizza | Xpress Bites (Salter's Market) | Chicken Barn (Wildey)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0810, -59.5920) — 64 orders</li><li>(13.0760, -59.5680) — 56 orders</li><li>(13.0850, -59.5780) — 53 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0856, -59.5859)<br>             Bounding box: lat [13.0644, 13.1135], lng [-59.6255, -59.5508]         </div>         </div>         </div>`)[0];
+                popup_b7864e77d28dc91cc90a539aa6a88355.setContent(html_837b42c73b023c971cda4d8430e1ad9b);
+            
+        
+
+        polygon_cda2bcd28a6309e82e8192f2a890f5d9.bindPopup(popup_b7864e77d28dc91cc90a539aa6a88355)
+        ;
+
+        
+    
+    
+            polygon_cda2bcd28a6309e82e8192f2a890f5d9.bindTooltip(
+                `<div>
+                     #1 · Zone 11 · Bridgetown + 5 more · 362 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_edefece21dddc82e1ba16195eb03a8d7 = L.marker(
+                [13.08562511, -59.58590284],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_1a6258fb9bd6d8e86d56d9989b8ae50d = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #F39C12;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #1\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_edefece21dddc82e1ba16195eb03a8d7.bindTooltip(
+                `<div>
+                     #1 · Zone 11 · Bridgetown + 5 more · 362 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_edefece21dddc82e1ba16195eb03a8d7.setIcon(div_icon_1a6258fb9bd6d8e86d56d9989b8ae50d);
+            
+    
+            var polygon_d82c6ce66558ef90729cb3c5a8e708b5 = L.polygon(
+                [[13.14502357, -59.63514503], [13.13306584, -59.63287768], [13.13284796, -59.63270188], [13.1319278, -59.63065677], [13.13231216, -59.62790276], [13.13546776, -59.61799154], [13.13554502, -59.61793976], [13.13562975, -59.61792474], [13.13651884, -59.61787391], [13.13782439, -59.61785488], [13.1458879, -59.61811912], [13.14750736, -59.61912469], [13.14815814, -59.61995982], [13.15133915, -59.62524257], [13.152501, -59.628562], [13.152512, -59.628662], [13.15218993, -59.63108197], [13.1512869, -59.6328057], [13.1509865, -59.6332625], [13.14502357, -59.63514503]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_df69684d630c8cf6cd509e32117540d1 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_e8a9ff433a341c236f5d07adad44fa29 = $(`<div id="html_e8a9ff433a341c236f5d07adad44fa29" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #2</div>             <div style="font-size: 16px; font-weight: 600;">Zone 14</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 3.3 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">135</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$7,628</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">54</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">SUBWAY® (The Walk) | Bento Box | Xpress Bites (Salter's Market)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1460, -59.6280) — 64 orders</li><li>(13.1350, -59.6320) — 40 orders</li><li>(13.1390, -59.6260) — 40 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1435, -59.6276)<br>             Bounding box: lat [13.1319, 13.1525], lng [-59.6351, -59.6179]         </div>         </div>         </div>`)[0];
+                popup_df69684d630c8cf6cd509e32117540d1.setContent(html_e8a9ff433a341c236f5d07adad44fa29);
+            
+        
+
+        polygon_d82c6ce66558ef90729cb3c5a8e708b5.bindPopup(popup_df69684d630c8cf6cd509e32117540d1)
+        ;
+
+        
+    
+    
+            polygon_d82c6ce66558ef90729cb3c5a8e708b5.bindTooltip(
+                `<div>
+                     #2 · Zone 14 · Central West · 135 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_dd5c7b73598f9f0db8278986baff7c44 = L.marker(
+                [13.14354815, -59.627581715],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_8f6ec117362a77012c13a321af2a062e = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #2\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_dd5c7b73598f9f0db8278986baff7c44.bindTooltip(
+                `<div>
+                     #2 · Zone 14 · Central West · 135 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_dd5c7b73598f9f0db8278986baff7c44.setIcon(div_icon_8f6ec117362a77012c13a321af2a062e);
+            
+    
+            var polygon_3f42f3240a1721570d0c267b66e12171 = L.polygon(
+                [[13.14515114, -59.58070738], [13.1383767, -59.58843077], [13.13243942, -59.58421772], [13.1301724, -59.580878], [13.12512484, -59.57202862], [13.12500628, -59.57168762], [13.12725478, -59.54126924], [13.12903181, -59.53906778], [13.1335607, -59.5335614], [13.13623088, -59.53318498], [13.15537705, -59.54787678], [13.1576992, -59.5536632], [13.1574372, -59.5579459], [13.1561252, -59.5603981], [13.14515114, -59.58070738]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_4356dca9001365e9e0f5e5bb483c0f12 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_865a8ae0686abcae20fa4f368d7a5b72 = $(`<div id="html_865a8ae0686abcae20fa4f368d7a5b72" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #4</div>             <div style="font-size: 16px; font-weight: 600;">Zone 2</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 14.2 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">79</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$5,594</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">50</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Xpress Bites (Salter's Market) | Cafe 195 & Bistro | Bento Box</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1350, -59.5710) — 46 orders</li><li>(13.1300, -59.5670) — 31 orders</li><li>(13.1530, -59.5580) — 25 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1353, -59.5581)<br>             Bounding box: lat [13.1250, 13.1577], lng [-59.5884, -59.5332]         </div>         </div>         </div>`)[0];
+                popup_4356dca9001365e9e0f5e5bb483c0f12.setContent(html_865a8ae0686abcae20fa4f368d7a5b72);
+            
+        
+
+        polygon_3f42f3240a1721570d0c267b66e12171.bindPopup(popup_4356dca9001365e9e0f5e5bb483c0f12)
+        ;
+
+        
+    
+    
+            polygon_3f42f3240a1721570d0c267b66e12171.bindTooltip(
+                `<div>
+                     #4 · Zone 2 · Central West · 79 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_e0d1a2de0cd359e8a2616c562e682df4 = L.marker(
+                [13.135323295, -59.5581484],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_272561c5925640d5b1435d02d2a0e583 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #4\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_e0d1a2de0cd359e8a2616c562e682df4.bindTooltip(
+                `<div>
+                     #4 · Zone 2 · Central West · 79 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_e0d1a2de0cd359e8a2616c562e682df4.setIcon(div_icon_272561c5925640d5b1435d02d2a0e583);
+            
+    
+            var polygon_f6554ab0b7c13dcddeb1889d28c28d56 = L.polygon(
+                [[13.0999062, -59.5046314], [13.0868516, -59.5125969], [13.0782515, -59.5079969], [13.07901458, -59.50076829], [13.08494143, -59.49448985], [13.08601284, -59.49340188], [13.09425312, -59.49549832], [13.0996444, -59.4981837], [13.0999062, -59.5046314]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_15d89ba1b956da7396709f5e400c48c4 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_528b9c4350c5e54d7172af71bd918296 = $(`<div id="html_528b9c4350c5e54d7172af71bd918296" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #3</div>             <div style="font-size: 16px; font-weight: 600;">Zone 3</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 3.4 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">67</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$4,745</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">40</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">SUBWAY® (O'Meara) | Wendy's (Arima) | Church's Chicken (O'Meara)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0830, -59.5040) — 54 orders</li><li>(13.0830, -59.5060) — 35 orders</li><li>(13.0840, -59.5030) — 30 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0846, -59.5044)<br>             Bounding box: lat [13.0783, 13.0999], lng [-59.5126, -59.4934]         </div>         </div>         </div>`)[0];
+                popup_15d89ba1b956da7396709f5e400c48c4.setContent(html_528b9c4350c5e54d7172af71bd918296);
+            
+        
+
+        polygon_f6554ab0b7c13dcddeb1889d28c28d56.bindPopup(popup_15d89ba1b956da7396709f5e400c48c4)
+        ;
+
+        
+    
+    
+            polygon_f6554ab0b7c13dcddeb1889d28c28d56.bindTooltip(
+                `<div>
+                     #3 · Zone 3 · South East · 67 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_09241d6714789eb555391558a12279a8 = L.marker(
+                [13.08456039, -59.50437864],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_b65dd03cebe2934ea7efbcd23e1ca7cb = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #3\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_09241d6714789eb555391558a12279a8.bindTooltip(
+                `<div>
+                     #3 · Zone 3 · South East · 67 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_09241d6714789eb555391558a12279a8.setIcon(div_icon_b65dd03cebe2934ea7efbcd23e1ca7cb);
+            
+    
+            var polygon_f27c4d6e4bb196c91753030e7e4f8181 = L.polygon(
+                [[13.20482368, -59.6399865], [13.2007525, -59.64132137], [13.1976101, -59.6406798], [13.19741169, -59.6401392], [13.19798118, -59.63804328], [13.19829139, -59.63751648], [13.20796014, -59.62715028], [13.20855687, -59.62670673], [13.21040103, -59.62588633], [13.21579395, -59.62926448], [13.2174156, -59.63445481], [13.21738645, -59.63447417], [13.20726618, -59.63892293], [13.20482368, -59.6399865]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_e859d63a26572b34736e66137b45d47d = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_4ce17bbf4ac432ae0f754671897084d6 = $(`<div id="html_4ce17bbf4ac432ae0f754671897084d6" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #5</div>             <div style="font-size: 16px; font-weight: 600;">Zone 4</div>             <div style="font-size: 13px; margin-top: 4px;">Sunset Crest</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 1.9 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">33</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$3,214</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">27</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Popeyes (South Park) | SUBWAY® (Marabella) | Pepenero</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.2170, -59.6340) — 78 orders</li><li>(13.2000, -59.6380) — 16 orders</li><li>(13.1990, -59.6380) — 8 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.2101, -59.6344)<br>             Bounding box: lat [13.1974, 13.2174], lng [-59.6413, -59.6259]         </div>         </div>         </div>`)[0];
+                popup_e859d63a26572b34736e66137b45d47d.setContent(html_4ce17bbf4ac432ae0f754671897084d6);
+            
+        
+
+        polygon_f27c4d6e4bb196c91753030e7e4f8181.bindPopup(popup_e859d63a26572b34736e66137b45d47d)
+        ;
+
+        
+    
+    
+            polygon_f27c4d6e4bb196c91753030e7e4f8181.bindTooltip(
+                `<div>
+                     #5 · Zone 4 · Sunset Crest · 33 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_1faa3d326af134b131147d18ffebde81 = L.marker(
+                [13.21011591, -59.6343814],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_072fe6ca611b39e4c75f57a2549e7143 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #5\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_1faa3d326af134b131147d18ffebde81.bindTooltip(
+                `<div>
+                     #5 · Zone 4 · Sunset Crest · 33 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1faa3d326af134b131147d18ffebde81.setIcon(div_icon_072fe6ca611b39e4c75f57a2549e7143);
+            
+    
+            var polygon_55ff31bd1986fb3ac4db66844b9bebab = L.polygon(
+                [[13.06624983, -59.50872784], [13.0537986, -59.5153749], [13.05289994, -59.51465736], [13.05114133, -59.51083339], [13.05226255, -59.50734308], [13.0534085, -59.50396297], [13.0574801, -59.5031128], [13.0645252, -59.50259709], [13.0653788, -59.5030723], [13.0664732, -59.5046176], [13.06624983, -59.50872784]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_3ab2f36a1c1ebcc37f9b48376f2c66e8 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_29ce03eadc1eb6ba7d47e0a00e407ceb = $(`<div id="html_29ce03eadc1eb6ba7d47e0a00e407ceb" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #6</div>             <div style="font-size: 16px; font-weight: 600;">Zone 7</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 1.6 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">26</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,804</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">31</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">SUBWAY® (Glencoe) | Pizza Boys & Church's Chicken (Glencoe) | Popeyes (MovieTowne)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0520, -59.5100) — 15 orders</li><li>(13.0640, -59.5060) — 12 orders</li><li>(13.0620, -59.5060) — 12 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0574, -59.5074)<br>             Bounding box: lat [13.0511, 13.0665], lng [-59.5154, -59.5026]         </div>         </div>         </div>`)[0];
+                popup_3ab2f36a1c1ebcc37f9b48376f2c66e8.setContent(html_29ce03eadc1eb6ba7d47e0a00e407ceb);
+            
+        
+
+        polygon_55ff31bd1986fb3ac4db66844b9bebab.bindPopup(popup_3ab2f36a1c1ebcc37f9b48376f2c66e8)
+        ;
+
+        
+    
+    
+            polygon_55ff31bd1986fb3ac4db66844b9bebab.bindTooltip(
+                `<div>
+                     #6 · Zone 7 · South East · 26 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_60c9a5b446d00afbfd29428978d75f78 = L.marker(
+                [13.0573716, -59.50739642],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_c80c0ca69af3c5113ca01cb05289fe49 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #6\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_60c9a5b446d00afbfd29428978d75f78.bindTooltip(
+                `<div>
+                     #6 · Zone 7 · South East · 26 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_60c9a5b446d00afbfd29428978d75f78.setIcon(div_icon_c80c0ca69af3c5113ca01cb05289fe49);
+            
+    
+            var polygon_96961b5085c4af2ed7ffac70fba8061b = L.polygon(
+                [[13.0741923, -59.5173714], [13.07776083, -59.51934252], [13.0806985, -59.5317207], [13.07861261, -59.53314421], [13.076576, -59.532618], [13.0711823, -59.5292253], [13.068831, -59.525097], [13.0724646, -59.5192934], [13.0741923, -59.5173714]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_ef87b002b1a7be9640be9f32c18161a8 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_a589e15d4eda5792d7e0dad50e43c10b = $(`<div id="html_a589e15d4eda5792d7e0dad50e43c10b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #8</div>             <div style="font-size: 16px; font-weight: 600;">Zone 8</div>             <div style="font-size: 13px; margin-top: 4px;">Maxwell · Christ Church (Oistins)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 1.3 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">25</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,790</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">30</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Pizza Boys & Church's Chicken (Maraval) | Canton Asian Kitchen | Burger King (Maraval)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0760, -59.5310) — 75 orders</li><li>(13.0780, -59.5190) — 21 orders</li><li>(13.0740, -59.5190) — 11 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0762, -59.5308)<br>             Bounding box: lat [13.0688, 13.0807], lng [-59.5331, -59.5174]         </div>         </div>         </div>`)[0];
+                popup_ef87b002b1a7be9640be9f32c18161a8.setContent(html_a589e15d4eda5792d7e0dad50e43c10b);
+            
+        
+
+        polygon_96961b5085c4af2ed7ffac70fba8061b.bindPopup(popup_ef87b002b1a7be9640be9f32c18161a8)
+        ;
+
+        
+    
+    
+            polygon_96961b5085c4af2ed7ffac70fba8061b.bindTooltip(
+                `<div>
+                     #8 · Zone 8 · Maxwell / Christ Church (Oistins) · 25 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_2cc91849a7037dd73325ba1f8c9f75a2 = L.marker(
+                [13.0761747, -59.5307734],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_040c7f332403a6107e66f92413f145d7 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #8\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_2cc91849a7037dd73325ba1f8c9f75a2.bindTooltip(
+                `<div>
+                     #8 · Zone 8 · Maxwell / Christ Church (Oistins) · 25 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2cc91849a7037dd73325ba1f8c9f75a2.setIcon(div_icon_040c7f332403a6107e66f92413f145d7);
+            
+    
+            var polygon_65dbea97e85444a709a49ba419ea3692 = L.polygon(
+                [[13.10948983, -59.54445701], [13.10521234, -59.54482882], [13.0968608, -59.5377526], [13.09578986, -59.53636999], [13.09546156, -59.53564508], [13.09529499, -59.53496021], [13.09531958, -59.53494019], [13.10167613, -59.53072375], [13.10950341, -59.53248111], [13.1099438, -59.5340009], [13.10969477, -59.54390143], [13.10948983, -59.54445701]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_0abb0e9f7d2b8127fedaa1bc088d5a8b = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_1df00d8565ed35e7a8e43cf9bd655746 = $(`<div id="html_1df00d8565ed35e7a8e43cf9bd655746" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #9</div>             <div style="font-size: 16px; font-weight: 600;">Zone 1</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 1.7 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">23</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,459</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">32</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Church's Chicken (O'Meara) | The Mini Bar (Shops of Arima) | Castro's Restaurant and Sports Bar</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1090, -59.5400) — 17 orders</li><li>(13.1020, -59.5390) — 15 orders</li><li>(13.0970, -59.5350) — 14 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1017, -59.5392)<br>             Bounding box: lat [13.0953, 13.1099], lng [-59.5448, -59.5307]         </div>         </div>         </div>`)[0];
+                popup_0abb0e9f7d2b8127fedaa1bc088d5a8b.setContent(html_1df00d8565ed35e7a8e43cf9bd655746);
+            
+        
+
+        polygon_65dbea97e85444a709a49ba419ea3692.bindPopup(popup_0abb0e9f7d2b8127fedaa1bc088d5a8b)
+        ;
+
+        
+    
+    
+            polygon_65dbea97e85444a709a49ba419ea3692.bindTooltip(
+                `<div>
+                     #9 · Zone 1 · Central East · 23 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_cc5776f04422f04a638b76cb8510489b = L.marker(
+                [13.10173394, -59.53915489],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_8a6bd8a2f3ca5e590e3d0e65e41f841e = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #9\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_cc5776f04422f04a638b76cb8510489b.bindTooltip(
+                `<div>
+                     #9 · Zone 1 · Central East · 23 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_cc5776f04422f04a638b76cb8510489b.setIcon(div_icon_8a6bd8a2f3ca5e590e3d0e65e41f841e);
+            
+    
+            var polygon_7851e1aa4a67d755722892cdf7d84eb3 = L.polygon(
+                [[13.1181049, -59.4775955], [13.10503385, -59.48210305], [13.0938236, -59.4704413], [13.09109123, -59.45999554], [13.0914449, -59.4571217], [13.09462435, -59.45362123], [13.105651, -59.445131], [13.11817445, -59.43555801], [13.123473, -59.432845], [13.13776946, -59.43151982], [13.14014492, -59.43201991], [13.1423384, -59.4388594], [13.1181049, -59.4775955]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_ce279d52f2410af5da02f93483f731ca = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_c080acf14d8c761f2821b807a487cf38 = $(`<div id="html_c080acf14d8c761f2821b807a487cf38" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #7</div>             <div style="font-size: 16px; font-weight: 600;">Zone 0</div>             <div style="font-size: 13px; margin-top: 4px;">Crane Beach</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 17.4 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">22</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,383</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">17</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">SUBWAY® (6 Roads) | Smash & Sear | Chicken Barn (Coverley)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1100, -59.4700) — 7 orders</li><li>(13.1380, -59.4370) — 6 orders</li><li>(13.1020, -59.4670) — 6 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1123, -59.4534)<br>             Bounding box: lat [13.0911, 13.1423], lng [-59.4821, -59.4315]         </div>         </div>         </div>`)[0];
+                popup_ce279d52f2410af5da02f93483f731ca.setContent(html_c080acf14d8c761f2821b807a487cf38);
+            
+        
+
+        polygon_7851e1aa4a67d755722892cdf7d84eb3.bindPopup(popup_ce279d52f2410af5da02f93483f731ca)
+        ;
+
+        
+    
+    
+            polygon_7851e1aa4a67d755722892cdf7d84eb3.bindTooltip(
+                `<div>
+                     #7 · Zone 0 · Crane Beach · 22 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_7dbc0b1d9959a599522a6a1d51b5d17f = L.marker(
+                [13.1123475, -59.4533875],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_8e9ac2c4d5f4e985baeb6ee093810d88 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #7\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_7dbc0b1d9959a599522a6a1d51b5d17f.bindTooltip(
+                `<div>
+                     #7 · Zone 0 · Crane Beach · 22 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_7dbc0b1d9959a599522a6a1d51b5d17f.setIcon(div_icon_8e9ac2c4d5f4e985baeb6ee093810d88);
+            
+    
+            var polygon_0d635f4ed6cde4fc6cde4061f00e6f1a = L.polygon(
+                [[13.18061669, -59.62973872], [13.18136838, -59.63024007], [13.186896, -59.635252], [13.1867113, -59.6372836], [13.18581684, -59.63835776], [13.1850283, -59.638469], [13.1831544, -59.6387313], [13.1773229, -59.6389621], [13.17557595, -59.6380237], [13.1743955, -59.63502575], [13.17440557, -59.63489699], [13.177064, -59.630811], [13.18061669, -59.62973872]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+        var popup_ce1551164b069818a59ae2f1b4c65bd0 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_7801cabb978465ae630158aa7c9583e8 = $(`<div id="html_7801cabb978465ae630158aa7c9583e8" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #10</div>             <div style="font-size: 16px; font-weight: 600;">Zone 6</div>             <div style="font-size: 13px; margin-top: 4px;">Holetown</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 1.0 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">21</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$2,119</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">27</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Abraham's Grill Hut | Lemon Pepper (Valpark) | SUBWAY® (Valsayn)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1780, -59.6370) — 26 orders</li><li>(13.1820, -59.6350) — 9 orders</li><li>(13.1800, -59.6370) — 8 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1787, -59.6367)<br>             Bounding box: lat [13.1744, 13.1869], lng [-59.6390, -59.6297]         </div>         </div>         </div>`)[0];
+                popup_ce1551164b069818a59ae2f1b4c65bd0.setContent(html_7801cabb978465ae630158aa7c9583e8);
+            
+        
+
+        polygon_0d635f4ed6cde4fc6cde4061f00e6f1a.bindPopup(popup_ce1551164b069818a59ae2f1b4c65bd0)
+        ;
+
+        
+    
+    
+            polygon_0d635f4ed6cde4fc6cde4061f00e6f1a.bindTooltip(
+                `<div>
+                     #10 · Zone 6 · Holetown · 21 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_7cb7d8cfd941bccf5fb651284741b0d8 = L.marker(
+                [13.17873554, -59.6367461],
+                {
+}
+            ).addTo(feature_group_b738cb727f9f47f3cc4c2c2c91a893ff);
+        
+    
+            var div_icon_bfa44de86aebab1f4144b35e7c9675c2 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 12px; font-weight: 700;\n                                color: white; background: #E74C3C;\n                                width: 28px; height: 28px;\n                                border-radius: 50%;\n                                border: 2px solid white;\n                                display: flex; align-items: center; justify-content: center;\n                                box-shadow: 0 1px 4px rgba(0,0,0,0.4);\"\u003e\n                    #10\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+            marker_7cb7d8cfd941bccf5fb651284741b0d8.bindTooltip(
+                `<div>
+                     #10 · Zone 6 · Holetown · 21 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_7cb7d8cfd941bccf5fb651284741b0d8.setIcon(div_icon_bfa44de86aebab1f4144b35e7c9675c2);
+            
+    
+            feature_group_b738cb727f9f47f3cc4c2c2c91a893ff.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var feature_group_55f0bef19d39d81106fa683f35c1f212 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var polygon_2e637dccbabe578fa8728802f32f0321 = L.polygon(
+                [[13.0480973, -59.5229486], [13.05474462, -59.52802119], [13.05162356, -59.53454413], [13.05155823, -59.53463794], [13.0497002, -59.5344193], [13.04773298, -59.53200364], [13.04770562, -59.53196301], [13.04587128, -59.52901003], [13.04556168, -59.52664036], [13.04679652, -59.52459275], [13.047749, -59.523043], [13.0480973, -59.5229486]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.18, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+        var popup_f2fb854a37d00faf7b44bf620f8a875e = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_ea5290fb65f6ec24ca743d276adb9c72 = $(`<div id="html_ea5290fb65f6ec24ca743d276adb9c72" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #13</div>             <div style="font-size: 16px; font-weight: 600;">Zone 9</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 0.8 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">15</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,196</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">24</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Pizza Boys & Church's Chicken (Maraval) | New York Pizza | Golden King Chinese Restaurant</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0480, -59.5320) — 14 orders</li><li>(13.0510, -59.5290) — 14 orders</li><li>(13.0470, -59.5280) — 12 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0482, -59.5291)<br>             Bounding box: lat [13.0456, 13.0547], lng [-59.5346, -59.5229]         </div>         </div>         </div>`)[0];
+                popup_f2fb854a37d00faf7b44bf620f8a875e.setContent(html_ea5290fb65f6ec24ca743d276adb9c72);
+            
+        
+
+        polygon_2e637dccbabe578fa8728802f32f0321.bindPopup(popup_f2fb854a37d00faf7b44bf620f8a875e)
+        ;
+
+        
+    
+    
+            polygon_2e637dccbabe578fa8728802f32f0321.bindTooltip(
+                `<div>
+                     #13 · Zone 9 · South East · 15 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_c8229f3a07dc028e4e2146e3ac87ddae = L.marker(
+                [13.04816462, -59.529100135],
+                {
+}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+            var div_icon_7c8d1ad20997bc0d3c5d53c7935b6193 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 9px; color: #E74C3C; font-weight: 600;\n                                text-shadow: 1px 1px 1px white, -1px -1px 1px white;\"\u003e\n                    Z9\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+                marker_c8229f3a07dc028e4e2146e3ac87ddae.setIcon(div_icon_7c8d1ad20997bc0d3c5d53c7935b6193);
+            
+    
+            var polygon_2187cf35194430ecef1e8f15ac28661e = L.polygon(
+                [[13.1552616, -59.62229], [13.1525657, -59.6139367], [13.154109, -59.613496], [13.15487666, -59.61368303], [13.1593848, -59.6164962], [13.15983521, -59.61802864], [13.1575623, -59.6202704], [13.1552616, -59.62229]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.18, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+        var popup_f98ca91373b25718d08806419f91ebfd = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_4e1ce8efeaf7cbef28ba42197763afee = $(`<div id="html_4e1ce8efeaf7cbef28ba42197763afee" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #11</div>             <div style="font-size: 16px; font-weight: 600;">Zone 12</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 0.4 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">11</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$1,039</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">22</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Popeyes (South Park) | SUBWAY® (Gasparillo) | Starbucks (South Park)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1570, -59.6160) — 13 orders</li><li>(13.1540, -59.6160) — 10 orders</li><li>(13.1560, -59.6170) — 7 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1561, -59.6161)<br>             Bounding box: lat [13.1526, 13.1598], lng [-59.6223, -59.6135]         </div>         </div>         </div>`)[0];
+                popup_f98ca91373b25718d08806419f91ebfd.setContent(html_4e1ce8efeaf7cbef28ba42197763afee);
+            
+        
+
+        polygon_2187cf35194430ecef1e8f15ac28661e.bindPopup(popup_f98ca91373b25718d08806419f91ebfd)
+        ;
+
+        
+    
+    
+            polygon_2187cf35194430ecef1e8f15ac28661e.bindTooltip(
+                `<div>
+                     #11 · Zone 12 · Central West · 11 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_2e173983266886dabde642f640555475 = L.marker(
+                [13.15614336, -59.61614143],
+                {
+}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+            var div_icon_b2a03b172307cc399dbce0b64c2b9e53 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 9px; color: #E74C3C; font-weight: 600;\n                                text-shadow: 1px 1px 1px white, -1px -1px 1px white;\"\u003e\n                    Z12\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+                marker_2e173983266886dabde642f640555475.setIcon(div_icon_b2a03b172307cc399dbce0b64c2b9e53);
+            
+    
+            var polygon_4aa93826c2e764b155414ffc5cb6cca5 = L.polygon(
+                [[13.14765589, -59.61284521], [13.14462888, -59.61348697], [13.1445527, -59.6134083], [13.1440633, -59.61212777], [13.14337276, -59.60941145], [13.1431893, -59.6080801], [13.14342975, -59.60541534], [13.1446, -59.6048], [13.1458218, -59.6043379], [13.14747553, -59.60468699], [13.14765589, -59.61284521]],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.18, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+        var popup_92c07079e34f3cefa17a2bb616770712 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_78a94b406e0813660c524157f6b4242b = $(`<div id="html_78a94b406e0813660c524157f6b4242b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #F39C12; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #15</div>             <div style="font-size: 16px; font-weight: 600;">Zone 13</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Mixed (split supply) · 0.4 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">8</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$799</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">18</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Popeyes (Gulf City) | Wing On Chinese Restaurant and Bar | Lemon Pepper (C3 Centre)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.1450, -59.6060) — 7 orders</li><li>(13.1430, -59.6080) — 6 orders</li><li>(13.1450, -59.6130) — 5 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.1453, -59.6094)<br>             Bounding box: lat [13.1432, 13.1477], lng [-59.6135, -59.6043]         </div>         </div>         </div>`)[0];
+                popup_92c07079e34f3cefa17a2bb616770712.setContent(html_78a94b406e0813660c524157f6b4242b);
+            
+        
+
+        polygon_4aa93826c2e764b155414ffc5cb6cca5.bindPopup(popup_92c07079e34f3cefa17a2bb616770712)
+        ;
+
+        
+    
+    
+            polygon_4aa93826c2e764b155414ffc5cb6cca5.bindTooltip(
+                `<div>
+                     #15 · Zone 13 · Central West · 8 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_5784f0c033384d6b443ec75cb32bd139 = L.marker(
+                [13.145267205, -59.609422445],
+                {
+}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+            var div_icon_22c8950f405d3b60460e4c2fcc200ccb = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 9px; color: #F39C12; font-weight: 600;\n                                text-shadow: 1px 1px 1px white, -1px -1px 1px white;\"\u003e\n                    Z13\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+                marker_5784f0c033384d6b443ec75cb32bd139.setIcon(div_icon_22c8950f405d3b60460e4c2fcc200ccb);
+            
+    
+            var polygon_c4ece2f45c4966ee79e823f871625304 = L.polygon(
+                [[13.05820956, -59.53499411], [13.06475399, -59.53173345], [13.0676992, -59.5330395], [13.06743221, -59.53506644], [13.06742031, -59.53508432], [13.06525, -59.53792], [13.06452004, -59.53875946], [13.064056, -59.539024], [13.0610071, -59.5401014], [13.0605319, -59.5394862], [13.05972257, -59.53818124], [13.05961227, -59.53797149], [13.05820956, -59.53499411]],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.18, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+        var popup_49ec0a1b785bca11f7d3bd99b6adb659 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_306240bd6a171f7e37b66b6fa9e5ee5c = $(`<div id="html_306240bd6a171f7e37b66b6fa9e5ee5c" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #E74C3C; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #12</div>             <div style="font-size: 16px; font-weight: 600;">Zone 10</div>             <div style="font-size: 13px; margin-top: 4px;">Christ Church (Oistins) · Maxwell · St Lawrence Gap</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Cross-zone dependent · 0.6 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">8</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$454</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">18</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Canton Asian Kitchen | Joe's Pizza (Maraval) | Trotters</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.0630, -59.5390) — 6 orders</li><li>(13.0610, -59.5380) — 6 orders</li><li>(13.0640, -59.5380) — 6 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.0639, -59.5379)<br>             Bounding box: lat [13.0582, 13.0677], lng [-59.5401, -59.5317]         </div>         </div>         </div>`)[0];
+                popup_49ec0a1b785bca11f7d3bd99b6adb659.setContent(html_306240bd6a171f7e37b66b6fa9e5ee5c);
+            
+        
+
+        polygon_c4ece2f45c4966ee79e823f871625304.bindPopup(popup_49ec0a1b785bca11f7d3bd99b6adb659)
+        ;
+
+        
+    
+    
+            polygon_c4ece2f45c4966ee79e823f871625304.bindTooltip(
+                `<div>
+                     #12 · Zone 10 · Christ Church (Oistins) / Maxwell / St Lawrence Gap · 8 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_a3b5664fe8aa3d17ce9492db8827e3d8 = L.marker(
+                [13.0638573, -59.537938100000005],
+                {
+}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+            var div_icon_d9bdabe882c171f7eae81b238c553e44 = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 9px; color: #E74C3C; font-weight: 600;\n                                text-shadow: 1px 1px 1px white, -1px -1px 1px white;\"\u003e\n                    Z10\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+                marker_a3b5664fe8aa3d17ce9492db8827e3d8.setIcon(div_icon_d9bdabe882c171f7eae81b238c553e44);
+            
+    
+            var polygon_fe36aef669765fb6bb01fcff8933eaa8 = L.polygon(
+                [[13.22281143, -59.63756024], [13.23780337, -59.63922535], [13.23772549, -59.63988264], [13.2290694, -59.64246976], [13.22770546, -59.64250631], [13.21850644, -59.64195197], [13.22281143, -59.63756024]],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.18, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1.5}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+        var popup_84821e3d16c2886af953b8a00b7fbdbe = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_15a26a6245763732ff237d37d41d78df = $(`<div id="html_15a26a6245763732ff237d37d41d78df" style="width: 100.0%; height: 100.0%;">         <div style="font-family: -apple-system, Segoe UI, sans-serif; min-width: 340px; max-width: 400px; font-size: 12px;">         <div style="background: #F39C12; color: white; padding: 10px; margin: -10px -10px 8px -10px;">             <div style="font-size: 11px; opacity: 0.85;">Priority rank #14</div>             <div style="font-size: 16px; font-weight: 600;">Zone 5</div>             <div style="font-size: 13px; margin-top: 4px;">(unmapped pocket — local team to label)</div>             <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;">                 Mixed (split supply) · 0.7 km²             </div>         </div>                  <table style="font-size: 12px; width: 100%;">             <tr><td><b>Monthly orders</b></td><td style="text-align: right;">6</td></tr>             <tr><td><b>Monthly GMV</b></td><td style="text-align: right;">$915</td></tr>             <tr><td><b>Merchants serving</b></td><td style="text-align: right;">16</td></tr>         </table>                  <div style="margin-top: 8px;">             <b>Top merchants:</b><br>             <span style="font-size: 11px; color: #555;">Popeyes (Price Plaza) | Wing Hua Chinese Restaurant (Edinburgh) | Wendy's (Brentwood)</span>         </div>                  <div style="margin-top: 8px;">             <b>Geographic anchor points:</b>             <ol style="margin: 4px 0 0 16px; padding: 0; font-size: 11px;">                 <li>(13.2230, -59.6400) — 8 orders</li><li>(13.2300, -59.6390) — 4 orders</li><li>(13.2240, -59.6410) — 3 orders</li>             </ol>         </div>                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 10px; color: #888;">             Centroid: (13.2238, -59.6403)<br>             Bounding box: lat [13.2185, 13.2378], lng [-59.6425, -59.6376]         </div>         </div>         </div>`)[0];
+                popup_84821e3d16c2886af953b8a00b7fbdbe.setContent(html_15a26a6245763732ff237d37d41d78df);
+            
+        
+
+        polygon_fe36aef669765fb6bb01fcff8933eaa8.bindPopup(popup_84821e3d16c2886af953b8a00b7fbdbe)
+        ;
+
+        
+    
+    
+            polygon_fe36aef669765fb6bb01fcff8933eaa8.bindTooltip(
+                `<div>
+                     #14 · Zone 5 · North West · 6 orders/mo
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_500fe52590e465f24ab889a4487b94ea = L.marker(
+                [13.22383012, -59.64033352],
+                {
+}
+            ).addTo(feature_group_55f0bef19d39d81106fa683f35c1f212);
+        
+    
+            var div_icon_7cff8de983bfaffc8e2e8f9a71825e6b = L.divIcon({
+  "html": "\n                    \u003cdiv style=\"font-size: 9px; color: #F39C12; font-weight: 600;\n                                text-shadow: 1px 1px 1px white, -1px -1px 1px white;\"\u003e\n                    Z5\n                    \u003c/div\u003e\n                ",
+  "className": "empty",
+});
+        
+    
+                marker_500fe52590e465f24ab889a4487b94ea.setIcon(div_icon_7cff8de983bfaffc8e2e8f9a71825e6b);
+            
+    
+            feature_group_55f0bef19d39d81106fa683f35c1f212.addTo(map_d4d907469be8a6daff380e69f6159d60);
+        
+    
+            var feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var circle_marker_ca440b2f371bb40c07e56d4f91ccee72 = L.circleMarker(
+                [13.08562511, -59.58590284],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_4b994ea733a824adc7bd51c71ab1b4f6 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_98fac4efe1808d3ce5bab206b9736f2c = $(`<div id="html_98fac4efe1808d3ce5bab206b9736f2c" style="width: 100.0%; height: 100.0%;"><b>Zone 11</b> centroid<br>(13.0856, -59.5859)</div>`)[0];
+                popup_4b994ea733a824adc7bd51c71ab1b4f6.setContent(html_98fac4efe1808d3ce5bab206b9736f2c);
+            
+        
+
+        circle_marker_ca440b2f371bb40c07e56d4f91ccee72.bindPopup(popup_4b994ea733a824adc7bd51c71ab1b4f6)
+        ;
+
+        
+    
+    
+            var circle_marker_1383e11ae7f4616976e149315fce9e83 = L.circleMarker(
+                [13.14354815, -59.627581715],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_5b776491081f170ae778a9c2cf9b53a6 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_1f428a364f1a3b11dec8b18a5a8f3493 = $(`<div id="html_1f428a364f1a3b11dec8b18a5a8f3493" style="width: 100.0%; height: 100.0%;"><b>Zone 14</b> centroid<br>(13.1435, -59.6276)</div>`)[0];
+                popup_5b776491081f170ae778a9c2cf9b53a6.setContent(html_1f428a364f1a3b11dec8b18a5a8f3493);
+            
+        
+
+        circle_marker_1383e11ae7f4616976e149315fce9e83.bindPopup(popup_5b776491081f170ae778a9c2cf9b53a6)
+        ;
+
+        
+    
+    
+            var circle_marker_f70f553fbb8b20c46aae7f8e13c3bdf0 = L.circleMarker(
+                [13.135323295, -59.5581484],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_027f32bdbb3850e872d2dc01a8947831 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_a12f89268ffcb61592a47120395e4c93 = $(`<div id="html_a12f89268ffcb61592a47120395e4c93" style="width: 100.0%; height: 100.0%;"><b>Zone 2</b> centroid<br>(13.1353, -59.5581)</div>`)[0];
+                popup_027f32bdbb3850e872d2dc01a8947831.setContent(html_a12f89268ffcb61592a47120395e4c93);
+            
+        
+
+        circle_marker_f70f553fbb8b20c46aae7f8e13c3bdf0.bindPopup(popup_027f32bdbb3850e872d2dc01a8947831)
+        ;
+
+        
+    
+    
+            var circle_marker_09b22afc0ffef0fc186158b3bafa8651 = L.circleMarker(
+                [13.08456039, -59.50437864],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_2d5fc370c3556ae0b93fd08b7b093f06 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_01e4b81d607f97b5026c9c99c4ad3cd5 = $(`<div id="html_01e4b81d607f97b5026c9c99c4ad3cd5" style="width: 100.0%; height: 100.0%;"><b>Zone 3</b> centroid<br>(13.0846, -59.5044)</div>`)[0];
+                popup_2d5fc370c3556ae0b93fd08b7b093f06.setContent(html_01e4b81d607f97b5026c9c99c4ad3cd5);
+            
+        
+
+        circle_marker_09b22afc0ffef0fc186158b3bafa8651.bindPopup(popup_2d5fc370c3556ae0b93fd08b7b093f06)
+        ;
+
+        
+    
+    
+            var circle_marker_639c2f2b5686aa978f5a589d1b82d67b = L.circleMarker(
+                [13.21011591, -59.6343814],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_73f7f0ea976d05fa02f199d18a87b9ab = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_63d549903b36ca974adbb1025dec9073 = $(`<div id="html_63d549903b36ca974adbb1025dec9073" style="width: 100.0%; height: 100.0%;"><b>Zone 4</b> centroid<br>(13.2101, -59.6344)</div>`)[0];
+                popup_73f7f0ea976d05fa02f199d18a87b9ab.setContent(html_63d549903b36ca974adbb1025dec9073);
+            
+        
+
+        circle_marker_639c2f2b5686aa978f5a589d1b82d67b.bindPopup(popup_73f7f0ea976d05fa02f199d18a87b9ab)
+        ;
+
+        
+    
+    
+            var circle_marker_e3e665caa87c5a79f12db52516561702 = L.circleMarker(
+                [13.0573716, -59.50739642],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_d460f7056ba9a096e75242f44f9ed992 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_28e0c09b76ed3048a63ee75c5fb68ad4 = $(`<div id="html_28e0c09b76ed3048a63ee75c5fb68ad4" style="width: 100.0%; height: 100.0%;"><b>Zone 7</b> centroid<br>(13.0574, -59.5074)</div>`)[0];
+                popup_d460f7056ba9a096e75242f44f9ed992.setContent(html_28e0c09b76ed3048a63ee75c5fb68ad4);
+            
+        
+
+        circle_marker_e3e665caa87c5a79f12db52516561702.bindPopup(popup_d460f7056ba9a096e75242f44f9ed992)
+        ;
+
+        
+    
+    
+            var circle_marker_aa0f04da10434186b35e7db9e72df0d7 = L.circleMarker(
+                [13.0761747, -59.5307734],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_8c72dc68e09b2436e70d5f63b2e2458d = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_dfe930835743559daa65db6a3a762b22 = $(`<div id="html_dfe930835743559daa65db6a3a762b22" style="width: 100.0%; height: 100.0%;"><b>Zone 8</b> centroid<br>(13.0762, -59.5308)</div>`)[0];
+                popup_8c72dc68e09b2436e70d5f63b2e2458d.setContent(html_dfe930835743559daa65db6a3a762b22);
+            
+        
+
+        circle_marker_aa0f04da10434186b35e7db9e72df0d7.bindPopup(popup_8c72dc68e09b2436e70d5f63b2e2458d)
+        ;
+
+        
+    
+    
+            var circle_marker_4cb529a565122fe8e71158b9a4168b1b = L.circleMarker(
+                [13.10173394, -59.53915489],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_81ccf502cccafe27f4d3dedc27943624 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_8e30bca49e6c36a4d5b4b8ddd8dc5fa5 = $(`<div id="html_8e30bca49e6c36a4d5b4b8ddd8dc5fa5" style="width: 100.0%; height: 100.0%;"><b>Zone 1</b> centroid<br>(13.1017, -59.5392)</div>`)[0];
+                popup_81ccf502cccafe27f4d3dedc27943624.setContent(html_8e30bca49e6c36a4d5b4b8ddd8dc5fa5);
+            
+        
+
+        circle_marker_4cb529a565122fe8e71158b9a4168b1b.bindPopup(popup_81ccf502cccafe27f4d3dedc27943624)
+        ;
+
+        
+    
+    
+            var circle_marker_0fb9b69545530e227ccca10a1b41ff3e = L.circleMarker(
+                [13.1123475, -59.4533875],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_c7141278e1cf3f203a8d1b0799df579b = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_f3850e2aa21b1e64af20f8f6c31c787a = $(`<div id="html_f3850e2aa21b1e64af20f8f6c31c787a" style="width: 100.0%; height: 100.0%;"><b>Zone 0</b> centroid<br>(13.1123, -59.4534)</div>`)[0];
+                popup_c7141278e1cf3f203a8d1b0799df579b.setContent(html_f3850e2aa21b1e64af20f8f6c31c787a);
+            
+        
+
+        circle_marker_0fb9b69545530e227ccca10a1b41ff3e.bindPopup(popup_c7141278e1cf3f203a8d1b0799df579b)
+        ;
+
+        
+    
+    
+            var circle_marker_04b388d7b9f86ffefaa78a6361fae133 = L.circleMarker(
+                [13.17873554, -59.6367461],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_7a422c3ed23fd94a18717daafaf390e6 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_a5e2199c514a512df4963a44f66f02dd = $(`<div id="html_a5e2199c514a512df4963a44f66f02dd" style="width: 100.0%; height: 100.0%;"><b>Zone 6</b> centroid<br>(13.1787, -59.6367)</div>`)[0];
+                popup_7a422c3ed23fd94a18717daafaf390e6.setContent(html_a5e2199c514a512df4963a44f66f02dd);
+            
+        
+
+        circle_marker_04b388d7b9f86ffefaa78a6361fae133.bindPopup(popup_7a422c3ed23fd94a18717daafaf390e6)
+        ;
+
+        
+    
+    
+            var circle_marker_0f0955e1b2240bee55d6ba6955a2a029 = L.circleMarker(
+                [13.04816462, -59.529100135],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_c642be439f0dca0e2c903cc04c23180d = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_8a6a9adca85d97c5d3eff64e3afacb25 = $(`<div id="html_8a6a9adca85d97c5d3eff64e3afacb25" style="width: 100.0%; height: 100.0%;"><b>Zone 9</b> centroid<br>(13.0482, -59.5291)</div>`)[0];
+                popup_c642be439f0dca0e2c903cc04c23180d.setContent(html_8a6a9adca85d97c5d3eff64e3afacb25);
+            
+        
+
+        circle_marker_0f0955e1b2240bee55d6ba6955a2a029.bindPopup(popup_c642be439f0dca0e2c903cc04c23180d)
+        ;
+
+        
+    
+    
+            var circle_marker_992944a7a9df4b3be5e1341aba975daf = L.circleMarker(
+                [13.15614336, -59.61614143],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_c23c308dda777e6a2b6497fa1645b1fc = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_37f40f454a38e8c20bb7e674c779d1ba = $(`<div id="html_37f40f454a38e8c20bb7e674c779d1ba" style="width: 100.0%; height: 100.0%;"><b>Zone 12</b> centroid<br>(13.1561, -59.6161)</div>`)[0];
+                popup_c23c308dda777e6a2b6497fa1645b1fc.setContent(html_37f40f454a38e8c20bb7e674c779d1ba);
+            
+        
+
+        circle_marker_992944a7a9df4b3be5e1341aba975daf.bindPopup(popup_c23c308dda777e6a2b6497fa1645b1fc)
+        ;
+
+        
+    
+    
+            var circle_marker_0fe80fb1a6f619d958399605459fa67d = L.circleMarker(
+                [13.145267205, -59.609422445],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_6371d2d9ded898b05c851289f39bbde4 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_4367a61c3ac5e2129efd432da5d6e755 = $(`<div id="html_4367a61c3ac5e2129efd432da5d6e755" style="width: 100.0%; height: 100.0%;"><b>Zone 13</b> centroid<br>(13.1453, -59.6094)</div>`)[0];
+                popup_6371d2d9ded898b05c851289f39bbde4.setContent(html_4367a61c3ac5e2129efd432da5d6e755);
+            
+        
+
+        circle_marker_0fe80fb1a6f619d958399605459fa67d.bindPopup(popup_6371d2d9ded898b05c851289f39bbde4)
+        ;
+
+        
+    
+    
+            var circle_marker_2574ca8bb0c2138e02f5ee86f3219448 = L.circleMarker(
+                [13.0638573, -59.537938100000005],
+                {"bubblingMouseEvents": true, "color": "#E74C3C", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#E74C3C", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_b300b0f9744d41978c4cc9edfe015dff = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_d0d117095f7d553bd3f6ca9029a5e1fc = $(`<div id="html_d0d117095f7d553bd3f6ca9029a5e1fc" style="width: 100.0%; height: 100.0%;"><b>Zone 10</b> centroid<br>(13.0639, -59.5379)</div>`)[0];
+                popup_b300b0f9744d41978c4cc9edfe015dff.setContent(html_d0d117095f7d553bd3f6ca9029a5e1fc);
+            
+        
+
+        circle_marker_2574ca8bb0c2138e02f5ee86f3219448.bindPopup(popup_b300b0f9744d41978c4cc9edfe015dff)
+        ;
+
+        
+    
+    
+            var circle_marker_36526998e8602c4495aa7ccb95e632e2 = L.circleMarker(
+                [13.22383012, -59.64033352],
+                {"bubblingMouseEvents": true, "color": "#F39C12", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F39C12", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 4, "stroke": true, "weight": 1}
+            ).addTo(feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0);
+        
+    
+        var popup_f1a0d9713e864c560358e0062cb46bed = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_f356e85b81ce497011f084bfe55b28e7 = $(`<div id="html_f356e85b81ce497011f084bfe55b28e7" style="width: 100.0%; height: 100.0%;"><b>Zone 5</b> centroid<br>(13.2238, -59.6403)</div>`)[0];
+                popup_f1a0d9713e864c560358e0062cb46bed.setContent(html_f356e85b81ce497011f084bfe55b28e7);
+            
+        
+
+        circle_marker_36526998e8602c4495aa7ccb95e632e2.bindPopup(popup_f1a0d9713e864c560358e0062cb46bed)
+        ;
+
+        
+    
+    
+            var feature_group_0e07e4680c4bb8a7d435d84092a078e1 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var heat_map_b5014b61e58b3e6ebb51334cdf613d41 = L.heatLayer(
+                [[13.081, -59.592, 64], [13.076, -59.568, 56], [13.085, -59.578, 53], [13.087, -59.61, 40], [13.112, -59.617, 31], [13.146, -59.628, 64], [13.135, -59.632, 40], [13.139, -59.626, 40], [13.136, -59.63, 37], [13.149, -59.624, 34], [13.083, -59.504, 54], [13.083, -59.506, 35], [13.084, -59.503, 30], [13.085, -59.507, 26], [13.084, -59.506, 18], [13.135, -59.571, 46], [13.13, -59.567, 31], [13.153, -59.558, 25], [13.131, -59.547, 22], [13.137, -59.54, 19], [13.217, -59.634, 78], [13.2, -59.638, 16], [13.199, -59.638, 8], [13.209, -59.623, 8], [13.206, -59.632, 6], [13.052, -59.51, 15], [13.064, -59.506, 12], [13.062, -59.506, 12], [13.057, -59.513, 12], [13.066, -59.505, 8], [13.11, -59.47, 7], [13.138, -59.437, 6], [13.102, -59.467, 6], [13.147, -59.433, 6], [13.118, -59.441, 5], [13.076, -59.531, 75], [13.078, -59.519, 21], [13.074, -59.519, 11], [13.074, -59.527, 6], [13.074, -59.518, 4], [13.109, -59.54, 17], [13.102, -59.539, 15], [13.097, -59.535, 14], [13.097, -59.534, 13], [13.108, -59.543, 8], [13.178, -59.637, 26], [13.182, -59.635, 9], [13.18, -59.637, 8], [13.176, -59.638, 7], [13.184, -59.633, 6], [13.157, -59.616, 13], [13.154, -59.616, 10], [13.156, -59.617, 7], [13.153, -59.614, 5], [13.159, -59.618, 5], [13.063, -59.539, 6], [13.061, -59.538, 6], [13.064, -59.538, 6], [13.064, -59.536, 6], [13.065, -59.538, 5], [13.048, -59.532, 14], [13.051, -59.529, 14], [13.047, -59.528, 12], [13.052, -59.535, 7], [13.047, -59.527, 5], [13.223, -59.64, 8], [13.23, -59.639, 4], [13.224, -59.641, 3], [13.234, -59.639, 2], [13.238, -59.64, 2], [13.145, -59.606, 7], [13.143, -59.608, 6], [13.145, -59.613, 5], [13.146, -59.612, 5], [13.146, -59.604, 4]],
+                {
+  "minOpacity": 0.3,
+  "maxZoom": 18,
+  "radius": 20,
+  "blur": 25,
+}
+            );
+        
+    
+            heat_map_b5014b61e58b3e6ebb51334cdf613d41.addTo(feature_group_0e07e4680c4bb8a7d435d84092a078e1);
+        
+    
+            var layer_control_34855078a04f3c7239af1b6c5d76136a_layers = {
+                base_layers : {
+                    "Street map (default)" : tile_layer_82bff7de7f23def40e99a43c5ffc96a9,
+                    "OpenStreetMap (full detail)" : tile_layer_c974347f5b92b123d1399cf95e30c0dc,
+                    "Light map (minimal)" : tile_layer_bf253e66eac10ba6e729c2888298901f,
+                    "Satellite" : tile_layer_39c61cc5c02678fa2cf96971c5213fc7,
+                },
+                overlays :  {
+                    "Place name labels (overlay)" : tile_layer_abef7f96e905cbe86a0bbfa194193e7e,
+                    "Top 10 priority zones (highlighted)" : feature_group_b738cb727f9f47f3cc4c2c2c91a893ff,
+                    "Other zones" : feature_group_55f0bef19d39d81106fa683f35c1f212,
+                    "Zone centroids" : feature_group_a5ae3ccaad2a4d9e2cff6dfdb354d2e0,
+                    "Customer order density (heatmap)" : feature_group_0e07e4680c4bb8a7d435d84092a078e1,
+                },
+            };
+            let layer_control_34855078a04f3c7239af1b6c5d76136a = L.control.layers(
+                layer_control_34855078a04f3c7239af1b6c5d76136a_layers.base_layers,
+                layer_control_34855078a04f3c7239af1b6c5d76136a_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": false,
+  "autoZIndex": true,
+}
+            ).addTo(map_d4d907469be8a6daff380e69f6159d60);
+
+        
+</script>
+</html>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { X, Clock, Camera, Film, Check, Layers } from "lucide-react";
 import { scorePct, scoreColor } from "../utils";
+import { useT } from "../i18n";
 
 export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose }) {
+  const t = useT();
   // Which frame of the event is shown large. Reset whenever the opened hit changes.
   const [activeId, setActiveId] = useState(null);
   useEffect(() => {
@@ -56,12 +58,12 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
               {active.timestamp_hms}
             </span>
             <span className={`font-bold ${scoreColor(active.score)}`}>
-              match {scorePct(active.score)}
+              {t("vision.match")} {scorePct(active.score)}
             </span>
             {isEvent && (
               <span className="inline-flex items-center gap-1 rounded bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                <Layers size={12} /> {frames.length} instances ·{" "}
-                {hit.event_start_hms}–{hit.event_end_hms}
+                <Layers size={12} /> {t("vision.instances", { n: frames.length })}{" "}
+                · {hit.event_start_hms}–{hit.event_end_hms}
               </span>
             )}
           </div>
@@ -75,7 +77,7 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
         <div className="relative flex h-[58vh] min-h-0 flex-1 items-center justify-center bg-black">
           <img
             src={active.thumbnail_url}
-            alt={`frame ${active.frame_id}`}
+            alt={t("vision.frameAlt", { id: active.frame_id })}
             className="h-full w-auto max-w-full object-contain"
           />
           <button
@@ -87,7 +89,7 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
             }`}
           >
             <Check size={14} />
-            {isSel(active.frame_id) ? "In report" : "Add to report"}
+            {isSel(active.frame_id) ? t("vision.inReport") : t("vision.addToReport")}
           </button>
         </div>
 
@@ -96,14 +98,14 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
           <div className="border-t border-ink-600 px-4 pb-3 pt-2.5">
             <div className="mb-2 flex items-center justify-between text-[11px] text-slate-400">
               <span>
-                All {frames.length} frames in this event — click to view, check to add to report
+                {t("vision.eventGalleryHint", { n: frames.length })}
               </span>
               <button
                 onClick={addAll}
                 disabled={allSelected}
                 className="rounded-lg bg-ink-700 px-2.5 py-1 font-semibold text-slate-200 transition hover:bg-accent-600 hover:text-white disabled:opacity-40"
               >
-                {allSelected ? "All in report" : "Add all to report"}
+                {allSelected ? t("vision.allInReport") : t("vision.addAllToReport")}
               </button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -119,7 +121,7 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
                 >
                   <img
                     src={f.thumbnail_url}
-                    alt={`frame ${f.frame_id}`}
+                    alt={t("vision.frameAlt", { id: f.frame_id })}
                     loading="lazy"
                     className="h-full w-full object-cover"
                   />
@@ -136,7 +138,7 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
                         ? "border-accent bg-accent text-white"
                         : "border-white/50 bg-ink-900/60 text-transparent group-hover:border-white"
                     }`}
-                    title="Add to report"
+                    title={t("vision.addToReport")}
                   >
                     <Check size={12} />
                   </button>
@@ -151,7 +153,7 @@ export default function FrameDetail({ hit, selectedIds, onToggleSelect, onClose 
           <Film size={13} />
           <span>{hit.filename}</span>
           <span className="text-slate-600">·</span>
-          <span>frame #{active.frame_id}</span>
+          <span>{t("vision.frameNo", { id: active.frame_id })}</span>
           {hit.detections?.map((d, i) => (
             <span
               key={i}

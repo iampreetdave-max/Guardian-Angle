@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { Siren } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
+
+// Known anomaly types -> dictionary key. Anything else falls back to the raw
+// API value rather than rendering a missing-key string in the tooltip.
+const TYPE_KEYS = {
+  fire: "alerts.typeFire", smoke: "alerts.typeSmoke", accident: "alerts.typeAccident",
+  weapon: "alerts.typeWeapon", violence: "alerts.typeViolence",
+};
 
 /** Compact header badge: pulses while there are unacknowledged anomaly
  * alerts; clicking jumps to the Live Alerts module. Staff-only (mounted
  * conditionally by the caller). */
 export default function AlertTicker({ onOpen }) {
+  const t = useT();
   const [summary, setSummary] = useState({ new: 0, by_type: {} });
 
   useEffect(() => {
@@ -21,8 +30,10 @@ export default function AlertTicker({ onOpen }) {
       onClick={onOpen}
       title={
         active
-          ? Object.entries(summary.by_type).map(([t, n]) => `${t}: ${n}`).join(" · ")
-          : "Anomaly watch — no active alerts"
+          ? Object.entries(summary.by_type)
+              .map(([ty, n]) => `${TYPE_KEYS[ty] ? t(TYPE_KEYS[ty]) : ty}: ${n}`)
+              .join(" · ")
+          : t("alerts.tickerIdle")
       }
       className={`relative rounded-lg p-2 transition ${
         active

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Cpu, Database, ScanFace, Boxes, Sparkles, ChevronDown } from "lucide-react";
+import { useT } from "../i18n";
 
 /* Five always-visible chips (device, frame count, CLIP, YOLOv8, ArcFace) used to
    sit in the header. On anything narrower than a very wide desktop they wrapped
@@ -12,6 +13,7 @@ import { Cpu, Database, ScanFace, Boxes, Sparkles, ChevronDown } from "lucide-re
    (are the models up?) and reveals the rest on demand. */
 
 function Row({ ok, icon: Icon, label, value }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between gap-6 px-3 py-2">
       <span className="inline-flex items-center gap-2 text-xs text-slate-300">
@@ -26,7 +28,7 @@ function Row({ ok, icon: Icon, label, value }) {
             ok ? "text-signal-green" : "text-slate-500"
           }`}
         >
-          {ok ? "Loaded" : "Unavailable"}
+          {ok ? t("header.loaded") : t("header.unavailable")}
         </span>
       )}
     </div>
@@ -34,6 +36,7 @@ function Row({ ok, icon: Icon, label, value }) {
 }
 
 export default function StatusBar({ health }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -61,9 +64,13 @@ export default function StatusBar({ health }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={`System status: ${up} of ${models.length} models loaded`}
+        aria-label={t("header.statusAria", { up, total: models.length })}
         aria-expanded={open}
-        title={`${up}/${models.length} models loaded · ${health.device?.toUpperCase()}`}
+        title={t("header.statusTitle", {
+          up,
+          total: models.length,
+          device: health.device?.toUpperCase(),
+        })}
         className="inline-flex h-9 items-center gap-2 rounded-lg bg-ink-700 px-2.5 text-xs font-medium
                    text-slate-300 transition hover:bg-ink-600 hover:text-slate-100"
       >
@@ -73,7 +80,9 @@ export default function StatusBar({ health }) {
           }`}
         />
         <span className="hidden whitespace-nowrap xl:inline">
-          {allUp ? "Systems ready" : `${up}/${models.length} models`}
+          {allUp
+            ? t("header.systemsReady")
+            : t("header.modelsLoaded", { up, total: models.length })}
         </span>
         <ChevronDown size={13} className="hidden shrink-0 opacity-60 xl:inline" />
       </button>
@@ -83,19 +92,19 @@ export default function StatusBar({ health }) {
           className="absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border
                      border-ink-600 bg-ink-800 py-1 shadow-2xl"
           role="dialog"
-          aria-label="System status detail"
+          aria-label={t("header.statusDetail")}
         >
           <p className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-wider text-slate-500">
-            Runtime
+            {t("header.runtime")}
           </p>
-          <Row icon={Cpu} label="Device" value={health.device?.toUpperCase()} />
+          <Row icon={Cpu} label={t("header.device")} value={health.device?.toUpperCase()} />
           <Row
             icon={Database}
-            label="Indexed frames"
+            label={t("header.indexedFrames")}
             value={health.indexed_frames?.toLocaleString()}
           />
           <p className="border-t border-ink-700 px-3 pb-1 pt-2 text-[10px] uppercase tracking-wider text-slate-500">
-            Models
+            {t("header.models")}
           </p>
           <Row ok={m.clip} icon={Sparkles} label="CLIP" />
           <Row ok={m.yolo} icon={Boxes} label="YOLOv8" />

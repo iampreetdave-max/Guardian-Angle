@@ -61,8 +61,8 @@ def _user_from_creds(creds: HTTPAuthorizationCredentials | None) -> dict:
     uid = int(payload.get("sub", 0))
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, name, email, role, team_id, active, token_version "
-            "FROM users WHERE id = ?",
+            "SELECT id, name, email, role, team_id, active, token_version, "
+            "language FROM users WHERE id = ?",
             (uid,),
         ).fetchone()
     if row is None or not row["active"]:

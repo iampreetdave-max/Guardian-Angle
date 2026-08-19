@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Radio, Square, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
+import { useT } from "../i18n";
 
 /**
  * Live preview of a feed using hls.js (for .m3u8 streams). While this plays,
  * the backend is continuously indexing the same feed so it can be searched.
  */
 export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
+  const t = useT();
   const videoRef = useRef(null);
   const [err, setErr] = useState(null);
   // Collapsing the preview frees the screen for search + results — the player
@@ -57,24 +59,26 @@ export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
           </span>
           <span className="font-medium text-slate-200">{video.camera_id}</span>
           <span className="text-xs text-slate-500">
-            indexing in real time · {indexedCount ?? video.keyframe_count} frames captured
+            {t("vision.indexingLive", {
+              n: indexedCount ?? video.keyframe_count,
+            })}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCollapsed((c) => !c)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-ink-600"
-            title={collapsed ? "Show preview" : "Hide preview (keeps indexing)"}
+            title={collapsed ? t("vision.showPreview") : t("vision.hidePreview")}
           >
             {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-            {collapsed ? "Show" : "Hide"}
+            {collapsed ? t("vision.show") : t("vision.hide")}
           </button>
           <button
             onClick={onStop}
             disabled={stopping}
             className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-signal-red/20 hover:text-signal-red disabled:opacity-50"
           >
-            <Square size={13} /> Stop
+            <Square size={13} /> {t("vision.stop")}
           </button>
         </div>
       </div>
@@ -84,15 +88,9 @@ export default function LivePlayer({ video, indexedCount, onStop, stopping }) {
           <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-slate-400">
             <AlertTriangle size={22} className="text-signal-amber" />
             {err === "preview-unsupported" ? (
-              <span>
-                This feed can't preview in-browser, but it's being captured and
-                indexed live — search results below update in real time.
-              </span>
+              <span>{t("vision.previewUnsupported")}</span>
             ) : (
-              <span>
-                Live preview unavailable (the stream blocked playback), but
-                capture + indexing continue on the server.
-              </span>
+              <span>{t("vision.playbackFailed")}</span>
             )}
           </div>
         ) : (

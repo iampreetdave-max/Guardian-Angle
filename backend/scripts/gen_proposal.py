@@ -64,7 +64,18 @@ RED = colors.HexColor("#b3261e")
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "proposals")
 TODAY = date.today().isoformat()
-TEAM = "Team <TBD>"
+TEAM = "Preet Dave Ghanshyam — individual entry"
+# Official Kanad S.H.I.E.L.D. 2026 catalogue IDs (Category-II problem pack) keyed
+# by our internal portal Problem ID, so every proposal shows BOTH the ID the
+# organiser's spreadsheet expects and the one we registered under. VisionScan
+# (Cat 1) is not in the Category-II pack, so it has no P2 catalogue ID.
+KANAD_ID = {
+    "PS-69E9C85F9C307": None,
+    "PS-69EEFE1294451": "KANADSHIELD26_P2_07",
+    "PS-69EEFDD4DA6E9": "KANADSHIELD26_P2_04",
+    "PS-69EEFDFB90B99": "KANADSHIELD26_P2_06",
+    "PS-69EEFE4F8CD1C": "KANADSHIELD26_P2_10",
+}
 DEMO_URL = "https://visionscan.centralindia.cloudapp.azure.com"
 GITHUB_URL = "https://github.com/iampreetdave-max/Guardian-Angle"
 HF_URL = "https://huggingface.co/spaces/iampreetdave/visionscan"
@@ -211,12 +222,14 @@ def _cover(spec: dict) -> list:
     story.append(_p(_esc(spec["tagline"]), "VSCoverSub"))
     story.append(Spacer(1, 10 * mm))
 
+    kanad = KANAD_ID.get(spec["problem_id"])
+    problem_id_disp = (f"{spec['problem_id']} · {kanad}" if kanad else spec["problem_id"])
     meta_rows = [
-        ["Problem ID", spec["problem_id"]],
+        ["Problem ID", problem_id_disp],
         ["Category", f"Category {spec['category']}"],
         ["Hackathon", "Kanad S.H.I.E.L.D. 2026 — Cyber Crime Branch, Ahmedabad City Police"],
         ["Live demo", DEMO_URL],
-        ["Team", TEAM],
+        ["Participant", TEAM],
         ["Date", TODAY],
     ]
     t = Table(
@@ -416,8 +429,11 @@ def _disclaimer_page() -> list:
            _p("Honest disclaimer", "VSH1"),
            HRFlowable(width="100%", color=RED, thickness=1.2, spaceAfter=6)]
     out.append(_p(
-        "This is a hackathon prototype evaluated on seeded demonstration data. It "
-        "is not deployed, and no real case decision depends on it today.", "VSWarn"))
+        "This is a hackathon prototype. It runs live on Microsoft Azure (Central "
+        "India, TLS) so evaluators can verify every claim hands-on — but it is "
+        "evaluated on seeded demonstration data, is not yet operationally deployed "
+        "inside any police system, and no real case decision depends on it today.",
+        "VSWarn"))
     out += [
         _p("<b>Synthetic demonstration data.</b> The neighbourhood-level crime "
            "intensities and the synthetic incident dataset that seed the demo are "
@@ -698,8 +714,19 @@ def _validation_deployment() -> list:
     return out
 
 
-def _how_prediction_works() -> list:
+def _how_prediction_works(bt: dict | None = None) -> list:
     """Plain-language explanation of the predictive model, for non-technical judges."""
+    cap10, pai10 = "77%", "2.3×"
+    if bt:
+        try:
+            cap = bt["model"]["capture_curve"]
+            if cap and len(cap) >= 10:
+                cap10 = f"{cap[9] * 100:.0f}%"
+            p = bt["model"]["summary"].get("pai@10")
+            if p is not None:
+                pai10 = f"{p:.1f}×"
+        except Exception:
+            pass
     out = [_p("How the prediction works — in plain language", "VSH1"),
            HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
            _p("Think of every Ahmedabad locality as having a “risk temperature” that we "
@@ -728,9 +755,9 @@ def _how_prediction_works() -> list:
         "<b>Crucially, we do not just claim it works — we back-test it.</b> We hide the most "
         "recent weeks of data, predict from the rest, then check how many real incidents "
         "actually fell inside our predicted top zones. On the demonstration data the top-10 "
-        "zones captured roughly <b>77% of the next week's incidents — about 2.3× better than "
-        "picking areas at random</b> — and the model beats simpler baselines (a static crime "
-        "map, or raw all-time counts)."))
+        f"zones captured roughly <b>{cap10} of the next week's incidents — about {pai10} better "
+        "than picking areas at random</b> — and the model beats simpler baselines (a static "
+        "crime map, or raw all-time counts)."))
     out.append(_p(
         "And every score is <b>explainable</b>: click any hotspot and it breaks down into "
         "“baseline prior + recent incidents by type + live anomaly boost,” so an officer can "
@@ -742,10 +769,11 @@ def _how_prediction_works() -> list:
 def _about_submitter() -> list:
     """Final 'about the team' page with submitter details."""
     out = [PageBreak(),
-           _p("About the team", "VSH1"),
+           _p("About the participant", "VSH1"),
            HRFlowable(width="100%", color=GOLD, thickness=1.2, spaceAfter=6),
-           _p("This platform was designed, built and deployed for the Kanad "
-              "S.H.I.E.L.D. 2026 hackathon (Cyber Crime Branch, Ahmedabad City Police)."),
+           _p("This platform was designed, built and deployed single-handedly as an "
+              "individual entry for the Kanad S.H.I.E.L.D. 2026 hackathon (Cyber "
+              "Crime Branch, Ahmedabad City Police)."),
            Spacer(1, 6)]
     rows = [
         ("Name", "Preet Dave Ghanshyam"),
@@ -765,7 +793,7 @@ def _about_submitter() -> list:
     ]))
     out.append(t)
     out.append(Spacer(1, 10))
-    out.append(_p("Thank you for reviewing our submission. The live platform, source code "
+    out.append(_p("Thank you for reviewing this submission. The live platform, source code "
                   "and evaluator test footage are linked on the “Live demo &amp; access” page.",
                   "VSSmall"))
     return out
@@ -792,7 +820,7 @@ def _build_proposal(spec: dict, bt: dict | None) -> tuple[bytes, int]:
     story.append(PageBreak())
     # The prediction-heavy statements get a plain-language model explainer.
     if spec["slug"] in ("2-crime-hotspot", "5-open-ended"):
-        story += _how_prediction_works()
+        story += _how_prediction_works(bt)
         story.append(PageBreak())
     story += _criteria_matrix(spec["matrix_intro"], spec["matrix"])
     story.append(PageBreak())
@@ -833,7 +861,20 @@ def _layers_common() -> list[list[str]]:
     ]
 
 
+def _hr_pai(bt: dict | None) -> tuple[str, str]:
+    """HR@10 / PAI@10 strings from the single live backtest so every reference in
+    the docs matches the Evidence table. Falls back to the last-published figures
+    only if the backtest cannot be reproduced in this environment."""
+    if bt:
+        ms = bt.get("model", {}).get("summary", {})
+        hr, pai = ms.get("hit_rate@10"), ms.get("pai@10")
+        if hr is not None and pai is not None:
+            return f"{hr:.3f}", f"{pai:.2f}×"
+    return "0.771", "2.31×"
+
+
 def _specs(bt: dict | None) -> list[dict]:
+    hr10, pai10 = _hr_pai(bt)
     return [
         # ---------------------------------------------------------------- 1 VisionScan
         {
@@ -992,8 +1033,8 @@ def _specs(bt: dict | None) -> list[dict]:
                             "and the running map).",
             "matrix": [
                 ["Accuracy of hotspot detection &amp; prediction",
-                 "Recency-weighted risk + priors + anomaly boost; backtested HR@10 0.771 / "
-                 "PAI@10 2.31× via rolling-origin CV",
+                 f"Recency-weighted risk + priors + anomaly boost; backtested HR@10 {hr10} / "
+                 f"PAI@10 {pai10} via rolling-origin CV",
                  "predictive.py, validation.py"],
                 ["Effectiveness of patrol-route optimization",
                  "Nearest-neighbour + 2-opt over live top-risk hotspots; haversine ETAs",
@@ -1297,7 +1338,7 @@ def _specs(bt: dict | None) -> list[dict]:
                     "banner; complaint tracking and ratings.",
                     "Five intelligence modules — VisionScan, Anomaly Watch, predictive "
                     "GIS + patrol routing, CrimeGPT/Arbiter, GovIntel — on one codebase.",
-                    "Backtested predictive accuracy (HR@10 0.771 / PAI@10 2.31×); anomaly "
+                    f"Backtested predictive accuracy (HR@10 {hr10} / PAI@10 {pai10}); anomaly "
                     "detector calibrated to suppress false positives.",
                 ]),
         },

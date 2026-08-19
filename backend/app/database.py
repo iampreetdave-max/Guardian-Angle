@@ -115,6 +115,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "obj_faiss_id" not in cols:
         conn.execute("ALTER TABLE detections ADD COLUMN obj_faiss_id INTEGER")
 
+    # Per-user interface language (en|hi|gu). The platform already speaks these
+    # three for CrimeGPT documents and Arbiter answers; this makes the UI itself
+    # follow the same set, chosen per user rather than per deployment.
+    ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if "language" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")
+
     # Detection boxes are stored in the video's native pixel space, so the API
     # needs the frame size to return resolution-independent coordinates the UI
     # can overlay on a scaled thumbnail. Backfilled from the file by

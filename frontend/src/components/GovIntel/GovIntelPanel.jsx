@@ -11,16 +11,17 @@ import {
   govRemoveSavedSearch,
 } from "./govApi";
 import { useAuth, isStaff, isLead } from "../../auth";
+import { useT } from "../../i18n";
 
 // Category → colour + icon, shared by chips and result badges.
 const CATS = {
-  GR: { label: "GR", color: "text-sky-300 bg-sky-400/15", icon: ScrollText },
-  Notification: { label: "Notification", color: "text-amber-300 bg-amber-400/15", icon: Megaphone },
-  Circular: { label: "Circular", color: "text-violet-300 bg-violet-400/15", icon: ClipboardList },
-  Act: { label: "Act", color: "text-emerald-300 bg-emerald-400/15", icon: BookOpen },
-  Rule: { label: "Rule", color: "text-teal-300 bg-teal-400/15", icon: FileBadge },
-  Judgment: { label: "Judgment", color: "text-rose-300 bg-rose-400/15", icon: Scale },
-  Scheme: { label: "Scheme", color: "text-indigo-300 bg-indigo-400/15", icon: HandCoins },
+  GR: { color: "text-sky-300 bg-sky-400/15", icon: ScrollText },
+  Notification: { color: "text-amber-300 bg-amber-400/15", icon: Megaphone },
+  Circular: { color: "text-violet-300 bg-violet-400/15", icon: ClipboardList },
+  Act: { color: "text-emerald-300 bg-emerald-400/15", icon: BookOpen },
+  Rule: { color: "text-teal-300 bg-teal-400/15", icon: FileBadge },
+  Judgment: { color: "text-rose-300 bg-rose-400/15", icon: Scale },
+  Scheme: { color: "text-indigo-300 bg-indigo-400/15", icon: HandCoins },
 };
 const CAT_KEYS = Object.keys(CATS);
 
@@ -31,6 +32,7 @@ const LANGS = [
 ];
 
 export default function GovIntelPanel() {
+  const t = useT();
   const { user } = useAuth();
   const staff = isStaff(user);
   // POST /api/gov/refresh is require_role("lead") server-side (govintel/routes.py),
@@ -110,7 +112,7 @@ export default function GovIntelPanel() {
       const res = await API.govSearch(params);
       setResults(res);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Search failed.");
+      setError(e?.response?.data?.detail || t("govintel.searchFailed"));
       setResults(null);
     } finally {
       setBusy(false);
@@ -133,7 +135,7 @@ export default function GovIntelPanel() {
       setSaved(d.items || []);
       setSaveAlert(false);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Could not save this search.");
+      setError(e?.response?.data?.detail || t("govintel.saveSearchFailed"));
     } finally {
       setSavingSearch(false);
     }
@@ -199,7 +201,7 @@ export default function GovIntelPanel() {
       const d = await API.govSubscriptions();
       setSubs(d.items || []);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Could not subscribe.");
+      setError(e?.response?.data?.detail || t("govintel.subscribeFailed"));
     }
   };
 
@@ -213,11 +215,11 @@ export default function GovIntelPanel() {
     setRefreshMsg(null);
     try {
       const r = await API.govRefresh();
-      setRefreshMsg(`Fetched ${r.fetched}, ${r.new} new, ${r.alerts} alert(s) sent.`);
+      setRefreshMsg(t("govintel.refreshDone", { n: r.fetched, added: r.new, alerts: r.alerts }));
       runSearch(q);
       govInsights().then(setInsights).catch(() => {});
     } catch (e) {
-      setRefreshMsg(e?.response?.data?.detail || "Refresh failed.");
+      setRefreshMsg(e?.response?.data?.detail || t("govintel.refreshFailed"));
     } finally {
       setRefreshing(false);
     }
@@ -250,10 +252,10 @@ export default function GovIntelPanel() {
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">
-            Legal &amp; Government <span className="text-accent">Intelligence</span>
+            {t("govintel.titleMain")} <span className="text-accent">{t("govintel.titleAccent")}</span>
           </h2>
           <p className="text-[11px] text-slate-500">
-            One search across GRs · notifications · circulars · Acts · rules · judgments · schemes — Central &amp; Gujarat
+            {t("govintel.subtitle")}
           </p>
         </div>
         {health && (
@@ -264,8 +266,8 @@ export default function GovIntelPanel() {
             title={`${health.search_mode} · ${health.mode}`}
           >
             {health.llm_online ? <Sparkles size={13} /> : <WifiOff size={13} />}
-            {health.llm_online ? "Gemini summaries" : "Offline mode"}
-            <span className="text-slate-500">· {health.corpus_documents} docs</span>
+            {health.llm_online ? t("govintel.geminiSummaries") : t("govintel.offlineMode")}
+            <span className="text-slate-500">· {t("govintel.docsCount", { n: health.corpus_documents })}</span>
           </span>
         )}
       </div>
@@ -275,11 +277,11 @@ export default function GovIntelPanel() {
 
       {/* tabs */}
       <div className="mb-3 flex items-center gap-1.5 border-b border-ink-700">
-        <TabButton active={tab === "search"} onClick={() => setTab("search")} icon={Search} label="Search" />
+        <TabButton active={tab === "search"} onClick={() => setTab("search")} icon={Search} label={t("common.search")} />
         {user && (
           <TabButton
             active={tab === "saved"} onClick={() => setTab("saved")} icon={Star}
-            label={`Saved${bookmarkDocs.length + saved.length ? ` · ${bookmarkDocs.length + saved.length}` : ""}`}
+            label={`${t("govintel.savedTab")}${bookmarkDocs.length + saved.length ? ` · ${bookmarkDocs.length + saved.length}` : ""}`}
           />
         )}
       </div>
@@ -305,7 +307,7 @@ export default function GovIntelPanel() {
             onKeyDown={(e) => e.key === "Enter" && submit()}
             onFocus={() => suggests.length && setShowSug(true)}
             onBlur={() => setTimeout(() => setShowSug(false), 150)}
-            placeholder="Search e.g. pension, land records, cyber crime, scholarship…"
+            placeholder={t("govintel.searchPlaceholder")}
             className="flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
           />
           {q && (
@@ -317,7 +319,7 @@ export default function GovIntelPanel() {
             onClick={() => submit()}
             className="rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"
           >
-            Search
+            {t("common.search")}
           </button>
         </div>
         {showSug && suggests.length > 0 && (
@@ -339,11 +341,11 @@ export default function GovIntelPanel() {
       {trending.length > 0 && !q && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
           <TrendingUp size={13} className="text-accent" />
-          <span className="text-slate-500">Trending:</span>
-          {trending.slice(0, 7).map((t) => (
-            <button key={t} onClick={() => submit(t)}
+          <span className="text-slate-500">{t("govintel.trending")}</span>
+          {trending.slice(0, 7).map((term) => (
+            <button key={term} onClick={() => submit(term)}
               className="rounded-full bg-ink-700 px-2 py-0.5 text-slate-300 hover:bg-accent-600 hover:text-white">
-              {t}
+              {term}
             </button>
           ))}
         </div>
@@ -351,33 +353,33 @@ export default function GovIntelPanel() {
 
       {/* filters */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <Chip active={!docType} onClick={() => setDocType("")} label="All" />
+        <Chip active={!docType} onClick={() => setDocType("")} label={t("common.all")} />
         {CAT_KEYS.map((c) => (
           <Chip key={c} active={docType === c} onClick={() => setDocType(docType === c ? "" : c)}
-            label={`${CATS[c].label}${counts[c] ? ` ·${counts[c]}` : ""}`} cls={CATS[c].color} />
+            label={`${t(`govintel.cat.${c}`)}${counts[c] ? ` ·${counts[c]}` : ""}`} cls={CATS[c].color} />
         ))}
         <div className="mx-1 h-5 w-px bg-ink-600" />
-        <Chip active={!region} onClick={() => setRegion("")} label="All regions" />
-        <Chip active={region === "central"} onClick={() => setRegion(region === "central" ? "" : "central")} label="Central" />
-        <Chip active={region === "gujarat"} onClick={() => setRegion(region === "gujarat" ? "" : "gujarat")} label="Gujarat" />
+        <Chip active={!region} onClick={() => setRegion("")} label={t("govintel.allRegions")} />
+        <Chip active={region === "central"} onClick={() => setRegion(region === "central" ? "" : "central")} label={t("govintel.regionCentral")} />
+        <Chip active={region === "gujarat"} onClick={() => setRegion(region === "gujarat" ? "" : "gujarat")} label={t("govintel.regionGujarat")} />
         <select
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
           className="ml-auto rounded-lg bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none"
-          title="Filter by department"
+          title={t("govintel.filterByDept")}
         >
-          <option value="">All departments</option>
+          <option value="">{t("govintel.allDepartments")}</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <select value={lang} onChange={(e) => setLang(e.target.value)}
-          className="rounded-lg bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none" title="Summary language">
+          className="rounded-lg bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none" title={t("govintel.summaryLang")}>
           {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
         {canRefresh && (
           <button onClick={doRefresh} disabled={refreshing}
             className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-accent-600 hover:text-white disabled:opacity-40"
-            title="Pull the latest updates from government feeds">
-            {refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} Refresh feeds
+            title={t("govintel.refreshTitle")}>
+            {refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {t("govintel.refreshFeeds")}
           </button>
         )}
       </div>
@@ -385,29 +387,29 @@ export default function GovIntelPanel() {
       {/* advanced filters: date range + save search */}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
         <Calendar size={13} className="text-slate-500" />
-        <span className="text-slate-500">From</span>
+        <span className="text-slate-500">{t("govintel.from")}</span>
         <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
           className="rounded-lg bg-ink-700 px-2 py-1 text-slate-200 outline-none [color-scheme:dark]" />
-        <span className="text-slate-500">to</span>
+        <span className="text-slate-500">{t("govintel.to")}</span>
         <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
           className="rounded-lg bg-ink-700 px-2 py-1 text-slate-200 outline-none [color-scheme:dark]" />
         {(docType || region || department || dateFrom || dateTo || q) && (
           <button onClick={() => { clearFilters(); setQ(""); submit(""); }}
             className="rounded-lg bg-ink-700 px-2 py-1 font-semibold text-slate-300 hover:bg-ink-600">
-            Clear all
+            {t("govintel.clearAll")}
           </button>
         )}
         {user && (
           <div className="ml-auto flex items-center gap-1.5">
-            <label className="inline-flex items-center gap-1 text-slate-400" title="Notify me when matching new documents arrive">
+            <label className="inline-flex items-center gap-1 text-slate-400" title={t("govintel.alertTitle")}>
               <input type="checkbox" checked={saveAlert} onChange={(e) => setSaveAlert(e.target.checked)}
                 className="accent-accent-600" />
-              <Bell size={11} /> Alert
+              <Bell size={11} /> {t("govintel.alert")}
             </label>
             <button onClick={saveCurrentSearch} disabled={savingSearch}
               className="inline-flex items-center gap-1 rounded-lg bg-accent-600 px-2.5 py-1 font-semibold text-white hover:bg-accent-700 disabled:opacity-40"
-              title="Save this query + filters to the Saved tab">
-              {savingSearch ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save search
+              title={t("govintel.saveSearchTitle")}>
+              {savingSearch ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} {t("govintel.saveSearch")}
             </button>
           </div>
         )}
@@ -421,10 +423,10 @@ export default function GovIntelPanel() {
       {subs.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
           <BellPlus size={12} className="text-accent" />
-          <span className="text-slate-500">Watching:</span>
+          <span className="text-slate-500">{t("govintel.watching")}</span>
           {subs.map((s) => (
             <span key={s.id} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-accent">
-              {[s.query, s.doc_type, s.region].filter(Boolean).join(" · ") || "all updates"}
+              {[s.query, s.doc_type, s.region].filter(Boolean).join(" · ") || t("govintel.allUpdates")}
               <button onClick={() => unsubscribe(s.id)} className="hover:text-white"><X size={11} /></button>
             </span>
           ))}
@@ -439,19 +441,19 @@ export default function GovIntelPanel() {
         {busy && !results && (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader2 size={26} className="animate-spin text-accent" />
-            <p className="mt-3 text-sm">Searching government &amp; legal sources…</p>
+            <p className="mt-3 text-sm">{t("govintel.searching")}</p>
           </div>
         )}
         {results && (
           <>
             <p className="mb-3 text-sm text-slate-300">
-              <span className="font-bold text-white">{results.count}</span> document(s)
-              {results.query ? <> for <span className="text-accent">{results.query}</span></> : null}
+              <span className="font-bold text-white">{results.count}</span> {t("govintel.documents")}
+              {results.query ? <> {t("govintel.queryLabel")} <span className="text-accent">{results.query}</span></> : null}
             </p>
             {results.count === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                 <FileText size={26} />
-                <p className="mt-3 text-sm">No documents match. Try a broader keyword or clear filters.</p>
+                <p className="mt-3 text-sm">{t("govintel.noMatch")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -497,9 +499,10 @@ function TabButton({ active, onClick, icon: Icon, label }) {
   );
 }
 
-const JUR_LABEL = { central: "Central", gujarat: "Gujarat" };
+const JUR_KEY = { central: "govintel.regionCentral", gujarat: "govintel.regionGujarat" };
 
 function InsightsStrip({ insights, onPick }) {
+  const t = useT();
   const byType = insights.by_type || {};
   const byJur = insights.by_jurisdiction || {};
   const feeds = insights.feeds || [];
@@ -510,18 +513,18 @@ function InsightsStrip({ insights, onPick }) {
   const topType = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 4);
   return (
     <div className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <Insight icon={BarChart3} label="Documents indexed"
+      <Insight icon={BarChart3} label={t("govintel.insightDocs")}
         value={insights.total_documents}
-        sub={`${insights.live_documents || 0} live · ${insights.total_saved_searches || 0} saved searches`} />
-      <Insight icon={Landmark} label="By jurisdiction"
-        value={Object.entries(byJur).map(([k, v]) => `${JUR_LABEL[k] || k} ${v}`).join(" · ") || "—"}
-        sub="click a region chip below to filter" onClick={() => onPick && onPick("")} />
-      <Insight icon={TrendingUp} label="Top categories"
-        value={topType.map(([k, v]) => `${k} ${v}`).join(" · ") || "—"}
-        sub={`${insights.total_bookmarks || 0} bookmark(s) across users`} />
-      <Insight icon={Activity} label="Source health"
-        value={`${okFeeds}/${feeds.length} feeds live`}
-        sub={`last fetch: ${latest}`} />
+        sub={t("govintel.insightDocsSub", { live: insights.live_documents || 0, saved: insights.total_saved_searches || 0 })} />
+      <Insight icon={Landmark} label={t("govintel.insightJur")}
+        value={Object.entries(byJur).map(([k, v]) => `${JUR_KEY[k] ? t(JUR_KEY[k]) : k} ${v}`).join(" · ") || "—"}
+        sub={t("govintel.insightJurSub")} onClick={() => onPick && onPick("")} />
+      <Insight icon={TrendingUp} label={t("govintel.insightTop")}
+        value={topType.map(([k, v]) => `${CATS[k] ? t(`govintel.cat.${k}`) : k} ${v}`).join(" · ") || "—"}
+        sub={t("govintel.insightTopSub", { n: insights.total_bookmarks || 0 })} />
+      <Insight icon={Activity} label={t("govintel.insightHealth")}
+        value={t("govintel.insightHealthValue", { ok: okFeeds, total: feeds.length })}
+        sub={t("govintel.insightHealthSub", { at: latest })} />
     </div>
   );
 }
@@ -540,15 +543,16 @@ function Insight({ icon: Icon, label, value, sub, onClick }) {
 }
 
 function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveSaved }) {
+  const t = useT();
   return (
     <div className="-mr-2 flex-1 overflow-y-auto pr-2">
       {/* saved searches */}
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-        <Search size={13} className="text-accent" /> Saved searches
+        <Search size={13} className="text-accent" /> {t("govintel.savedSearches")}
       </div>
       {saved.length === 0 ? (
         <p className="mb-5 text-xs text-slate-500">
-          No saved searches yet. Run a search with filters, then hit “Save search”.
+          {t("govintel.noSavedSearches")}
         </p>
       ) : (
         <div className="mb-5 space-y-1.5">
@@ -556,25 +560,25 @@ function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveS
             <div key={s.id} className="flex items-center gap-2 rounded-lg border border-ink-700 bg-ink-800/50 p-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold text-slate-200">
-                  {s.name || s.query || "All updates"}
+                  {s.name || s.query || t("govintel.allUpdates")}
                   {s.alert && (
                     <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-accent/15 px-1 py-0.5 text-[9px] text-accent">
-                      <Bell size={9} /> alerting
+                      <Bell size={9} /> {t("govintel.alerting")}
                     </span>
                   )}
                 </div>
                 <div className="truncate text-[10px] text-slate-500">
                   {[s.query, s.filters?.doc_type, s.filters?.region, s.filters?.department,
-                    s.filters?.date_from && `from ${s.filters.date_from}`,
-                    s.filters?.date_to && `to ${s.filters.date_to}`]
-                    .filter(Boolean).join(" · ") || "all documents"}
+                    s.filters?.date_from && t("govintel.fromDate", { d: s.filters.date_from }),
+                    s.filters?.date_to && t("govintel.toDate", { d: s.filters.date_to })]
+                    .filter(Boolean).join(" · ") || t("govintel.allDocuments")}
                 </div>
               </div>
-              <button onClick={() => onRunSaved(s)} title="Re-run this search"
+              <button onClick={() => onRunSaved(s)} title={t("govintel.rerun")}
                 className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-accent-700">
-                <Play size={11} /> Run
+                <Play size={11} /> {t("govintel.run")}
               </button>
-              <button onClick={() => onRemoveSaved(s.id)} title="Delete"
+              <button onClick={() => onRemoveSaved(s.id)} title={t("common.delete")}
                 className="rounded-md bg-ink-700 p-1 text-slate-400 hover:bg-ink-600 hover:text-signal-red">
                 <Trash2 size={12} />
               </button>
@@ -585,11 +589,11 @@ function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveS
 
       {/* bookmarks */}
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-        <Star size={13} className="text-accent" /> Bookmarked documents
+        <Star size={13} className="text-accent" /> {t("govintel.bookmarkedDocs")}
       </div>
       {bookmarkDocs.length === 0 ? (
         <p className="text-xs text-slate-500">
-          No bookmarks yet. Tap the bookmark icon on any document to star it.
+          {t("govintel.noBookmarks")}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -597,7 +601,7 @@ function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveS
             <div key={d.id} className="flex flex-col rounded-xl border border-ink-600 bg-ink-800/50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <CatBadge type={d.doc_type} />
-                <button onClick={() => onUnstar(d)} title="Remove bookmark"
+                <button onClick={() => onUnstar(d)} title={t("govintel.removeBookmark")}
                   className="rounded-md bg-accent/20 px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/30">
                   <BookmarkCheck size={12} />
                 </button>
@@ -616,13 +620,15 @@ function SavedTab({ bookmarkDocs, saved, onOpen, onUnstar, onRunSaved, onRemoveS
   );
 }
 
-const LINK_LABEL = {
-  curated: "linked", family: "same family", keyword: "shared topic",
-  semantic: "similar", category: "same type", related: "related",
+const LINK_KEY = {
+  curated: "govintel.linkCurated", family: "govintel.linkFamily",
+  keyword: "govintel.linkKeyword", semantic: "govintel.linkSemantic",
+  category: "govintel.linkCategory", related: "govintel.linkRelated",
 };
 
 function LinkBadge({ linkType, score }) {
-  const label = LINK_LABEL[linkType] || "related";
+  const t = useT();
+  const label = t(LINK_KEY[linkType] || "govintel.linkRelated");
   const cls = linkType === "curated" || linkType === "family"
     ? "text-accent" : "text-slate-500";
   return (
@@ -646,16 +652,19 @@ function Chip({ active, onClick, label, cls = "" }) {
 }
 
 function CatBadge({ type }) {
-  const c = CATS[type] || { label: type, color: "text-slate-300 bg-slate-400/15", icon: FileText };
+  const t = useT();
+  const known = CATS[type];
+  const c = known || { color: "text-slate-300 bg-slate-400/15", icon: FileText };
   const Icon = c.icon;
   return (
     <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${c.color}`}>
-      <Icon size={11} /> {c.label}
+      <Icon size={11} /> {known ? t(`govintel.cat.${type}`) : type}
     </span>
   );
 }
 
 function ResultCard({ doc, bookmarked, canBookmark, onBookmark, onOpen, onSubscribe }) {
+  const t = useT();
   return (
     <div className="flex flex-col rounded-xl border border-ink-600 bg-ink-800/50 p-3 transition hover:border-ink-500">
       <div className="flex items-start justify-between gap-2">
@@ -667,7 +676,7 @@ function ResultCard({ doc, bookmarked, canBookmark, onBookmark, onOpen, onSubscr
             </span>
           )}
           {doc.origin === "live" && (
-            <span className="rounded bg-signal-green/15 px-1.5 py-0.5 text-[10px] font-semibold text-signal-green">live</span>
+            <span className="rounded bg-signal-green/15 px-1.5 py-0.5 text-[10px] font-semibold text-signal-green">{t("govintel.live")}</span>
           )}
         </div>
         {typeof doc.score === "number" && (
@@ -689,16 +698,16 @@ function ResultCard({ doc, bookmarked, canBookmark, onBookmark, onOpen, onSubscr
 
       <div className="mt-2.5 flex items-center gap-1.5 border-t border-ink-700 pt-2 text-[11px]">
         <button onClick={onOpen} className="inline-flex items-center gap-1 rounded-md bg-ink-700 px-2 py-1 font-semibold text-slate-200 hover:bg-accent-600 hover:text-white">
-          <Link2 size={12} /> Details
+          <Link2 size={12} /> {t("common.details")}
         </button>
         {doc.source_url && (
           <a href={doc.source_url} target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-md bg-ink-700 px-2 py-1 font-semibold text-slate-200 hover:bg-ink-600">
-            <ExternalLink size={12} /> Source
+            <ExternalLink size={12} /> {t("govintel.source")}
           </a>
         )}
         {canBookmark && (
-          <button onClick={onBookmark} title={bookmarked ? "Remove bookmark" : "Bookmark"}
+          <button onClick={onBookmark} title={bookmarked ? t("govintel.removeBookmark") : t("govintel.bookmark")}
             className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold ${
               bookmarked ? "bg-accent/20 text-accent" : "bg-ink-700 text-slate-200 hover:bg-ink-600"
             }`}>
@@ -706,9 +715,9 @@ function ResultCard({ doc, bookmarked, canBookmark, onBookmark, onOpen, onSubscr
           </button>
         )}
         {canBookmark && (
-          <button onClick={onSubscribe} title="Alert me about similar updates"
+          <button onClick={onSubscribe} title={t("govintel.subscribeTitle")}
             className="ml-auto inline-flex items-center gap-1 rounded-md bg-ink-700 px-2 py-1 font-semibold text-slate-200 hover:bg-accent-600 hover:text-white">
-            <BellPlus size={12} /> Subscribe
+            <BellPlus size={12} /> {t("govintel.subscribe")}
           </button>
         )}
       </div>
@@ -717,6 +726,7 @@ function ResultCard({ doc, bookmarked, canBookmark, onBookmark, onOpen, onSubscr
 }
 
 function DetailDrawer({ state, lang, onClose, onSummarize, onOpenRelated }) {
+  const t = useT();
   const { doc, related, summary, summarizing } = state;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -737,7 +747,7 @@ function DetailDrawer({ state, lang, onClose, onSummarize, onOpenRelated }) {
         {doc.source_url && (
           <a href={doc.source_url} target="_blank" rel="noreferrer"
             className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700">
-            <ExternalLink size={13} /> Open official source
+            <ExternalLink size={13} /> {t("govintel.openSource")}
           </a>
         )}
 
@@ -752,12 +762,12 @@ function DetailDrawer({ state, lang, onClose, onSummarize, onOpenRelated }) {
         <div className="mt-4 rounded-xl border border-ink-600 bg-ink-800/60 p-3">
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-              <Sparkles size={13} className="text-accent" /> AI summary
+              <Sparkles size={13} className="text-accent" /> {t("govintel.aiSummary")}
             </span>
             <button onClick={onSummarize} disabled={summarizing}
               className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-accent-700 disabled:opacity-40">
               {summarizing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              {summary ? "Regenerate" : "Summarise"} ({lang})
+              {summary ? t("govintel.regenerate") : t("govintel.summarise")} ({lang})
             </button>
           </div>
           {summary && (
@@ -770,11 +780,11 @@ function DetailDrawer({ state, lang, onClose, onSummarize, onOpenRelated }) {
 
         {/* related / cross-links */}
         <div className="mt-4">
-          <div className="mb-1.5 text-xs font-semibold text-slate-300">Related documents</div>
+          <div className="mb-1.5 text-xs font-semibold text-slate-300">{t("govintel.relatedDocs")}</div>
           {related === null ? (
-            <div className="flex items-center gap-2 text-xs text-slate-500"><Loader2 size={13} className="animate-spin" /> finding links…</div>
+            <div className="flex items-center gap-2 text-xs text-slate-500"><Loader2 size={13} className="animate-spin" /> {t("govintel.findingLinks")}</div>
           ) : related.length === 0 ? (
-            <p className="text-xs text-slate-500">No related documents found.</p>
+            <p className="text-xs text-slate-500">{t("govintel.noRelated")}</p>
           ) : (
             <div className="space-y-1.5">
               {related.map((r) => (

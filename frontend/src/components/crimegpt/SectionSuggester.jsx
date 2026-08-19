@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, Loader2, ScrollText, TriangleAlert, Gavel } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
 
 const INPUT =
   "w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent focus:outline-none";
@@ -9,6 +10,7 @@ const INPUT =
 // BNS/BNSS catalogue and shows ranked suggestions with why-matched terms. It
 // never writes to the case — it only informs the officer which sections apply.
 export default function SectionSuggester({ narrative }) {
+  const t = useT();
   const [text, setText] = useState(narrative || "");
   const [results, setResults] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -41,7 +43,7 @@ export default function SectionSuggester({ narrative }) {
         rows={4}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Describe what happened (free text). CrimeGPT ranks the applicable BNS 2023 / BNSS sections offline…"
+        placeholder={t("crimegpt.phNarrative")}
       />
       <button
         onClick={() => run()}
@@ -49,19 +51,19 @@ export default function SectionSuggester({ narrative }) {
         className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700 disabled:opacity-50"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-        Suggest sections
+        {t("crimegpt.suggestSections")}
       </button>
 
       {results && (
         <div className="mt-4">
           <p className="mb-2 text-xs text-slate-400">
-            {results.count} matching offence pattern{results.count === 1 ? "" : "s"}
-            {" "}· ranked by relevance
+            {t(results.count === 1 ? "crimegpt.matchOne" : "crimegpt.matchMany", {
+              n: results.count,
+            })}
           </p>
           {results.count === 0 ? (
             <p className="text-sm text-slate-500">
-              No strong keyword match — refine the narrative with specifics
-              (weapon, modus operandi, victim, loss).
+              {t("crimegpt.noMatch")}
             </p>
           ) : (
             <div className="space-y-2">
@@ -73,12 +75,12 @@ export default function SectionSuggester({ narrative }) {
                       <span className="font-semibold text-slate-100">{s.label}</span>
                       {s.verify && (
                         <span className="inline-flex items-center gap-1 rounded bg-signal-amber/15 px-1.5 py-0.5 text-[10px] font-semibold text-signal-amber">
-                          <TriangleAlert size={10} /> verify clause
+                          <TriangleAlert size={10} /> {t("crimegpt.verifyClause")}
                         </span>
                       )}
                     </div>
                     <span className="rounded-full bg-ink-900/80 px-2 py-0.5 text-[10px] text-slate-400">
-                      score {s.score}
+                      {t("crimegpt.score", { n: s.score })}
                     </span>
                   </div>
 
@@ -102,7 +104,8 @@ export default function SectionSuggester({ narrative }) {
                   )}
                   {s.bnss?.length > 0 && (
                     <p className="mt-1.5 text-[11px] text-slate-500">
-                      <span className="font-semibold">Procedure:</span> {s.bnss.join("; ")}
+                      <span className="font-semibold">{t("crimegpt.procedure")}</span>{" "}
+                      {s.bnss.join("; ")}
                     </p>
                   )}
                   {s.judgments?.length > 0 && (
@@ -113,7 +116,8 @@ export default function SectionSuggester({ narrative }) {
                   )}
                   {s.matched_terms?.length > 0 && (
                     <p className="mt-1.5 text-[10px] text-slate-500">
-                      matched: {s.matched_terms.map((t) => `“${t}”`).join(", ")}
+                      {t("crimegpt.matched")}{" "}
+                      {s.matched_terms.map((m) => `“${m}”`).join(", ")}
                     </p>
                   )}
                 </div>
@@ -121,8 +125,7 @@ export default function SectionSuggester({ narrative }) {
             </div>
           )}
           <p className="mt-3 text-[10px] text-slate-500">
-            AI-suggested from an offline curated catalogue. Always verify the
-            exact clause against the bare act before filing.
+            {t("crimegpt.suggestNote")}
           </p>
         </div>
       )}

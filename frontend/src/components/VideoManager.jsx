@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, Trash2, Video, Camera, Radio, Info, Loader2, Globe, Boxes } from "lucide-react";
 import { statusBadge, fmtDuration } from "../utils";
+import { useT } from "../i18n";
 
 export default function VideoManager({
   videos,
@@ -13,6 +14,7 @@ export default function VideoManager({
   onReindex,
   onDelete,
 }) {
+  const t = useT();
   const [reindexing, setReindexing] = useState(false);
   const fileRef = useRef(null);
   const [mode, setMode] = useState("upload"); // upload | live
@@ -79,7 +81,7 @@ export default function VideoManager({
     <div className="flex h-full flex-col">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
         <Video size={16} className="text-accent" />
-        Camera Feeds
+        {t("vision.cameraFeeds")}
         {onReindex && videos.length > 0 && (
           <button
             onClick={async () => {
@@ -88,10 +90,10 @@ export default function VideoManager({
             }}
             disabled={reindexing}
             className="ml-auto inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:bg-ink-600 disabled:opacity-50"
-            title="Re-process existing footage to enable 'Find every object' instance search on it"
+            title={t("vision.reindexTitle")}
           >
             {reindexing ? <Loader2 size={11} className="animate-spin" /> : <Boxes size={11} />}
-            Re-index
+            {t("vision.reindex")}
           </button>
         )}
         <span className="rounded bg-ink-700 px-2 py-0.5 text-xs text-slate-400">
@@ -109,7 +111,7 @@ export default function VideoManager({
               mode === "upload" ? "bg-accent-600 text-white" : "text-slate-400"
             }`}
           >
-            <Upload size={13} /> Upload
+            <Upload size={13} /> {t("vision.upload")}
           </button>
           <button
             onClick={() => setMode("live")}
@@ -117,7 +119,7 @@ export default function VideoManager({
               mode === "live" ? "bg-accent-600 text-white" : "text-slate-400"
             }`}
           >
-            <Radio size={13} /> Live Feed
+            <Radio size={13} /> {t("vision.liveFeed")}
           </button>
         </div>
 
@@ -127,7 +129,7 @@ export default function VideoManager({
             value={cameraId}
             onChange={(e) => setCameraId(e.target.value)}
             className="w-full rounded bg-ink-700 px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
-            placeholder="Camera ID (e.g. CAM-Gate-1)"
+            placeholder={t("vision.cameraIdPh")}
           />
         </div>
 
@@ -138,7 +140,7 @@ export default function VideoManager({
               className="flex w-full items-center justify-center gap-2 rounded bg-accent-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent-700"
             >
               <Upload size={14} />
-              Upload Footage
+              {t("vision.uploadFootage")}
             </button>
             <input
               ref={fileRef}
@@ -167,7 +169,7 @@ export default function VideoManager({
             <input
               value={streamUrl}
               onChange={(e) => setStreamUrl(e.target.value)}
-              placeholder="Public stream URL (RTSP / HLS / YouTube-live)"
+              placeholder={t("vision.streamUrlPh")}
               className="mb-2 w-full rounded bg-ink-700 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
             />
             <button
@@ -180,16 +182,16 @@ export default function VideoManager({
               ) : (
                 <Radio size={14} />
               )}
-              Go Live (watch &amp; search)
+              {t("vision.goLive")}
             </button>
             <div className="mb-2 flex items-center gap-2">
               <button
                 onClick={handleStream}
                 disabled={streaming || !streamUrl.trim()}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded bg-ink-700 px-2 py-1.5 text-[11px] font-medium text-slate-200 transition hover:bg-ink-600 disabled:opacity-40"
-                title="Capture a fixed window then stop"
+                title={t("vision.captureOnceTitle")}
               >
-                Capture once
+                {t("vision.captureOnce")}
               </button>
               <input
                 type="number"
@@ -199,22 +201,18 @@ export default function VideoManager({
                 onChange={(e) => setDuration(e.target.value)}
                 className="w-14 rounded bg-ink-700 px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-accent"
               />
-              <span className="text-[11px] text-slate-400">sec</span>
+              <span className="text-[11px] text-slate-400">{t("vision.sec")}</span>
             </div>
             <div className="mt-2 flex gap-1.5 rounded bg-signal-amber/10 p-2 text-[10px] leading-snug text-signal-amber/90">
               <Info size={20} className="shrink-0" />
-              <span>
-                Use only intentionally-public feeds (govt traffic cams, public
-                live streams). Accessing private/unsecured cameras without
-                authorization is illegal.
-              </span>
+              <span>{t("vision.legalNotice")}</span>
             </div>
 
             {feeds.length > 0 && (
               <div className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-300">
                   <Globe size={12} className="text-accent" />
-                  Public feeds — click to go live
+                  {t("vision.publicFeeds")}
                 </div>
                 <div className="space-y-1.5">
                   {feeds.map((f) => (
@@ -254,7 +252,7 @@ export default function VideoManager({
       <div className="-mr-1 flex-1 space-y-1.5 overflow-y-auto pr-1">
         {videos.length === 0 && (
           <p className="px-1 py-6 text-center text-xs text-slate-500">
-            No footage yet. Upload CCTV video to begin.
+            {t("vision.noFootage")}
           </p>
         )}
         {videos.map((v) => {
@@ -283,7 +281,8 @@ export default function VideoManager({
               </div>
               <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
                 <span>
-                  {v.keyframe_count} keyframes · {fmtDuration(v.duration_sec)}
+                  {t("vision.keyframes", { n: v.keyframe_count })} ·{" "}
+                  {fmtDuration(v.duration_sec)}
                 </span>
                 <button
                   onClick={(e) => {
@@ -291,7 +290,7 @@ export default function VideoManager({
                     onDelete(v.id);
                   }}
                   className="opacity-0 transition group-hover:opacity-100 hover:text-signal-red"
-                  title="Delete feed"
+                  title={t("vision.deleteFeed")}
                 >
                   <Trash2 size={13} />
                 </button>

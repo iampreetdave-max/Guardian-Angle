@@ -7,11 +7,13 @@ import PoolEditor from "./PoolEditor";
 import SectionSuggester from "./SectionSuggester";
 import DocumentGrid from "./DocumentGrid";
 import CaseDiary from "./CaseDiary";
+import { useT } from "../../i18n";
 
 // Single-entry data pool reused across every generated document. The officer
 // picks a case, fills the pool once, then suggests sections, generates the 7
 // statutory documents, and reviews the auto-maintained diary.
 export default function CrimeGPTView() {
+  const t = useT();
   const [cases, setCases] = useState([]);
   const [caseId, setCaseId] = useState(null);
   const [pool, setPool] = useState(null);
@@ -55,10 +57,10 @@ export default function CrimeGPTView() {
     : "";
 
   const TABS = [
-    { key: "pool", label: "Data Pool", icon: Users },
-    { key: "sections", label: "Suggest Sections", icon: Sparkles },
-    { key: "documents", label: "Documents", icon: FileText },
-    { key: "diary", label: "Case Diary", icon: BookOpen },
+    { key: "pool", label: t("crimegpt.tabPool"), icon: Users },
+    { key: "sections", label: t("crimegpt.tabSections"), icon: Sparkles },
+    { key: "documents", label: t("crimegpt.tabDocuments"), icon: FileText },
+    { key: "diary", label: t("crimegpt.tabDiary"), icon: BookOpen },
   ];
 
   return (
@@ -68,7 +70,7 @@ export default function CrimeGPTView() {
         <div>
           <h2 className="text-lg font-bold text-white">CrimeGPT</h2>
           <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            Enter facts once · generate every legal document
+            {t("crimegpt.tagline")}
           </p>
         </div>
 
@@ -83,10 +85,10 @@ export default function CrimeGPTView() {
             }}
             className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-1.5 text-sm text-slate-100"
           >
-            {cases.length === 0 && <option value="">No open cases</option>}
+            {cases.length === 0 && <option value="">{t("crimegpt.noOpenCases")}</option>}
             {cases.map((c) => (
               <option key={c.id} value={c.id}>
-                #{c.id} · {c.title?.slice(0, 48) || "Untitled"}
+                #{c.id} · {c.title?.slice(0, 48) || t("crimegpt.untitled")}
               </option>
             ))}
           </select>
@@ -97,25 +99,24 @@ export default function CrimeGPTView() {
         <div className="flex flex-col items-center justify-center rounded-xl border border-ink-600 bg-ink-800/50 py-20 text-center text-slate-500">
           <FolderOpen size={34} />
           <p className="mt-3 max-w-sm text-sm">
-            No open case to document yet. Triage a complaint into a case (or open
-            one from the Cases tab), then return here to build the file.
+            {t("crimegpt.emptyCase")}
           </p>
         </div>
       ) : (
         <>
           {/* tabs */}
           <div className="mb-4 flex flex-wrap items-center gap-1 rounded-lg bg-ink-900/60 p-1">
-            {TABS.map((t) => (
+            {TABS.map((tb) => (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={tb.key}
+                onClick={() => setTab(tb.key)}
                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                  tab === t.key
+                  tab === tb.key
                     ? "bg-accent-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                <t.icon size={14} /> {t.label}
+                <tb.icon size={14} /> {tb.label}
               </button>
             ))}
           </div>

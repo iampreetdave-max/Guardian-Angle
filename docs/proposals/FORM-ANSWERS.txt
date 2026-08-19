@@ -1,0 +1,176 @@
+KANAD S.H.I.E.L.D. 2026 — REGISTRATION FORM ANSWER SHEET
+=========================================================
+Copy each block into the matching form field. Two file uploads at the bottom.
+Flagship problem statement: Crime Hotspot Mapping & Predictive Patrol Routing
+(the same platform also answers 4 more — framed below as "one platform, five statements").
+
+-----------------------------------------------------------------
+[1] SYNOPSIS / ABSTRACT
+-----------------------------------------------------------------
+CityShield / VisionScan is a single AI policing platform that answers five of
+your Category-II problem statements at once, instead of five separate prototypes.
+One codebase, one database, one security layer, one live deployment.
+
+Its flagship module does GIS crime-hotspot mapping and predictive patrol routing:
+a recency-weighted risk model (exponential decay + NCRB-derived priors + a live
+anomaly boost) ranks city zones, and a nearest-neighbour + 2-opt optimiser turns
+the top zones into an efficient patrol route. Around it sit four more modules on
+the same data: always-on CCTV anomaly detection (fire/smoke/accident/weapon/
+violence) via CLIP + YOLOv8, an AI legal-documentation assistant (CrimeGPT) that
+suggests BNS/BNSS sections and drafts FIR-ready documents, a unified legal &
+government-intelligence search, and a structured cyber-fraud intake with a
+"golden-hour 1930" prompt.
+
+The modules form one real closed loop: a live CCTV anomaly auto-creates a
+geo-tagged case, raises that locality's predictive risk, and dispatches the
+nearest patrol unit. It runs live today over HTTPS, CPU-only, offline-capable,
+with no paid AI APIs — hosted at zero infrastructure cost on Microsoft Azure
+for Students.
+
+  Live demo:  https://visionscan.centralindia.cloudapp.azure.com
+  Test clips & demo logins (Google Drive):
+              https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz
+
+-----------------------------------------------------------------
+[2] LITERATURE REVIEW / EXISTING INNOVATION & TECHNOLOGY
+-----------------------------------------------------------------
+Predictive policing exists commercially — PredPol/Geolitica, HunchLab and
+Palantir use historical-incident models to forecast risk; ShotSpotter does
+acoustic gunshot detection. CCTV analytics (Briefcam, AnyVision) and commercial
+face recognition (NEC, Clearview) handle video. Legal-AI tools (CaseMine,
+SpotDraft) draft documents. These work, but they are proprietary, expensive,
+cloud/GPU-dependent, and largely opaque — predictive systems in particular have
+faced fairness and "black-box" criticism (e.g. COMPAS), and most are five
+separate products that do not share data.
+
+Our gaps-to-fill: (a) transparency — every hotspot has a "Why this hotspot?"
+breakdown and the predictive model is backtested with rolling-origin cross-
+validation rather than asserted; (b) cost & sovereignty — CPU-only, offline-
+capable, no paid APIs, deployable on commodity hardware a department already
+owns; (c) integration — one platform where detection, prediction, dispatch and
+documentation share a single database, instead of five disconnected tools. We
+build on open models (OpenAI CLIP, Ultralytics YOLOv8, ArcFace, MiniLM/ChromaDB
+RAG) and open data standards (OpenStreetMap, NCRB statistics).
+
+-----------------------------------------------------------------
+[3] YOUR APPROACH TO SOLVE THE PROBLEM
+-----------------------------------------------------------------
+One unified platform, modular by problem statement, on a shared data model.
+
+Prediction: city zones are scored by a recency-weighted model — recent incidents
+count more via exponential half-life decay — blended with NCRB-derived category
+priors and a real-time boost when an anomaly is detected nearby. The ranked zones
+feed a nearest-neighbour + 2-opt routing optimiser that outputs an efficient
+patrol path. We do NOT just claim accuracy: a rolling-origin backtest reports
+Hit-Rate@k, PAI (Predictive Accuracy Index), capture rate and bootstrap
+confidence intervals, against frequency / prior / random baselines.
+
+Detection: each CCTV/video frame is scored by CLIP zero-shot against
+threat/normal prompts (with measured-margin calibration and debounce to cut false
+alarms); YOLOv8 adds object labels and localized fire/smoke boxes. Optional
+ArcFace face matching for watchlists.
+
+Documentation & intelligence: CrimeGPT maps a case's facts to BNS/BNSS sections
+and drafts documents; a ChromaDB + MiniLM RAG search covers legal/government
+corpora; Gemini is optional and falls back to grounded offline templates so the
+system never depends on a paid API. All wrapped in JWT/RBAC auth, OWASP-Top-10
+hardening and audit logging, with a 77-test regression suite. Stack: FastAPI +
+SQLite backend, React/Vite frontend, Docker Compose, deployed on Azure behind
+Caddy auto-HTTPS.
+
+-----------------------------------------------------------------
+[4] ROAD MAP / FLOW DIAGRAM  (FILE UPLOAD)
+-----------------------------------------------------------------
+Upload this file:
+  C:\Users\PREET\OneDrive\Desktop\VisionScan\docs\proposals\SUBMISSION-roadmap.pdf
+
+-----------------------------------------------------------------
+[5] TOOLS & TECHNOLOGIES TO BE USED
+-----------------------------------------------------------------
+Backend: Python, FastAPI, SQLite, Uvicorn, Pydantic.
+Frontend: React, Vite, Tailwind CSS, Leaflet / react-leaflet (OpenStreetMap),
+  Recharts, lucide-react.
+AI / ML: OpenAI CLIP (ViT-B/32) zero-shot detection & semantic search;
+  Ultralytics YOLOv8 object + fire/smoke detection; ArcFace / InsightFace face
+  matching; ChromaDB + MiniLM (sentence-transformers) RAG; PyTorch/Torchvision
+  (CPU); optional Google Gemini with offline template fallback.
+Predictive analytics: recency-weighted (exponential-decay) risk scoring,
+  NCRB-derived priors, nearest-neighbour + 2-opt routing, rolling-origin
+  backtesting (Hit-Rate@k, PAI, bootstrap CIs), NumPy.
+Documents: ReportLab (branded PDF generation).
+Security/Infra: JWT + RBAC, bcrypt, OWASP-Top-10 middleware, audit logging,
+  Docker / Docker Compose, Caddy (auto-HTTPS), Git deploy.
+Hosting: Microsoft Azure for Students (Ubuntu VM, Central India) — HTTPS, CPU-
+  only, offline-capable, zero paid-API cost.
+Testing: pytest + httpx (77-test suite).
+
+-----------------------------------------------------------------
+[6] CHALLENGES / RISKS IN IMPLEMENTING THE FINAL PROTOTYPE
+-----------------------------------------------------------------
+- Data access: the demo runs on SYNTHETIC data (no real people/cases). Real
+  deployment needs an MoU / data-sharing agreement for actual incident records;
+  we built the model to ingest standard incident schemas to ease that.
+- Fairness & accountability: predictive policing can entrench bias. We mitigate
+  with full transparency ("Why this hotspot?" score breakdown), human-in-the-loop
+  dispatch (the system suggests, officers decide), and published backtest metrics.
+- CPU latency: to stay cheap and offline, inference is CPU-only — a CCTV clip
+  takes ~30-90 s to process. A production deployment can add a GPU for real-time.
+- Privacy & law: face matching and CCTV analytics must comply with the DPDP Act
+  and due process; these are opt-in modules with access controls and audit logs.
+- Licensing: YOLOv8 is AGPL-3.0 — documented in THIRD_PARTY_NOTICES; production
+  can swap in a permissive detector. The rest of our stack is permissive/MIT.
+- Scale & accuracy drift: models need periodic retraining on fresh local data;
+  rolling-origin backtesting is built in to monitor drift.
+
+-----------------------------------------------------------------
+[7] POSSIBLE OUTCOME OF YOUR WORK
+-----------------------------------------------------------------
+A single deployable platform that lets a Cyber Crime / city police unit:
+- Patrol smarter — on backtests the top-10 predicted zones (≈33% of the city)
+  captured ~77% of the next week's crime (Hit-Rate@10 0.77, PAI 2.3x vs a 2.5x
+  oracle ceiling, 3/3 planted surges detected, beating frequency/prior/random
+  baselines) — on synthetic data, demonstrating the methodology.
+- Catch incidents faster — always-on CCTV anomaly alerts (fire/smoke/accident/
+  weapon/violence) instead of manual monitoring, auto-creating geo-tagged cases.
+- Cut paperwork time — AI-suggested BNS/BNSS sections and FIR-ready drafts.
+- Respond to cyber-fraud in the golden hour — structured 1930 intake.
+- Run at near-zero cost — CPU-only, offline-capable, no paid APIs, deployable on
+  hardware a department already owns.
+Net impact: faster response, better-allocated patrols, less manual CCTV/paperwork
+load, and a transparent, auditable workflow — pilot-ready for a real district.
+
+-----------------------------------------------------------------
+[8] ACCOMPLISHMENTS TO DATE
+-----------------------------------------------------------------
+The platform is BUILT and RUNNING LIVE, not a concept:
+- All five modules functional in one codebase, deployed over HTTPS on Microsoft
+  Azure for Students at zero infrastructure cost:
+  https://visionscan.centralindia.cloudapp.azure.com
+- Predictive model implemented and backtested (rolling-origin CV): Hit-Rate@10
+  0.77, PAI 2.3x, 3/3 surges, beating baselines (synthetic data).
+- CCTV anomaly detection working on real test footage — a curated Google Drive
+  folder of Creative-Commons clips + demo logins ships with the submission:
+  https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz
+- CrimeGPT mapping 30+ BNS/BNSS offence patterns and generating branded PDFs.
+- Security workstream: JWT/RBAC, OWASP-Top-10 coverage, audit logging, pinned by
+  a 77-test passing regression suite; MIT licence + third-party / open-source
+  compliance notices.
+- Validation underway: the legal section logic is under review by a practising
+  lawyer (a family member) with feedback sought from additional lawyers; informal
+  feedback gathered from a serving police officer; a review by an IPS officer is
+  being arranged.
+- Full documentation: architecture/ER diagrams, security testing report, demo kit
+  and reviewer brief.
+Built single-handedly as a final-year student for the Cyber Crime Branch, Ahmedabad.
+
+-----------------------------------------------------------------
+[9] SOLUTION DOCUMENT  (FILE UPLOAD)
+-----------------------------------------------------------------
+Upload this file:
+  C:\Users\PREET\OneDrive\Desktop\VisionScan\docs\proposals\SUBMISSION-document.pdf
+
+-----------------------------------------------------------------
+[10] CONSENT & DECLARATION
+-----------------------------------------------------------------
+Tick:  I Agree
+=================================================================

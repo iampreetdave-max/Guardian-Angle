@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2, Users, Boxes, Quote } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
 
 const ROLE_BADGE = {
   accused: "bg-signal-red/15 text-signal-red",
@@ -20,12 +21,13 @@ const DEL_BTN =
 // to the unified pool and triggers onChange() to re-pull, so the data the
 // document engine reads is always the single source of truth shown here.
 export default function PoolEditor({ caseId, pool, onChange }) {
+  const t = useT();
   const [sub, setSub] = useState("parties");
 
   const SUBS = [
-    { key: "parties", label: "Parties", icon: Users, n: pool?.parties?.length || 0 },
-    { key: "seizures", label: "Seizures", icon: Boxes, n: pool?.seizures?.length || 0 },
-    { key: "statements", label: "Statements", icon: Quote, n: pool?.statements?.length || 0 },
+    { key: "parties", label: t("crimegpt.subParties"), icon: Users, n: pool?.parties?.length || 0 },
+    { key: "seizures", label: t("crimegpt.subSeizures"), icon: Boxes, n: pool?.seizures?.length || 0 },
+    { key: "statements", label: t("crimegpt.subStatements"), icon: Quote, n: pool?.statements?.length || 0 },
   ];
 
   return (
@@ -65,6 +67,7 @@ export default function PoolEditor({ caseId, pool, onChange }) {
 
 // ----------------------------------------------------------------- parties
 function Parties({ caseId, parties, onChange }) {
+  const t = useT();
   const blank = {
     role: "accused", name: "", age: "", gender: "", address: "", phone: "",
     id_proof: "", description: "",
@@ -101,43 +104,45 @@ function Parties({ caseId, parties, onChange }) {
           onChange={(e) => setForm({ ...form, role: e.target.value })}
           className={INPUT}
         >
-          <option value="accused">Accused</option>
-          <option value="victim">Victim / Complainant</option>
-          <option value="witness">Witness</option>
+          <option value="accused">{t("crimegpt.role.accused")}</option>
+          <option value="victim">{t("crimegpt.role.victim")}</option>
+          <option value="witness">{t("crimegpt.role.witness")}</option>
         </select>
-        <input className={INPUT} placeholder="Name *" value={form.name}
+        <input className={INPUT} placeholder={t("crimegpt.phName")} value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className={INPUT} placeholder="Age" type="number" value={form.age}
+        <input className={INPUT} placeholder={t("crimegpt.phAge")} type="number" value={form.age}
           onChange={(e) => setForm({ ...form, age: e.target.value })} />
-        <input className={INPUT} placeholder="Gender" value={form.gender}
+        <input className={INPUT} placeholder={t("crimegpt.phGender")} value={form.gender}
           onChange={(e) => setForm({ ...form, gender: e.target.value })} />
-        <input className={`${INPUT} col-span-2`} placeholder="Address" value={form.address}
+        <input className={`${INPUT} col-span-2`} placeholder={t("crimegpt.phAddress")} value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })} />
-        <input className={INPUT} placeholder="Phone" value={form.phone}
+        <input className={INPUT} placeholder={t("crimegpt.phPhone")} value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        <input className={INPUT} placeholder="ID proof" value={form.id_proof}
+        <input className={INPUT} placeholder={t("crimegpt.phIdProof")} value={form.id_proof}
           onChange={(e) => setForm({ ...form, id_proof: e.target.value })} />
-        <input className={`${INPUT} col-span-2 sm:col-span-3`} placeholder="Description / identifying marks"
+        <input className={`${INPUT} col-span-2 sm:col-span-3`} placeholder={t("crimegpt.phPartyDesc")}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <button disabled={busy} className={ADD_BTN}>
-          <Plus size={14} /> Add
+          <Plus size={14} /> {t("common.add")}
         </button>
       </form>
 
       <div className="space-y-1.5">
         {parties.length === 0 && (
-          <p className="text-xs text-slate-500">No parties recorded yet.</p>
+          <p className="text-xs text-slate-500">{t("crimegpt.noParties")}</p>
         )}
         {parties.map((p) => (
           <div key={p.id} className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-800/60 px-3 py-2 text-sm">
             <div className="min-w-0">
               <span className={`mr-2 rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${ROLE_BADGE[p.role] || "bg-ink-700 text-slate-400"}`}>
-                {p.role}
+                {ROLE_BADGE[p.role] ? t(`crimegpt.role.${p.role}`) : p.role}
               </span>
               <span className="font-semibold text-slate-100">{p.name}</span>
               <span className="ml-2 text-xs text-slate-500">
-                {[p.age && `${p.age}y`, p.gender, p.phone].filter(Boolean).join(" · ")}
+                {[p.age && t("crimegpt.ageYears", { n: p.age }), p.gender, p.phone]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
               {p.description && (
                 <div className="truncate text-xs text-slate-500">{p.description}</div>
@@ -155,6 +160,7 @@ function Parties({ caseId, parties, onChange }) {
 
 // ----------------------------------------------------------------- seizures
 function Seizures({ caseId, seizures, onChange }) {
+  const t = useT();
   const blank = {
     item: "", quantity: "", description: "", seized_from: "", seized_at: "",
     witness_names: "",
@@ -182,26 +188,26 @@ function Seizures({ caseId, seizures, onChange }) {
   return (
     <div>
       <form onSubmit={add} className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <input className={INPUT} placeholder="Item *" value={form.item}
+        <input className={INPUT} placeholder={t("crimegpt.phItem")} value={form.item}
           onChange={(e) => setForm({ ...form, item: e.target.value })} />
-        <input className={INPUT} placeholder="Quantity" value={form.quantity}
+        <input className={INPUT} placeholder={t("crimegpt.phQuantity")} value={form.quantity}
           onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-        <input className={INPUT} placeholder="Seized from" value={form.seized_from}
+        <input className={INPUT} placeholder={t("crimegpt.phSeizedFrom")} value={form.seized_from}
           onChange={(e) => setForm({ ...form, seized_from: e.target.value })} />
-        <input className={`${INPUT} col-span-2`} placeholder="Description" value={form.description}
+        <input className={`${INPUT} col-span-2`} placeholder={t("crimegpt.phSeizureDesc")} value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <input className={INPUT} placeholder="Seized at (date/time)" value={form.seized_at}
+        <input className={INPUT} placeholder={t("crimegpt.phSeizedAt")} value={form.seized_at}
           onChange={(e) => setForm({ ...form, seized_at: e.target.value })} />
-        <input className={`${INPUT} col-span-2`} placeholder="Panch witness names" value={form.witness_names}
+        <input className={`${INPUT} col-span-2`} placeholder={t("crimegpt.phPanchWitnesses")} value={form.witness_names}
           onChange={(e) => setForm({ ...form, witness_names: e.target.value })} />
         <button disabled={busy} className={ADD_BTN}>
-          <Plus size={14} /> Add
+          <Plus size={14} /> {t("common.add")}
         </button>
       </form>
 
       <div className="space-y-1.5">
         {seizures.length === 0 && (
-          <p className="text-xs text-slate-500">No seized articles recorded yet.</p>
+          <p className="text-xs text-slate-500">{t("crimegpt.noSeizures")}</p>
         )}
         {seizures.map((s) => (
           <div key={s.id} className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-800/60 px-3 py-2 text-sm">
@@ -209,7 +215,12 @@ function Seizures({ caseId, seizures, onChange }) {
               <span className="font-semibold text-slate-100">{s.item}</span>
               {s.quantity && <span className="ml-2 text-xs text-accent">×{s.quantity}</span>}
               <span className="ml-2 text-xs text-slate-500">
-                {[s.seized_from && `from ${s.seized_from}`, s.witness_names].filter(Boolean).join(" · ")}
+                {[
+                  s.seized_from && t("crimegpt.fromWhom", { name: s.seized_from }),
+                  s.witness_names,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             </div>
             <button onClick={() => del(s.id)} className={DEL_BTN}>
@@ -224,6 +235,7 @@ function Seizures({ caseId, seizures, onChange }) {
 
 // ----------------------------------------------------------------- statements
 function Statements({ caseId, statements, parties, onChange }) {
+  const t = useT();
   const [form, setForm] = useState({ party_id: "", statement_text: "" });
   const [busy, setBusy] = useState(false);
 
@@ -255,28 +267,28 @@ function Statements({ caseId, statements, parties, onChange }) {
           onChange={(e) => setForm({ ...form, party_id: e.target.value })}
           className={`${INPUT} w-full sm:w-64`}
         >
-          <option value="">Attribute to… (optional)</option>
+          <option value="">{t("crimegpt.phAttribute")}</option>
           {parties.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.role}: {p.name}
+              {ROLE_BADGE[p.role] ? t(`crimegpt.role.${p.role}`) : p.role}: {p.name}
             </option>
           ))}
         </select>
         <textarea
           className={`${INPUT} w-full`}
           rows={3}
-          placeholder="Recorded statement (BNSS s.180/183) *"
+          placeholder={t("crimegpt.phStatement")}
           value={form.statement_text}
           onChange={(e) => setForm({ ...form, statement_text: e.target.value })}
         />
         <button disabled={busy} className={ADD_BTN}>
-          <Plus size={14} /> Record statement
+          <Plus size={14} /> {t("crimegpt.recordStatement")}
         </button>
       </form>
 
       <div className="space-y-1.5">
         {statements.length === 0 && (
-          <p className="text-xs text-slate-500">No statements recorded yet.</p>
+          <p className="text-xs text-slate-500">{t("crimegpt.noStatements")}</p>
         )}
         {statements.map((s) => (
           <div key={s.id} className="flex items-start justify-between gap-3 rounded-lg border border-ink-600 bg-ink-800/60 px-3 py-2 text-sm">
@@ -287,7 +299,7 @@ function Statements({ caseId, statements, parties, onChange }) {
               <span className="text-slate-200">{s.statement_text}</span>
               {s.recorded_by_name && (
                 <div className="text-[11px] text-slate-500">
-                  Recorded by {s.recorded_by_name}
+                  {t("crimegpt.recordedBy", { name: s.recorded_by_name })}
                 </div>
               )}
             </div>

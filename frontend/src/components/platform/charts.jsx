@@ -2,12 +2,15 @@
 // palette. Kept tiny on purpose — no charting library, so the bundle stays lean
 // and the dashboard works fully offline.
 
+import { useT } from "../../i18n";
+
 const PALETTE = ["#f4b23c", "#3b82f6", "#22c55e", "#ef4444", "#a855f7", "#14b8a6", "#f59e0b", "#64748b"];
 
 // Horizontal labelled bars — good for category / status breakdowns.
-export function BarList({ data, accent = "#f4b23c", empty = "No data yet" }) {
+export function BarList({ data, accent = "#f4b23c", empty }) {
+  const t = useT();
   if (!data || data.length === 0)
-    return <p className="py-6 text-center text-xs text-slate-500">{empty}</p>;
+    return <p className="py-6 text-center text-xs text-slate-500">{empty || t("dashboard.noDataYet")}</p>;
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
     <div className="space-y-2">
@@ -32,11 +35,12 @@ export function BarList({ data, accent = "#f4b23c", empty = "No data yet" }) {
 }
 
 // Donut with legend — good for case status / severity split.
-export function Donut({ data, empty = "No data yet", size = 132 }) {
+export function Donut({ data, empty, size = 132 }) {
+  const t = useT();
   const items = (data || []).filter((d) => d.count > 0);
   const total = items.reduce((s, d) => s + d.count, 0);
   if (total === 0)
-    return <p className="py-6 text-center text-xs text-slate-500">{empty}</p>;
+    return <p className="py-6 text-center text-xs text-slate-500">{empty || t("dashboard.noDataYet")}</p>;
 
   const r = 54, c = 2 * Math.PI * r;
   let offset = 0;
@@ -74,9 +78,10 @@ export function Donut({ data, empty = "No data yet", size = 132 }) {
 }
 
 // Compact vertical bars for a time trend (e.g. last 14 days of complaints).
-export function TrendBars({ data, accent = "#f4b23c", empty = "No data yet" }) {
+export function TrendBars({ data, accent = "#f4b23c", empty }) {
+  const t = useT();
   if (!data || data.length === 0)
-    return <p className="py-6 text-center text-xs text-slate-500">{empty}</p>;
+    return <p className="py-6 text-center text-xs text-slate-500">{empty || t("dashboard.noDataYet")}</p>;
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
     <div className="flex h-32 items-end gap-1">

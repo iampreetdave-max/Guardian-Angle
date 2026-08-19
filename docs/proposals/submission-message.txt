@@ -1,0 +1,35 @@
+Subject: KANAD S.H.I.E.L.D. 2026 — submission note (Preet Dave Ghanshyam, individual entry)
+
+Dear Cyber Crime Branch / KANAD S.H.I.E.L.D. team,
+
+A short note on what I've built, since the approach is a little unusual.
+
+Working solo, I set out to answer not one but several of your Category-II problem statements with a single unified platform instead of separate prototypes. The result is CityShield / VisionScan — one codebase whose modules each answer a different official statement while sharing one data model, one security layer, and one live deployment. From that platform I'm entering three statements:
+
+  1. KANADSHIELD26_P2_07 (PS-69EEFE1294451) — Crime Hotspot Mapping & Predictive Patrol Routing (flagship)
+  2. KANADSHIELD26_P2_06 (PS-69EEFDFB90B99) — CrimeGPT: AI Crime Documentation & Legal Intelligence
+  3. KANADSHIELD26_P2_10 (PS-69EEFE4F8CD1C) — Open-Ended Innovation Platform for Smart Policing
+
+The same codebase also covers P2_04 (Unified Legal & Government Intelligence) and a Category-I CCTV-search statement — five official problems, one platform.
+
+A few things I'm proud of:
+
+- Genuinely integrated, not five demos on a slide. A live CCTV anomaly auto-creates a geo-tagged case, raises that locality's predictive risk, and dispatches the nearest patrol unit — one real closed loop on one shared database.
+
+- Accuracy measured, not claimed. The predictive model is backtested with rolling-origin cross-validation: Hit-Rate@10 0.79, PAI@10 2.4x against a 2.5x oracle ceiling, capturing 79% of next-week crime in the top-10 zones (33% of the city), catching 3/3 planted crime surges and beating frequency, prior and random baselines. (On synthetic demonstration data — the methodology, not operational accuracy.)
+
+- It runs live today. Using my Microsoft Azure for Students credits, I deployed the whole platform over HTTPS at zero infrastructure cost — you can verify every claim hands-on, no install needed. It's CPU-only, offline-capable, and uses no paid AI APIs, so a department could run it on commodity hardware with no recurring cost.
+
+- Hardened. Security was a dedicated workstream — OWASP Top-10 coverage, JWT/RBAC, audit logging — pinned by a 77-test regression suite.
+
+Try it:
+  Live demo (HTTPS): https://visionscan.centralindia.cloudapp.azure.com
+  Source code:        https://github.com/iampreetdave-max/Guardian-Angle
+  Demo logins and ready-to-upload test CCTV clips are included with the submission.
+
+Built single-handedly as a final-year student, for the Cyber Crime Branch, Ahmedabad. I'd be glad to walk the panel through the live closed loop in person.
+
+Warm regards,
+Preet Dave Ghanshyam
+Final-year, NLJIET
+linkedin.com/in/iampreetdave

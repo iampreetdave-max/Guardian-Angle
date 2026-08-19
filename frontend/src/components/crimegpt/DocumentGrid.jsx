@@ -4,24 +4,18 @@ import {
   UserSquare, ScanFace, FileSignature, Globe, History,
 } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
 
 // The 7 statutory documents, with the icon + one-liner for each card. doc_type
 // keys must match backend service.DOC_TYPES exactly.
 const DOC_CARDS = [
-  { key: "purvani_chargesheet", title: "Purvani Chargesheet", icon: FileSignature,
-    desc: "Preliminary charge-sheet from the full case pool." },
-  { key: "medical_letter", title: "Medical Treatment Letter", icon: Stethoscope,
-    desc: "Request for medical examination / MLC." },
-  { key: "remand_request", title: "Remand Request (PC)", icon: Gavel,
-    desc: "Police custody remand application (BNSS s.187)." },
-  { key: "seizure_receipt", title: "Seizure Receipt", icon: Receipt,
-    desc: "Panchnama of seized muddamal." },
-  { key: "court_custody_letter", title: "Court Custody Letter", icon: Building2,
-    desc: "Judicial custody application." },
-  { key: "accused_panchanama", title: "Accused Panchanama", icon: UserSquare,
-    desc: "Arrest panchnama with description." },
-  { key: "face_identification", title: "Face Identification Form", icon: ScanFace,
-    desc: "TIP / facial-match identification form." },
+  { key: "purvani_chargesheet", icon: FileSignature },
+  { key: "medical_letter", icon: Stethoscope },
+  { key: "remand_request", icon: Gavel },
+  { key: "seizure_receipt", icon: Receipt },
+  { key: "court_custody_letter", icon: Building2 },
+  { key: "accused_panchanama", icon: UserSquare },
+  { key: "face_identification", icon: ScanFace },
 ];
 
 const LANGS = [
@@ -31,6 +25,7 @@ const LANGS = [
 ];
 
 export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
+  const t = useT();
   const [language, setLanguage] = useState("en");
   const [busy, setBusy] = useState(null); // doc_type currently generating
   const [history, setHistory] = useState([]);
@@ -80,7 +75,7 @@ export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Globe size={15} className="text-slate-400" />
-        <span className="text-xs text-slate-400">Language:</span>
+        <span className="text-xs text-slate-400">{t("common.language")}:</span>
         <div className="flex items-center gap-1 rounded-lg bg-ink-900/60 p-1">
           {LANGS.map((l) => (
             <button
@@ -96,7 +91,7 @@ export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
         </div>
         {language !== "en" && (
           <span className="text-[10px] text-slate-500">
-            Narrative translated when AI is online; structural labels stay English.
+            {t("crimegpt.langNote")}
           </span>
         )}
       </div>
@@ -106,14 +101,18 @@ export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
           <div key={d.key} className="flex flex-col rounded-xl border border-ink-600 bg-ink-800/60 p-4">
             <div className="mb-2 flex items-center gap-2">
               <d.icon size={18} className="text-accent" />
-              <span className="font-semibold text-slate-100">{d.title}</span>
+              <span className="font-semibold text-slate-100">
+                {t(`crimegpt.doc.${d.key}`)}
+              </span>
               {latest[d.key] != null && (
                 <span className="ml-auto rounded-full bg-ink-900/80 px-2 py-0.5 text-[10px] text-slate-400">
                   v{latest[d.key]}
                 </span>
               )}
             </div>
-            <p className="mb-3 flex-1 text-xs text-slate-500">{d.desc}</p>
+            <p className="mb-3 flex-1 text-xs text-slate-500">
+              {t(`crimegpt.doc.${d.key}_desc`)}
+            </p>
             <button
               onClick={() => generate(d.key)}
               disabled={busy === d.key}
@@ -124,7 +123,7 @@ export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
               ) : (
                 <Download size={14} />
               )}
-              Generate PDF
+              {t("crimegpt.generatePdf")}
             </button>
           </div>
         ))}
@@ -134,10 +133,10 @@ export default function DocumentGrid({ caseId, refreshKey, onGenerated }) {
       <div className="mt-5">
         <div className="mb-2 flex items-center gap-2">
           <History size={15} className="text-slate-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Version history</h3>
+          <h3 className="text-sm font-semibold text-slate-200">{t("crimegpt.versionHistory")}</h3>
         </div>
         {history.length === 0 ? (
-          <p className="text-xs text-slate-500">No documents generated yet.</p>
+          <p className="text-xs text-slate-500">{t("crimegpt.noDocs")}</p>
         ) : (
           <div className="space-y-1">
             {history.map((h) => (

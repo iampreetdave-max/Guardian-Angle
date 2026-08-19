@@ -9,6 +9,7 @@ import {
   Info, Target, ChevronDown, ChevronRight, Download, BarChart3, WifiOff,
 } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
 import { BarList } from "./charts";
 
 /** City Map — GIS crime intelligence for Ahmedabad.
@@ -48,9 +49,11 @@ const UNIT_COLORS = ["#f4b23c", "#38bdf8", "#22c55e", "#a855f7", "#fb7185", "#14
 // Distinct violet/purple family for the cyber-fraud layer so it never reads as
 // the amber/red crime-density palette.
 const CYBER_COLORS = ["#312e6b", "#7c3aed", "#a855f7", "#c084fc"];
+// Module-level constant, so it stores i18n KEYS: hooks cannot be called here,
+// t(w.key) runs at the render site instead.
 const WINDOWS = [
-  { label: "7 days", days: 7 }, { label: "30 days", days: 30 },
-  { label: "90 days", days: 90 }, { label: "All time", days: 0 },
+  { key: "citymap.win7", days: 7 }, { key: "citymap.win30", days: 30 },
+  { key: "citymap.win90", days: 90 }, { key: "citymap.winAll", days: 0 },
 ];
 
 const TrendIcon = ({ trend, size = 12 }) =>
@@ -107,6 +110,7 @@ function cyberStyle(metric, maxLog, hasAmount) {
 }
 
 function SeverityBar({ mix }) {
+  const t = useT();
   const total = Object.values(mix).reduce((a, b) => a + b, 0);
   if (!total) return null;
   return (
@@ -118,7 +122,7 @@ function SeverityBar({ mix }) {
       </div>
       <div className="mt-1 flex flex-wrap gap-x-2 text-[10px] text-slate-400">
         {Object.entries(mix).map(([sev, n]) => (
-          <span key={sev}><span style={{ color: SEV_COLORS[sev] }}>●</span> {sev} {n}</span>
+          <span key={sev}><span style={{ color: SEV_COLORS[sev] }}>●</span> {t(`common.${sev}`)} {n}</span>
         ))}
       </div>
     </div>
@@ -126,13 +130,15 @@ function SeverityBar({ mix }) {
 }
 
 function HourBars({ data }) {
+  const t = useT();
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
     <div className="flex h-16 items-end gap-px">
       {data.map((d) => (
         <div key={d.hour} className="flex-1 rounded-t bg-accent"
           style={{ height: `${(d.count / max) * 100}%`, minHeight: d.count ? 3 : 1, opacity: d.count ? 1 : 0.25 }}
-          title={`${String(d.hour).padStart(2, "0")}:00 — ${d.count} report${d.count === 1 ? "" : "s"}`} />
+          title={`${String(d.hour).padStart(2, "0")}:00 — ${d.count} ${
+            t(d.count === 1 ? "citymap.report" : "citymap.reports")}`} />
       ))}
     </div>
   );
@@ -150,26 +156,27 @@ function prettyCat(c) {
 
 // Flatten an area's `contributions` object into ordered, colored segments that
 // sum to (approximately) the displayed risk_score.
-function contributionSegments(contrib) {
+function contributionSegments(contrib, t) {
   if (!contrib) return [];
   const segs = [];
   if (contrib.prior > 0)
-    segs.push({ key: "prior", label: "baseline prior", value: contrib.prior, color: CONTRIB_PRIOR });
+    segs.push({ key: "prior", label: t("citymap.segPrior"), value: contrib.prior, color: CONTRIB_PRIOR });
   const cats = Object.entries(contrib.recent_by_category || {})
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1]);
   cats.forEach(([cat, v], i) =>
-    segs.push({ key: cat, label: `${prettyCat(cat)} (recent)`, value: v, color: CONTRIB_CATS[i % CONTRIB_CATS.length] })
+    segs.push({ key: cat, label: t("citymap.segRecent", { cat: prettyCat(cat) }), value: v, color: CONTRIB_CATS[i % CONTRIB_CATS.length] })
   );
   if (contrib.anomaly_boost > 0)
-    segs.push({ key: "anomaly", label: "live anomaly boost", value: contrib.anomaly_boost, color: CONTRIB_ANOMALY });
+    segs.push({ key: "anomaly", label: t("citymap.segAnomaly"), value: contrib.anomaly_boost, color: CONTRIB_ANOMALY });
   return segs;
 }
 
 // "Why this hotspot?" — a mini stacked bar + plain-English sentence. Used in
 // both the map popup and the side-panel row expander.
 function WhyHotspot({ area, light = false }) {
-  const segs = contributionSegments(area.contributions);
+  const t = useT();
+  const segs = contributionSegments(area.contributions, t);
   const total = segs.reduce((s, x) => s + x.value, 0) || 1;
   // Plain-English: lead with the biggest recent-category driver if present.
   const cats = Object.entries(area.contributions?.recent_by_category || {})
@@ -179,17 +186,20 @@ function WhyHotspot({ area, light = false }) {
   const anomaly = Math.round(area.contributions?.anomaly_boost || 0);
   const topCat = cats[0];
   const sentence =
-    `Risk ${area.risk_score} = prior ${prior}` +
-    (topCat ? ` + ${Math.round(topCat[1])} from recent ${prettyCat(topCat[0])}` : "") +
-    (cats.length > 1 ? ` (+${cats.length - 1} more)` : "") +
-    (anomaly > 0 ? ` + ${anomaly} live anomaly boost` : "") +
-    ` over ${area.n_reports_used || 0} report${area.n_reports_used === 1 ? "" : "s"} (recency-decayed).`;
+    t("citymap.whyLead", { score: area.risk_score, prior }) +
+    (topCat ? t("citymap.whyCat", { v: Math.round(topCat[1]), cat: prettyCat(topCat[0]) }) : "") +
+    (cats.length > 1 ? t("citymap.whyMore", { n: cats.length - 1 }) : "") +
+    (anomaly > 0 ? t("citymap.whyAnomaly", { v: anomaly }) : "") +
+    t("citymap.whyOver", {
+      n: area.n_reports_used || 0,
+      noun: t(area.n_reports_used === 1 ? "citymap.report" : "citymap.reports"),
+    });
   const muted = light ? "text-slate-600" : "text-slate-400";
   const head = light ? "text-slate-700" : "text-slate-300";
   return (
     <div className="mt-1.5">
       <div className={`mb-1 flex items-center gap-1 text-[10px] font-semibold ${head}`}>
-        <Info size={10} /> Why this hotspot?
+        <Info size={10} /> {t("citymap.whyTitle")}
       </div>
       <div className="flex h-2 w-full overflow-hidden rounded-full bg-ink-700/60">
         {segs.map((s) => (
@@ -213,6 +223,7 @@ function WhyHotspot({ area, light = false }) {
 // reports used. Toggled inline so it works inside the (non-portaled) side panel.
 function ModelCard({ model }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   if (!model) return null;
   const fmtTime = (t) => {
     if (!t) return "—";
@@ -223,29 +234,29 @@ function ModelCard({ model }) {
     .sort((a, b) => b[1] - a[1]).slice(0, 5);
   return (
     <span className="relative">
-      <button onClick={() => setOpen((v) => !v)} title="Model card"
+      <button onClick={() => setOpen((v) => !v)} title={t("citymap.modelCard")}
         className="inline-flex items-center text-slate-500 hover:text-accent">
         <Info size={12} />
       </button>
       {open && (
         <div className="absolute right-0 z-[1000] mt-1 w-64 rounded-lg border border-ink-600 bg-ink-900 p-3 text-[10px] leading-relaxed text-slate-300 shadow-xl">
-          <div className="mb-1 font-semibold text-slate-100">Risk model card</div>
+          <div className="mb-1 font-semibold text-slate-100">{t("citymap.modelCardTitle")}</div>
           <div className="text-slate-500">{model.formula}</div>
           <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-0.5">
-            <span className="text-slate-500">Half-life</span>
-            <span className="text-right tabular-nums">{model.half_life_days} days</span>
-            <span className="text-slate-500">Trend window</span>
-            <span className="text-right tabular-nums">{model.trend_window_days} days</span>
-            <span className="text-slate-500">Anomaly boost</span>
+            <span className="text-slate-500">{t("citymap.halfLife")}</span>
+            <span className="text-right tabular-nums">{t("citymap.days", { n: model.half_life_days })}</span>
+            <span className="text-slate-500">{t("citymap.trendWindow")}</span>
+            <span className="text-right tabular-nums">{t("citymap.days", { n: model.trend_window_days })}</span>
+            <span className="text-slate-500">{t("citymap.anomalyBoost")}</span>
             <span className="text-right tabular-nums">×{model.anomaly_boost}</span>
-            <span className="text-slate-500">Reports used</span>
+            <span className="text-slate-500">{t("citymap.reportsUsed")}</span>
             <span className="text-right tabular-nums">
               {(model.n_reports_used ?? 0).toLocaleString()}
             </span>
           </div>
           {sevTop.length > 0 && (
             <div className="mt-2">
-              <div className="text-slate-500">Top category weights</div>
+              <div className="text-slate-500">{t("citymap.topWeights")}</div>
               <div className="mt-0.5 flex flex-wrap gap-x-2">
                 {sevTop.map(([c, w]) => (
                   <span key={c}>{prettyCat(c)} ×{w}</span>
@@ -254,7 +265,7 @@ function ModelCard({ model }) {
             </div>
           )}
           <div className="mt-2 border-t border-ink-700 pt-1 text-slate-500">
-            Recomputed from {(model.n_reports_used ?? 0).toLocaleString()} reports ·{" "}
+            {t("citymap.recomputed", { n: (model.n_reports_used ?? 0).toLocaleString() })}{" "}
             {fmtTime(model.computed_at)}
           </div>
         </div>
@@ -282,6 +293,7 @@ function MiniBar({ label, pct, value, color = "#f4b23c", sub }) {
 // ceiling, plus the API's own disclaimer string.
 function AccuracyPanel({ data, loading }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const model = data?.model;
   const summary = model?.summary || {};
   const surges = data?.surge_detection || [];
@@ -303,14 +315,16 @@ function AccuracyPanel({ data, loading }) {
     <div className="rounded-xl border border-accent/30 bg-ink-800/70 p-3">
       <button onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 text-xs font-semibold text-slate-200">
-        <Target size={13} className="text-accent" /> Model accuracy (backtested)
+        <Target size={13} className="text-accent" /> {t("citymap.accuracy")}
         {open ? <ChevronDown size={13} className="ml-auto text-slate-500" />
               : <ChevronRight size={13} className="ml-auto text-slate-500" />}
       </button>
 
       {!open && surges.length > 0 && (
         <div className="mt-1.5 text-[10px] text-slate-400">
-          Caught <b className="text-signal-green">{caught.length}/{surges.length}</b> planted crime waves.
+          {t("citymap.caughtPre")}
+          <b className="text-signal-green">{caught.length}/{surges.length}</b>
+          {t("citymap.caughtPost")}
         </div>
       )}
 
@@ -318,7 +332,7 @@ function AccuracyPanel({ data, loading }) {
         <div className="mt-2 space-y-3">
           {loading && !data && (
             <div className="flex items-center gap-2 py-3 text-[11px] text-slate-500">
-              <Loader2 size={13} className="animate-spin text-accent" /> Backtesting…
+              <Loader2 size={13} className="animate-spin text-accent" /> {t("citymap.backtesting")}
             </div>
           )}
 
@@ -327,13 +341,13 @@ function AccuracyPanel({ data, loading }) {
               {/* 1. Surge detection — lead with the strongest result */}
               <div className="rounded-lg bg-signal-green/10 p-2 ring-1 ring-signal-green/20">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-signal-green">
-                  <Siren size={12} /> Caught {caught.length}/{surges.length} planted crime waves
+                  <Siren size={12} /> {t("citymap.caughtWaves", { n: caught.length, m: surges.length })}
                 </div>
                 {bestSurge && bestSurge.rank_before_surge && bestSurge.rank_during_surge && (
                   <p className="mt-1 text-[10px] leading-snug text-slate-300">
-                    {bestSurge.area} surfaced rank{" "}
+                    {t("citymap.surgePre", { area: bestSurge.area })}{" "}
                     <b>{bestSurge.rank_before_surge}→{bestSurge.rank_during_surge}</b>{" "}
-                    the week its {prettyCat(bestSurge.category)} wave hit.
+                    {t("citymap.surgePost", { cat: prettyCat(bestSurge.category) })}
                   </p>
                 )}
               </div>
@@ -342,16 +356,17 @@ function AccuracyPanel({ data, loading }) {
               {curve.length > 0 && (
                 <div>
                   <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold text-slate-300">
-                    <BarChart3 size={11} className="text-accent" /> Capture curve
+                    <BarChart3 size={11} className="text-accent" /> {t("citymap.captureCurve")}
                   </div>
                   {cap10 != null && (
                     <p className="mb-1 text-[10px] text-slate-400">
-                      Top-10 zones = <b className="text-accent">{cap10}%</b> of next-week crime.
+                      {t("citymap.top10Pre")} <b className="text-accent">{cap10}%</b>{" "}
+                      {t("citymap.top10Post")}
                     </p>
                   )}
                   <div className="space-y-1">
                     {[3, 5, 10].filter((k) => curve.length >= k).map((k) => (
-                      <MiniBar key={k} label={`top-${k}`}
+                      <MiniBar key={k} label={t("citymap.topK", { k })}
                         pct={curve[k - 1] * 100}
                         value={`${Math.round(curve[k - 1] * 100)}%`} />
                     ))}
@@ -372,17 +387,20 @@ function AccuracyPanel({ data, loading }) {
                     {pai10 != null ? `${pai10.toFixed(2)}×` : "—"}
                   </div>
                   <div className="text-[9px] text-slate-500">
-                    PAI@10{oracle10 ? ` of ${oracle10.toFixed(2)}× ceiling` : ""}
+                    PAI@10{oracle10 ? t("citymap.ofCeiling", { x: oracle10.toFixed(2) }) : ""}
                   </div>
                 </div>
               </div>
               {pctOfCeiling != null && (
                 <div>
-                  <MiniBar label="vs oracle" pct={pctOfCeiling}
+                  <MiniBar label={t("citymap.vsOracle")} pct={pctOfCeiling}
                     value={`${pctOfCeiling}%`} color="#22c55e" />
                   <p className="mt-1 text-[9px] leading-snug text-slate-500">
-                    PAI {pai10.toFixed(2)}× of the {oracle10.toFixed(2)}× perfect-hindsight
-                    ceiling ≈ {pctOfCeiling}% of what's achievable on this data.
+                    {t("citymap.ceilingNote", {
+                      pai: pai10.toFixed(2),
+                      oracle: oracle10.toFixed(2),
+                      pct: pctOfCeiling,
+                    })}
                   </p>
                 </div>
               )}
@@ -390,7 +408,7 @@ function AccuracyPanel({ data, loading }) {
               {/* baseline comparison */}
               {compare.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[10px] font-semibold text-slate-300">vs baselines (PAI@10)</div>
+                  <div className="mb-1 text-[10px] font-semibold text-slate-300">{t("citymap.vsBaselines")}</div>
                   <div className="space-y-1">
                     {compare.map((row) => (
                       <MiniBar key={row.strategy} label={row.strategy}
@@ -416,6 +434,7 @@ function AccuracyPanel({ data, loading }) {
 }
 
 export default function CityMapView() {
+  const t = useT();
   const [layer, setLayer] = useState("reports"); // reports | risk | cyber
   const [category, setCategory] = useState("");
   const [days, setDays] = useState(0);
@@ -534,7 +553,7 @@ export default function CityMapView() {
     return (
       <div className="flex flex-col items-center py-24 text-slate-400">
         <Loader2 size={26} className="animate-spin text-accent" />
-        <p className="mt-3 text-sm">Loading city intelligence…</p>
+        <p className="mt-3 text-sm">{t("citymap.loading")}</p>
       </div>
     );
   }
@@ -556,14 +575,16 @@ export default function CityMapView() {
     <div className="flex h-full flex-col p-4 sm:p-6">
       <div className="mb-1 flex items-center gap-2">
         <MapIcon className="text-accent" size={20} />
-        <h2 className="font-serif text-xl font-bold text-white">City Map · Ahmedabad</h2>
+        <h2 className="font-serif text-xl font-bold text-white">{t("citymap.title")}</h2>
       </div>
       <p className="mb-3 text-xs text-slate-500">
         {layer === "reports"
-          ? `Area-wise load from ${totals.complaints} complaints, ${totals.cases} linked cases and ${totals.anomalies} anomaly detections.`
+          ? t("citymap.subReports", {
+              c: totals.complaints, k: totals.cases, a: totals.anomalies,
+            })
           : layer === "cyber"
-          ? "Victim-location density — where victims live, not where fraudsters operate."
-          : "Hotspot forecast — recency-weighted risk model over reports, severity, category and live anomaly signals."}
+          ? t("citymap.subCyber")
+          : t("citymap.subRisk")}
       </p>
 
       {/* control bar */}
@@ -572,17 +593,17 @@ export default function CityMapView() {
           <button onClick={() => setLayer("reports")}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition ${
               layer === "reports" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
-            <Layers size={13} /> Reports
+            <Layers size={13} /> {t("citymap.layerReports")}
           </button>
           <button onClick={() => setLayer("risk")}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition ${
               layer === "risk" ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
-            <Brain size={13} /> Risk forecast
+            <Brain size={13} /> {t("citymap.layerRisk")}
           </button>
           <button onClick={() => setLayer("cyber")}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition ${
               layer === "cyber" ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
-            <ShieldAlert size={13} /> Cyber fraud
+            <ShieldAlert size={13} /> {t("citymap.layerCyber")}
           </button>
         </div>
 
@@ -590,14 +611,14 @@ export default function CityMapView() {
           <>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
               className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
-              <option value="">All categories</option>
+              <option value="">{t("citymap.allCategories")}</option>
               {(data.categories || []).map((c) => (
                 <option key={c} value={c}>{c.replace(/_/g, " ")}</option>
               ))}
             </select>
             <select value={days} onChange={(e) => setDays(Number(e.target.value))}
               className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
-              {WINDOWS.map((w) => <option key={w.days} value={w.days}>{w.label}</option>)}
+              {WINDOWS.map((w) => <option key={w.days} value={w.days}>{t(w.key)}</option>)}
             </select>
           </>
         )}
@@ -607,13 +628,16 @@ export default function CityMapView() {
             <select value={days} onChange={(e) => setDays(Number(e.target.value))}
               className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
               {WINDOWS.filter((w) => w.days > 0).map((w) => (
-                <option key={w.days} value={w.days}>{w.label}</option>
+                <option key={w.days} value={w.days}>{t(w.key)}</option>
               ))}
             </select>
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600/15 px-3 py-1.5 font-semibold text-violet-200 ring-1 ring-violet-500/30">
               <ShieldAlert size={13} className="text-violet-300" />
-              {formatINR(cyber.citywide.total_amount_lost)} lost citywide ·{" "}
-              {cyber.citywide.total_victims} victims · last {cyberWindowDays} days
+              {t("citymap.cyberChip", {
+                amount: formatINR(cyber.citywide.total_amount_lost),
+                victims: cyber.citywide.total_victims,
+                days: cyberWindowDays,
+              })}
             </span>
           </>
         )}
@@ -622,18 +646,23 @@ export default function CityMapView() {
           {routes ? (
             <button onClick={() => setRoutes(null)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 font-semibold text-slate-300 hover:text-white">
-              <X size={13} /> Clear routes
+              <X size={13} /> {t("citymap.clearRoutes")}
             </button>
           ) : (
             <>
               <select value={units} onChange={(e) => setUnits(Number(e.target.value))}
-                title="Patrol units available"
+                title={t("citymap.unitsAvailable")}
                 className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-slate-300">
-                {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} unit{n > 1 ? "s" : ""}</option>)}
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {t(n > 1 ? "citymap.unitWords" : "citymap.unitWord")}
+                  </option>
+                ))}
               </select>
               <button onClick={planRoutes} disabled={planning}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 font-semibold text-white hover:bg-accent-700 disabled:opacity-50">
-                {planning ? <Loader2 size={13} className="animate-spin" /> : <Route size={13} />} Plan patrol routes
+                {planning ? <Loader2 size={13} className="animate-spin" /> : <Route size={13} />}{" "}
+                {t("citymap.planRoutes")}
               </button>
             </>
           )}
@@ -647,7 +676,7 @@ export default function CityMapView() {
             <div className="pointer-events-none absolute left-1/2 top-3 z-[1000] -translate-x-1/2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-ink-900/90 px-3 py-1.5 text-[11px] font-semibold text-amber-200 shadow-lg ring-1 ring-amber-500/40">
                 <WifiOff size={12} className="text-amber-300" />
-                Map tiles unavailable — running offline; data layers still live
+                {t("citymap.tilesOffline")}
               </span>
             </div>
           )}
@@ -676,24 +705,27 @@ export default function CityMapView() {
                 <CircleMarker key={a.area} center={[a.lat, a.lng]} pathOptions={style} radius={style.radius}>
                   <Tooltip direction="top" opacity={0.9}>
                     <span className="text-xs font-semibold">
-                      {a.area}: {total} report{total === 1 ? "" : "s"}{a.anomalies > 0 ? " · ⚠" : ""}
+                      {a.area}: {total}{" "}
+                      {t(total === 1 ? "citymap.report" : "citymap.reports")}
+                      {a.anomalies > 0 ? " · ⚠" : ""}
                     </span>
                   </Tooltip>
                   <Popup>
                     <div className="min-w-[190px] text-xs">
                       <div className="mb-1 text-sm font-bold">{a.area}</div>
                       <div className="space-y-0.5">
-                        <div>Complaints: <b>{a.complaints}</b> · Cases: <b>{a.cases}</b></div>
-                        {a.top_category && <div>Top category: <b>{a.top_category.replace(/_/g, " ")}</b></div>}
+                        <div>{t("citymap.complaints")}: <b>{a.complaints}</b> · {t("citymap.cases")}: <b>{a.cases}</b></div>
+                        {a.top_category && <div>{t("citymap.topCategory")}: <b>{a.top_category.replace(/_/g, " ")}</b></div>}
                         {r && (
                           <div className="flex items-center gap-1">
-                            Risk: <b style={{ color: BAND_COLORS[r.risk_band] }}>{r.risk_score}</b>
+                            {t("citymap.risk")}: <b style={{ color: BAND_COLORS[r.risk_band] }}>{r.risk_score}</b>
                             <TrendIcon trend={r.trend} />
                           </div>
                         )}
                         {a.anomalies > 0 && (
                           <div className="flex items-center gap-1 font-semibold text-red-600">
-                            <Siren size={12} /> {a.anomalies} anomaly alert{a.anomalies === 1 ? "" : "s"}
+                            <Siren size={12} /> {a.anomalies}{" "}
+                            {t(a.anomalies === 1 ? "citymap.anomalyAlert" : "citymap.anomalyAlerts")}
                           </div>
                         )}
                       </div>
@@ -709,20 +741,26 @@ export default function CityMapView() {
               return (
                 <CircleMarker key={a.area} center={[a.lat, a.lng]} pathOptions={style} radius={style.radius}>
                   <Tooltip direction="top" opacity={0.9}>
-                    <span className="text-xs font-semibold">{a.area}: risk {a.risk_score} ({a.risk_band})</span>
+                    <span className="text-xs font-semibold">
+                      {t("citymap.riskTooltip", {
+                        area: a.area, score: a.risk_score,
+                        band: t(`citymap.band.${a.risk_band}`),
+                      })}
+                    </span>
                   </Tooltip>
                   <Popup>
                     <div className="min-w-[190px] text-xs">
                       <div className="mb-1 text-sm font-bold">{a.area}</div>
                       <div className="space-y-0.5">
-                        <div>Risk score: <b style={{ color: BAND_COLORS[a.risk_band] }}>{a.risk_score} ({a.risk_band})</b></div>
+                        <div>{t("citymap.riskScore")}: <b style={{ color: BAND_COLORS[a.risk_band] }}>{a.risk_score} ({t(`citymap.band.${a.risk_band}`)})</b></div>
                         <div className="flex items-center gap-1">
-                          Forecast: <b style={{ color: BAND_COLORS[a.predicted_band] }}>{a.predicted_score}</b>
-                          <TrendIcon trend={a.trend} /> {a.trend}
+                          {t("citymap.forecast")}: <b style={{ color: BAND_COLORS[a.predicted_band] }}>{a.predicted_score}</b>
+                          <TrendIcon trend={a.trend} /> {t(`citymap.trend.${a.trend}`)}
                         </div>
                         {a.active_anomalies > 0 && (
                           <div className="flex items-center gap-1 font-semibold text-red-600">
-                            <Siren size={12} /> {a.active_anomalies} live anomaly signal{a.active_anomalies === 1 ? "" : "s"}
+                            <Siren size={12} /> {a.active_anomalies}{" "}
+                            {t(a.active_anomalies === 1 ? "citymap.anomalySignal" : "citymap.anomalySignals")}
                           </div>
                         )}
                       </div>
@@ -741,7 +779,8 @@ export default function CityMapView() {
                 <CircleMarker key={a.area} center={[a.lat, a.lng]} pathOptions={style} radius={style.radius}>
                   <Tooltip direction="top" opacity={0.9}>
                     <span className="text-xs font-semibold">
-                      {a.area}: {a.victim_count} victim{a.victim_count === 1 ? "" : "s"}
+                      {a.area}: {a.victim_count}{" "}
+                      {t(a.victim_count === 1 ? "citymap.victim" : "citymap.victims")}
                       {style.hasAmount ? ` · ${formatINR(a.total_amount_lost)}` : ""}
                     </span>
                   </Tooltip>
@@ -752,17 +791,17 @@ export default function CityMapView() {
                       </div>
                       <div className="space-y-0.5">
                         {a.top_category_label && (
-                          <div>Top fraud type: <b>{a.top_category_label}</b></div>
+                          <div>{t("citymap.topFraudType")}: <b>{a.top_category_label}</b></div>
                         )}
-                        <div>Victims: <b>{a.victim_count}</b></div>
+                        <div>{t("citymap.victimsLabel")}: <b>{a.victim_count}</b></div>
                         <div>
-                          ₹ total: <b style={{ color: "#7c3aed" }}>
+                          {t("citymap.totalAmount")}: <b style={{ color: "#7c3aed" }}>
                             {style.hasAmount ? formatINR(a.total_amount_lost) : "—"}
                           </b>
                         </div>
                         {Object.keys(a.fraud_channels || {}).length > 0 && (
                           <div className="text-slate-600">
-                            via {Object.entries(a.fraud_channels)
+                            {t("citymap.via")} {Object.entries(a.fraud_channels)
                               .sort((x, y) => y[1] - x[1])
                               .map(([ch, n]) => `${ch.replace(/_/g, " ")} (${n})`)
                               .join(", ")}
@@ -787,7 +826,9 @@ export default function CityMapView() {
                   pathOptions={{ color, weight: 3, opacity: 0.85, dashArray: "6 6" }}>
                   <Tooltip sticky>
                     <span className="text-xs font-semibold">
-                      Unit {rt.unit}: {rt.distance_km} km · ~{rt.eta_min} min
+                      {t("citymap.unitTooltip", {
+                        n: rt.unit, km: rt.distance_km, min: rt.eta_min,
+                      })}
                     </span>
                   </Tooltip>
                 </Polyline>
@@ -807,13 +848,13 @@ export default function CityMapView() {
           {layer === "cyber" && cyber && (
             <div className="rounded-xl border border-violet-500/30 bg-violet-950/30 p-3">
               <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-violet-100">
-                <ShieldAlert size={13} className="text-violet-300" /> Top fraud channels
+                <ShieldAlert size={13} className="text-violet-300" /> {t("citymap.topChannels")}
               </div>
               {(() => {
                 const ch = cyber.citywide.top_channels || [];
                 const max = Math.max(...ch.map((c) => c.count), 1);
                 if (!ch.length)
-                  return <p className="py-3 text-center text-xs text-slate-500">No channel data in window.</p>;
+                  return <p className="py-3 text-center text-xs text-slate-500">{t("citymap.noChannelData")}</p>;
                 return (
                   <div className="space-y-2">
                     {ch.map((c) => (
@@ -834,7 +875,7 @@ export default function CityMapView() {
                 );
               })()}
               <div className="mt-3 border-t border-violet-500/20 pt-2 text-[10px] leading-snug text-violet-300/80">
-                Victim-location density — where victims live, not where fraudsters operate.
+                {t("citymap.subCyber")}
               </div>
             </div>
           )}
@@ -843,15 +884,16 @@ export default function CityMapView() {
 
           <div className="rounded-xl border border-ink-600 bg-ink-800/70 p-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-              <Brain size={13} className="text-accent" /> Top predicted hotspots
+              <Brain size={13} className="text-accent" /> {t("citymap.topHotspots")}
               <ModelCard model={risk.model} />
               <button onClick={() => exportCsv("risk.csv", "risk-table.csv")}
                 disabled={exporting === "risk.csv"}
-                title="Export the full ranked risk table as CSV"
+                title={t("citymap.exportRiskCsv")}
                 className="ml-auto inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-1 text-[10px] font-semibold text-slate-300 hover:text-white disabled:opacity-50">
                 {exporting === "risk.csv"
                   ? <Loader2 size={11} className="animate-spin" />
-                  : <Download size={11} />} Export CSV
+                  : <Download size={11} />}{" "}
+                {t("citymap.exportCsv")}
               </button>
             </div>
             <div className="space-y-1">
@@ -882,14 +924,15 @@ export default function CityMapView() {
           {routes?.routes?.length > 0 && (
             <div className="rounded-xl border border-ink-600 bg-ink-800/70 p-3">
               <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-                <Route size={13} className="text-accent" /> Patrol plan
+                <Route size={13} className="text-accent" /> {t("citymap.patrolPlan")}
                 <button onClick={() => exportCsv(`patrol-plan.csv?units=${units}`, "patrol-plan.csv")}
                   disabled={exporting === `patrol-plan.csv?units=${units}`}
-                  title="Export this patrol plan as CSV"
+                  title={t("citymap.exportPatrolCsv")}
                   className="ml-auto inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-1 text-[10px] font-semibold text-slate-300 hover:text-white disabled:opacity-50">
                   {exporting === `patrol-plan.csv?units=${units}`
                     ? <Loader2 size={11} className="animate-spin" />
-                    : <Download size={11} />} Export CSV
+                    : <Download size={11} />}{" "}
+                  {t("citymap.exportCsv")}
                 </button>
                 <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
                   <Building2 size={10} /> {routes.station.name}
@@ -900,9 +943,9 @@ export default function CityMapView() {
                 return (
                   <div key={rt.unit} className="mb-2 rounded-md bg-ink-900/40 p-2 text-xs">
                     <div className="mb-1 flex items-center gap-1.5 font-semibold" style={{ color }}>
-                      Unit {rt.unit}
+                      {t("citymap.unitLabel", { n: rt.unit })}
                       <span className="ml-auto font-normal text-slate-500">
-                        {rt.distance_km} km · ~{rt.eta_min} min
+                        {t("citymap.routeStats", { km: rt.distance_km, min: rt.eta_min })}
                       </span>
                     </div>
                     <div className="text-slate-400">
@@ -921,12 +964,12 @@ export default function CityMapView() {
 
           {temporal && (
             <div className="rounded-xl border border-ink-600 bg-ink-800/70 p-3">
-              <div className="mb-2 text-xs font-semibold text-slate-200">Reports by hour of day</div>
+              <div className="mb-2 text-xs font-semibold text-slate-200">{t("citymap.byHour")}</div>
               <HourBars data={temporal.by_hour} />
               <div className="mt-1 flex justify-between text-[9px] text-slate-600">
                 <span>00:00</span><span>12:00</span><span>23:00</span>
               </div>
-              <div className="mb-2 mt-3 text-xs font-semibold text-slate-200">By day of week</div>
+              <div className="mb-2 mt-3 text-xs font-semibold text-slate-200">{t("citymap.byDay")}</div>
               <BarList data={temporal.by_day.map((d) => ({ label: d.day, count: d.count }))} />
             </div>
           )}
@@ -936,10 +979,7 @@ export default function CityMapView() {
       <div className="mt-2 flex items-start gap-2 text-[10px] leading-snug text-slate-500">
         <TriangleAlert size={12} className="mt-0.5 shrink-0 text-accent" />
         <span>
-          Risk scores are recency-weighted model estimates over locality-level
-          approximations — decision support for patrol planning, not evidence.
-          Built on fully synthetic, deterministic demo data; accuracy figures
-          demonstrate methodology, not real-world performance (data provenance:{" "}
+          {t("citymap.disclaimer")}{" "}
           <code className="text-slate-400">docs/AHMEDABAD_CRIME_DATA.md</code>).
         </span>
       </div>

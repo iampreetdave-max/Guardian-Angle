@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { TriangleAlert, X, ExternalLink, MapPin } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
+
+// Severity comes back from the API; map only the known values to shared keys so
+// an unexpected one renders raw instead of a missing-key string.
+const SEV_KEYS = {
+  critical: "common.critical", high: "common.high",
+  medium: "common.medium", low: "common.low",
+};
 
 const SEV_STYLES = {
   critical: "border-signal-red/50 bg-signal-red/15 text-signal-red",
@@ -13,6 +21,7 @@ const SEV_STYLES = {
  * Polls every 30s; locally dismissible except critical alerts, which stay
  * pinned until the admin deactivates the broadcast. */
 export default function DisasterBanner() {
+  const t = useT();
   const [broadcasts, setBroadcasts] = useState([]);
   const [hidden, setHidden] = useState(() => new Set());
 
@@ -40,7 +49,8 @@ export default function DisasterBanner() {
           <TriangleAlert size={15} className="mt-0.5 shrink-0 animate-pulse" />
           <div className="min-w-0 flex-1">
             <span className="font-bold uppercase tracking-wide">
-              {b.kind === "disaster" ? "Disaster alert" : "Advisory"} · {b.severity}
+              {b.kind === "disaster" ? t("alerts.disasterAlert") : t("alerts.advisory")} ·{" "}
+              {SEV_KEYS[b.severity] ? t(SEV_KEYS[b.severity]) : b.severity}
             </span>
             <span className="mx-1.5 font-semibold">{b.title}</span>
             <span className="text-slate-300">{b.message}</span>
@@ -53,7 +63,7 @@ export default function DisasterBanner() {
               {b.link && (
                 <a href={b.link} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-0.5 underline">
-                  <ExternalLink size={10} /> details
+                  <ExternalLink size={10} /> {t("common.details")}
                 </a>
               )}
             </span>
@@ -62,7 +72,7 @@ export default function DisasterBanner() {
             <button
               onClick={() => setHidden((prev) => new Set(prev).add(b.id))}
               className="shrink-0 rounded p-0.5 opacity-70 hover:opacity-100"
-              title="Hide"
+              title={t("alerts.hide")}
             >
               <X size={13} />
             </button>

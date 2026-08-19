@@ -36,6 +36,10 @@ export const authRegister = (p) => api.post("/auth/register", p).then((r) => r.d
 export const authLogin = (p) => api.post("/auth/login", p).then((r) => r.data);
 export const authMe = () => api.get("/auth/me").then((r) => r.data);
 export const authLogout = () => api.post("/auth/logout").then((r) => r.data);
+// The signed-in user's own preferences (interface language). Self-service —
+// distinct from the admin-only PATCH /admin/users/{id}.
+export const updatePreferences = (p) =>
+  api.patch("/auth/me/preferences", p).then((r) => r.data);
 export const changePassword = (p) =>
   api.post("/auth/change-password", p).then((r) => r.data);
 export const forgotPassword = (p) =>

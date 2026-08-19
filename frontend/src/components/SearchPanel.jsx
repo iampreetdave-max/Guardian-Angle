@@ -1,13 +1,18 @@
 import { useRef, useState } from "react";
 import { Search, Type, Boxes, Image as ImageIcon, ScanFace, Loader2, Layers, Lightbulb } from "lucide-react";
+import { useT } from "../i18n";
 
+// Module-level, so labels/placeholders are stored as i18n KEYS and resolved with
+// t() at the render site — a hook can't be called out here.
 const MODES = [
-  { key: "text", label: "Text", icon: Type, ph: 'e.g. "person in red jacket near the gate"' },
-  { key: "object", label: "Object", icon: Boxes, ph: "e.g. car, person, truck, motorcycle" },
-  { key: "image", label: "Reference Image", icon: ImageIcon },
-  { key: "face", label: "Suspect Face", icon: ScanFace },
+  { key: "text", label: "vision.modeText", icon: Type, ph: "vision.phText" },
+  { key: "object", label: "vision.modeObject", icon: Boxes, ph: "vision.phObject" },
+  { key: "image", label: "vision.modeImage", icon: ImageIcon },
+  { key: "face", label: "vision.modeFace", icon: ScanFace },
 ];
 
+// Query values, not display text: CLIP/YOLO only understand English labels, so
+// these stay untranslated in every language.
 const COMMON_OBJECTS = ["person", "car", "truck", "motorcycle", "bicycle", "bus", "backpack", "handbag"];
 
 // Object-ish nouns that hint the operator really wants per-object (region)
@@ -20,6 +25,7 @@ const OBJECT_WORDS = [
 ];
 
 export default function SearchPanel({ onSearch, searching, faceEnabled }) {
+  const t = useT();
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
@@ -72,7 +78,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
               key={m.key}
               disabled={disabled}
               onClick={() => switchMode(m.key)}
-              title={disabled ? "ArcFace model not available" : ""}
+              title={disabled ? t("vision.faceUnavailable") : ""}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                 active
                   ? "bg-accent-600 text-white"
@@ -82,7 +88,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
               }`}
             >
               <m.icon size={14} />
-              {m.label}
+              {t(m.label)}
             </button>
           );
         })}
@@ -98,19 +104,19 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
             <current.icon size={20} className="text-accent" />
             <div className="min-w-0">
               <div className="text-sm text-slate-200">
-                {file ? file.name : `Upload ${current.label.toLowerCase()}`}
+                {file
+                  ? file.name
+                  : t("vision.uploadWhat", { what: t(current.label).toLowerCase() })}
               </div>
               <div className="text-[11px] text-slate-500">
-                {mode === "face"
-                  ? "Match this person across all footage (ArcFace)"
-                  : "Find frames that look like this image (CLIP)"}
+                {mode === "face" ? t("vision.faceHint") : t("vision.imageHint")}
               </div>
             </div>
           </button>
           {file && (
             <img
               src={URL.createObjectURL(file)}
-              alt="ref"
+              alt={t("vision.refAlt")}
               className="h-14 w-14 rounded-lg object-cover ring-1 ring-ink-500"
             />
           )}
@@ -127,7 +133,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
             className="flex items-center gap-2 rounded-lg bg-accent-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent-700 disabled:opacity-40"
           >
             {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            Search
+            {t("common.search")}
           </button>
         </div>
       ) : (
@@ -141,7 +147,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()}
-              placeholder={current.ph}
+              placeholder={t(current.ph)}
               className="w-full rounded-lg bg-ink-900/60 py-3 pl-10 pr-4 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-2 focus:ring-accent"
             />
           </div>
@@ -151,7 +157,7 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
             className="flex items-center gap-2 rounded-lg bg-accent-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent-700 disabled:opacity-40"
           >
             {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            Search
+            {t("common.search")}
           </button>
         </div>
       )}
@@ -178,14 +184,15 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-[11px] text-slate-300">
           <Lightbulb size={13} className="text-accent" />
           <span>
-            Searching for a specific object? Whole-frame text match is fuzzy —{" "}
-            <span className="font-semibold text-accent">Find every object</span> scores each detected object for precise matches.
+            {t("vision.nudgeLead")}{" "}
+            <span className="font-semibold text-accent">{t("vision.findEveryObject")}</span>{" "}
+            {t("vision.nudgeTail")}
           </span>
           <button
             onClick={runRegion}
             className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent-600 px-2.5 py-1 font-semibold text-white transition hover:bg-accent-700"
           >
-            <Boxes size={12} /> Find every object
+            <Boxes size={12} /> {t("vision.findEveryObject")}
           </button>
         </div>
       )}
@@ -200,10 +207,10 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
                 ? "bg-signal-green/15 text-signal-green"
                 : "bg-ink-700 text-slate-400 hover:bg-ink-600"
             }`}
-            title="Match individual detected objects instead of whole frames — finds EVERY instance (e.g. all 5 red cars), each with its own box."
+            title={t("vision.perObjectTitle")}
           >
             <Boxes size={13} />
-            {perObject ? "Find every object: ON" : "Find every object: OFF"}
+            {perObject ? t("vision.perObjectOn") : t("vision.perObjectOff")}
           </button>
         )}
         {!perObject && (
@@ -214,18 +221,18 @@ export default function SearchPanel({ onSearch, searching, faceEnabled }) {
                 ? "bg-accent/15 text-accent"
                 : "bg-ink-700 text-slate-400 hover:bg-ink-600"
             }`}
-            title="When on, frames from the same camera within a few seconds are collapsed into one event. Turn off to see every matching frame."
+            title={t("vision.groupTitle")}
           >
             <Layers size={13} />
-            {group ? "Grouping moments: ON" : "Grouping moments: OFF"}
+            {group ? t("vision.groupOn") : t("vision.groupOff")}
           </button>
         )}
         <span className="text-[10px] text-slate-500">
           {perObject
-            ? "instance search — every matching object, with its box"
+            ? t("vision.hintPerObject")
             : group
-            ? "collapses near-duplicate frames into events"
-            : "shows every matching frame"}
+            ? t("vision.hintGroup")
+            : t("vision.hintAll")}
         </span>
       </div>
     </div>

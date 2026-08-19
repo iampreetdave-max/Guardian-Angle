@@ -3,6 +3,8 @@ import { ShieldCheck, ScanSearch, Inbox, Loader2, Scale, Megaphone, FolderOpen, 
 import * as API from "./api";
 import { useAuth, isStaff, isAdmin } from "./auth";
 import StatusBar from "./components/StatusBar";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import { useT } from "./i18n";
 import VideoManager from "./components/VideoManager";
 import SearchPanel from "./components/SearchPanel";
 import FrameCard from "./components/FrameCard";
@@ -55,6 +57,7 @@ function Workbench() {
   const [stopping, setStopping] = useState(false);
 
   const { user, logout } = useAuth();
+  const t = useT();
   const staff = isStaff(user);
   // citizens land on complaints; staff land on the command dashboard
   const [module, setModule] = useState(staff ? "dashboard" : "complaints");
@@ -64,16 +67,16 @@ function Workbench() {
 
   // Role-based navigation, shared by the desktop top-nav and the mobile bottom bar.
   const navItems = [
-    staff && { key: "dashboard", label: "Dashboard", icon: BarChart3 },
-    staff && { key: "vision", label: "VisionScan", icon: ScanSearch },
-    staff && { key: "alerts", label: "Live Alerts", icon: Siren },
-    staff && { key: "map", label: "City Map", icon: MapIcon },
-    staff && { key: "arbiter", label: "Arbiter", icon: Scale },
-    staff && { key: "crimegpt", label: "CrimeGPT", icon: FileText },
-    { key: "govintel", label: "Legal Feed", icon: Landmark },
-    { key: "cases", label: "Cases", icon: FolderOpen },
-    { key: "complaints", label: "Complaints", icon: Megaphone },
-    isAdmin(user) && { key: "admin", label: "Admin", icon: Shield },
+    staff && { key: "dashboard", labelKey: "nav.dashboard", icon: BarChart3 },
+    staff && { key: "vision", labelKey: "nav.vision", icon: ScanSearch },
+    staff && { key: "alerts", labelKey: "nav.alerts", icon: Siren },
+    staff && { key: "map", labelKey: "nav.map", icon: MapIcon },
+    staff && { key: "arbiter", labelKey: "nav.arbiter", icon: Scale },
+    staff && { key: "crimegpt", labelKey: "nav.crimegpt", icon: FileText },
+    { key: "govintel", labelKey: "nav.govintel", icon: Landmark },
+    { key: "cases", labelKey: "nav.cases", icon: FolderOpen },
+    { key: "complaints", labelKey: "nav.complaints", icon: Megaphone },
+    isAdmin(user) && { key: "admin", labelKey: "nav.admin", icon: Shield },
   ].filter(Boolean);
 
   const lastQuery = useRef({ query: "", type: "text" });
@@ -278,11 +281,11 @@ function Workbench() {
           />
           <div className="min-w-0">
             <h1 className="whitespace-nowrap font-serif text-lg font-bold leading-tight text-white sm:text-xl">
-              City<span className="text-accent">Shield</span>
+              {t("header.brand")}
             </h1>
             {/* Only shown where there is genuinely room for it on one line. */}
             <p className="hidden whitespace-nowrap text-[10px] uppercase tracking-wider text-slate-500 2xl:block">
-              Cyber Crime Branch · Ahmedabad City Police
+              {t("header.tagline")}
             </p>
           </div>
         </div>
@@ -300,7 +303,7 @@ function Workbench() {
                   module === m.key ? "bg-accent-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                <m.icon size={14} /> {m.label}
+                <m.icon size={14} /> {t(m.labelKey)}
               </button>
             ))}
           </nav>
@@ -312,6 +315,7 @@ function Workbench() {
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0 sm:gap-3">
           {module === "vision" && <StatusBar health={health} />}
+          <LanguageSwitcher />
           {staff && <AlertTicker onOpen={() => setModule("alerts")} />}
           <NotificationBell />
           <div className="flex shrink-0 items-center gap-2 border-l border-ink-700 pl-2 sm:pl-3">
@@ -321,7 +325,7 @@ function Workbench() {
               <div className="truncate text-xs font-semibold text-slate-200">{user.name}</div>
               <div className="text-[10px] uppercase tracking-wide text-slate-500">{user.role}</div>
             </div>
-            <button onClick={logout} title="Sign out" aria-label="Sign out"
+            <button onClick={logout} title={t("header.signOut")} aria-label={t("header.signOut")}
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink-700 text-slate-300 transition hover:bg-signal-red/20 hover:text-signal-red">
               <LogOut size={15} />
             </button>

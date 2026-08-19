@@ -1,0 +1,56 @@
+ Excellent — this is the definitive answer, and it's a mixed bag: the project is mostly well-secured, but there are a few real
+  findings worth escalating. Every one of the 40 tables has RLS enabled, and the vast majority of policies are correctly scoped
+  (auth.uid() = employee_id, role checks, manager-via-reports_to). That's a solid design. But a handful of policies are dangerously
+  loose.
+
+  🔴 Critical — the users table
+
+  Three policies combine into a likely privilege-escalation + data-integrity hole:
+
+  users_delete   (DELETE, authenticated)  USING: true          ← any logged-in user can delete ANY user
+  users_insert   (INSERT, authenticated)  WITH CHECK: true     ← any logged-in user can insert ANY user row
+  users_no_delete(DELETE, public)         USING: false         ← intended to block deletes...
+  users_update_own(UPDATE, public)        USING/CHECK: auth.uid()=id   ← update your own row, no column limits
+
+  Why this is serious:
+  1. Delete-any-user: users_delete grants USING true to authenticated. The users_no_delete (false) policy does not save you —
+  permissive policies combine with OR, so true OR false = true. So unless users_no_delete is marked RESTRICTIVE (my query didn't
+  capture that column — needs checking), any employee can delete every user row. The very name "users_no_delete" suggests someone
+  thought they were blocking deletes but it only works if it's restrictive.
+  2. Self privilege-escalation: users_update_own lets you update your own row with no column restriction. The role column is
+  unprotected. Since is_super_admin() / current_user_role() read users.role, an employee can likely run UPDATE users SET
+  role='super_admin' WHERE id = <self> and become super_admin — which unlocks nearly every admin policy in the whole schema. (Caveat:
+  a BEFORE UPDATE trigger could block role changes — must verify.)
+  3. Insert-arbitrary-users: WITH CHECK true lets any authenticated user inject users rows, including ones with role='super_admin'.
+
+  This is the headline. You (preet.d, role employee, status training) can probably escalate to super_admin.
+
+  🟠 Medium
+
+  - system_config is world-readable: system_config_select_all (SELECT, public) USING: true. Granted to public, so even the anon key
+  can read it. If it holds API keys, secrets, or feature flags, that's a leak. Check its contents.
+  - audit_log insert open to everyone: audit_log_insert_system (INSERT, public) WITH CHECK: true → anyone (incl. anon) can forge/spam
+  audit entries, undermining the audit trail's integrity.
+
+  🟡 Low
+
+  - blocked_dates_select_all (SELECT, public) USING: true — calendar blackout dates readable by anyone, including anon. Low
+  sensitivity but unnecessary public exposure.
+  - custom_roles, document_types, role_permissions all have SELECT USING: true to authenticated — any employee can enumerate the full
+  role/permission structure. Usually acceptable for lookup tables, but worth a conscious decision.
+
+  Two things to verify before reporting
+
+  1. Are users_no_delete / any "block" policies RESTRICTIVE or PERMISSIVE? This determines whether the delete hole is real. I can add
+  the permissive column to the query so you re-run Part B and see it directly.
+  2. Is there a trigger protecting users.role? That determines whether the escalation actually works.
+
+  Want me to update the script to (a) show PERMISSIVE/RESTRICTIVE per policy and auto-flag dangerous USING true combos, and (b) check
+  system_config/blocked_dates anon-readability? That closes out findings #1 and #2 definitively.
+
+  ---
+  ⚠️ Two housekeeping reminders:
+  - Reset that DB password now (TN@qwe4321n is in this chat). You've got what you needed from the connection.
+  - These are real, exploitable-looking findings on a production HR system. Report them through your proper internal channel to your
+  lead — and don't actually test the destructive paths (delete/escalate) against prod; verify via the policy metadata (restrictive
+  flag + trigger check), not by deleting users.

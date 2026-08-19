@@ -17,7 +17,7 @@ from .models import (
     AssignIn, BroadcastIn, CaseIn, ChangePasswordIn, CloseCaseIn,
     CreateUserIn, DocumentIn, EvidenceIn, ForgotPasswordIn, LoginIn, MeetingIn,
     MessageIn, RatingIn, RegisterIn, ResetPasswordIn, TeamIn, TriageIn,
-    UpdateUserIn, VisibilityIn,
+    UpdatePreferencesIn, UpdateUserIn, VisibilityIn,
 )
 # ComplaintIn carries the structured cybercrime intake fields + taxonomy
 # validation, so it lives alongside the schema it validates against.
@@ -127,6 +127,38 @@ def logout_all(user: dict = Depends(get_current_user)) -> dict:
 @auth_router.get("/me", tags=["auth"])
 def me(user: dict = Depends(get_current_user)) -> dict:
     return user
+
+
+SUPPORTED_LANGUAGES = ("en", "hi", "gu")
+
+
+@auth_router.patch("/me/preferences", tags=["auth"])
+def update_preferences(body: UpdatePreferencesIn,
+                       user: dict = Depends(get_current_user)) -> dict:
+    """Update the signed-in user's own preferences.
+
+    Separate from PATCH /admin/users/{id}, which is admin-only and exists to
+    change role/team/active. A user changing their own display language must not
+    need an administrator, and must not be able to escalate anything else — so
+    this endpoint accepts exactly one field.
+    """
+    fields = body.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing to update")
+
+    lang = fields.get("language")
+    if lang is not None:
+        if lang not in SUPPORTED_LANGUAGES:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"language must be one of {'|'.join(SUPPORTED_LANGUAGES)}")
+        with get_conn() as conn:
+            conn.execute("UPDATE users SET language = ? WHERE id = ?",
+                         (lang, user["id"]))
+
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user["id"],)).fetchone()
+    return _public_user(row)
 
 
 @auth_router.post("/change-password", tags=["auth"])

@@ -4,6 +4,7 @@ import {
   Star, FileVideo, Layers, ShieldAlert,
 } from "lucide-react";
 import * as API from "../../api";
+import { useT } from "../../i18n";
 import { BarList, Donut, TrendBars } from "./charts";
 
 function Kpi({ icon: Icon, label, value, suffix, tint = "text-accent" }) {
@@ -34,6 +35,7 @@ function Card({ title, icon: Icon, children }) {
 }
 
 export default function AnalyticsView() {
+  const t = useT();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -42,7 +44,7 @@ export default function AnalyticsView() {
     const load = () =>
       API.getAnalytics()
         .then((d) => alive && setData(d))
-        .catch((e) => alive && setError(e?.response?.data?.detail || "Failed to load analytics"));
+        .catch((e) => alive && setError(e?.response?.data?.detail || t("dashboard.loadFailed")));
     load();
     const id = setInterval(load, 15000); // keep the command view live
     return () => { alive = false; clearInterval(id); };
@@ -66,46 +68,46 @@ export default function AnalyticsView() {
     <div className="mx-auto max-w-6xl p-4 sm:p-5">
       <div className="mb-4 flex items-center gap-3">
         <BarChart3 size={20} className="text-accent" />
-        <h2 className="text-lg font-bold text-white">Command Dashboard</h2>
-        <span className="ml-auto text-[11px] text-slate-500">live · refreshes every 15s</span>
+        <h2 className="text-lg font-bold text-white">{t("dashboard.title")}</h2>
+        <span className="ml-auto text-[11px] text-slate-500">{t("dashboard.liveNote")}</span>
       </div>
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi icon={Megaphone} label="Complaints" value={k.total_complaints} />
-        <Kpi icon={FolderOpen} label="Open cases" value={k.open_cases} tint="text-signal-amber" />
-        <Kpi icon={CheckCircle2} label="Closed" value={k.closed_cases} tint="text-signal-green" />
-        <Kpi icon={Clock} label="Avg resolve" value={k.avg_resolution_hours} suffix="h" tint="text-blue-400" />
-        <Kpi icon={Star} label="Avg rating" value={k.avg_rating || "—"} suffix={k.n_ratings ? `/5 (${k.n_ratings})` : ""} />
-        <Kpi icon={Layers} label="Evidence" value={k.total_evidence} tint="text-purple-400" />
+        <Kpi icon={Megaphone} label={t("dashboard.complaints")} value={k.total_complaints} />
+        <Kpi icon={FolderOpen} label={t("dashboard.openCases")} value={k.open_cases} tint="text-signal-amber" />
+        <Kpi icon={CheckCircle2} label={t("common.closed")} value={k.closed_cases} tint="text-signal-green" />
+        <Kpi icon={Clock} label={t("dashboard.avgResolve")} value={k.avg_resolution_hours} suffix={t("dashboard.hoursShort")} tint="text-blue-400" />
+        <Kpi icon={Star} label={t("dashboard.avgRating")} value={k.avg_rating || "—"} suffix={k.n_ratings ? `/5 (${k.n_ratings})` : ""} />
+        <Kpi icon={Layers} label={t("dashboard.evidence")} value={k.total_evidence} tint="text-purple-400" />
       </div>
 
       {/* VisionScan footprint */}
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi icon={FileVideo} label="Feeds" value={k.total_videos} tint="text-slate-300" />
-        <Kpi icon={Layers} label="Indexed frames" value={k.indexed_frames} tint="text-slate-300" />
-        <Kpi icon={ShieldAlert} label="Total cases" value={k.total_cases} tint="text-slate-300" />
-        <Kpi icon={Megaphone} label="Users" value={k.total_users} tint="text-slate-300" />
+        <Kpi icon={FileVideo} label={t("dashboard.feeds")} value={k.total_videos} tint="text-slate-300" />
+        <Kpi icon={Layers} label={t("dashboard.indexedFrames")} value={k.indexed_frames} tint="text-slate-300" />
+        <Kpi icon={ShieldAlert} label={t("dashboard.totalCases")} value={k.total_cases} tint="text-slate-300" />
+        <Kpi icon={Megaphone} label={t("dashboard.users")} value={k.total_users} tint="text-slate-300" />
       </div>
 
       {/* Charts */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Complaints — last 14 days" icon={BarChart3}>
+        <Card title={t("dashboard.trend14d")} icon={BarChart3}>
           <TrendBars data={data.complaints_over_time} />
         </Card>
-        <Card title="Cases by status" icon={FolderOpen}>
+        <Card title={t("dashboard.casesByStatus")} icon={FolderOpen}>
           <Donut data={data.cases_by_status} />
         </Card>
-        <Card title="Complaints by category" icon={Megaphone}>
+        <Card title={t("dashboard.complaintsByCategory")} icon={Megaphone}>
           <BarList data={data.complaints_by_category} />
         </Card>
-        <Card title="Complaints by status" icon={CheckCircle2}>
+        <Card title={t("dashboard.complaintsByStatus")} icon={CheckCircle2}>
           <BarList data={data.complaints_by_status} accent="#3b82f6" />
         </Card>
-        <Card title="Cases by severity" icon={ShieldAlert}>
+        <Card title={t("dashboard.casesBySeverity")} icon={ShieldAlert}>
           <BarList data={data.cases_by_severity} accent="#ef4444" />
         </Card>
-        <Card title="Top complaint locations" icon={FolderOpen}>
+        <Card title={t("dashboard.topLocations")} icon={FolderOpen}>
           <BarList data={data.top_locations} accent="#22c55e" />
         </Card>
       </div>

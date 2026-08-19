@@ -5,17 +5,28 @@ import {
 } from "lucide-react";
 import * as API from "../../api";
 import { useAuth, isStaff, isLead } from "../../auth";
+import { useT } from "../../i18n";
 
+/* Module scope: hooks cannot run here, so these hold translation KEYS and the
+   render site calls t() on them. */
 const TABS = [
-  { key: "evidence", label: "Evidence", icon: Boxes },
-  { key: "documents", label: "Documents", icon: FileText, staffOnly: true },
-  { key: "messages", label: "Messages", icon: MessagesSquare },
-  { key: "schedule", label: "Schedule", icon: CalendarClock, staffOnly: true },
-  { key: "timeline", label: "Timeline", icon: History, staffOnly: true },
+  { key: "evidence", labelKey: "cases.tabEvidence", icon: Boxes },
+  { key: "documents", labelKey: "cases.tabDocuments", icon: FileText, staffOnly: true },
+  { key: "messages", labelKey: "cases.tabMessages", icon: MessagesSquare },
+  { key: "schedule", labelKey: "cases.tabSchedule", icon: CalendarClock, staffOnly: true },
+  { key: "timeline", labelKey: "cases.tabTimeline", icon: History, staffOnly: true },
 ];
+
+// Enum-ish values that also come back from the API; anything unmapped renders raw.
+const KIND_KEY = { note: "cases.kindNote", frame: "cases.kindFrame", video: "cases.kindVideo", file: "cases.kindFile", report: "cases.kindReport" };
+const VIS_KEY = { team: "cases.visTeam", station: "cases.visStation", department: "cases.visDepartment", citizen: "cases.visCitizen" };
+const DOC_KEY = { brief: "cases.docBrief", chargesheet: "cases.docChargesheet", other: "cases.docOther" }; // FIR stays FIR
+const SEV_KEY = { low: "common.low", medium: "common.medium", high: "common.high", critical: "common.critical" };
+const STATUS_KEY = { open: "common.open", active: "common.active", closed: "common.closed", pending: "common.pending" };
 
 export default function CaseWorkspace({ caseId, onBack }) {
   const { user } = useAuth();
+  const t = useT();
   const staff = isStaff(user);
   const [c, setC] = useState(null);
   const [tab, setTab] = useState("evidence");
@@ -28,12 +39,12 @@ export default function CaseWorkspace({ caseId, onBack }) {
   const [busy, setBusy] = useState(false);
 
   const loadCase = () => API.getCase(caseId).then(setC).catch(() => onBack());
-  const loadTab = async (t) => {
-    if (t === "evidence") setEvidence(await API.listEvidence(caseId));
-    else if (t === "documents") setDocuments(await API.listDocuments(caseId).catch(() => []));
-    else if (t === "messages") setMessages(await API.listMessages(caseId));
-    else if (t === "schedule") setMeetings(await API.listMeetings(caseId).catch(() => []));
-    else if (t === "timeline") setTimeline(await API.caseTimeline(caseId).catch(() => []));
+  const loadTab = async (k) => {
+    if (k === "evidence") setEvidence(await API.listEvidence(caseId));
+    else if (k === "documents") setDocuments(await API.listDocuments(caseId).catch(() => []));
+    else if (k === "messages") setMessages(await API.listMessages(caseId));
+    else if (k === "schedule") setMeetings(await API.listMeetings(caseId).catch(() => []));
+    else if (k === "timeline") setTimeline(await API.caseTimeline(caseId).catch(() => []));
   };
 
   useEffect(() => { setLoading(true); loadCase().finally(() => setLoading(false)); }, [caseId]);
@@ -50,7 +61,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
   return (
     <div className="mx-auto max-w-5xl p-5">
       <button onClick={onBack} className="mb-3 inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200">
-        <ArrowLeft size={14} /> Back to cases
+        <ArrowLeft size={14} /> {t("cases.backToCases")}
       </button>
 
       {/* header */}
@@ -60,9 +71,9 @@ export default function CaseWorkspace({ caseId, onBack }) {
             <h2 className="text-lg font-bold text-white">#{c.id} · {c.title}</h2>
             <p className="mt-0.5 text-xs text-slate-400">{c.description}</p>
             <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
-              <span>status: <span className="text-slate-300">{c.status}</span></span>
-              <span>· severity: {c.severity}</span><span>· priority {c.priority}</span>
-              {c.members?.length ? <span>· {c.members.length} member(s)</span> : null}
+              <span>{t("common.status")}: <span className="text-slate-300">{STATUS_KEY[c.status] ? t(STATUS_KEY[c.status]) : c.status}</span></span>
+              <span>· {t("common.severity")}: {SEV_KEY[c.severity] ? t(SEV_KEY[c.severity]) : c.severity}</span><span>· {t("cases.priority")} {c.priority}</span>
+              {c.members?.length ? <span>· {t("cases.members", { n: c.members.length })}</span> : null}
             </div>
           </div>
           {staff && (
@@ -70,7 +81,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
               <button onClick={toggleVisibility} disabled={busy}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${c.citizen_visible ? "bg-signal-green/15 text-signal-green" : "bg-ink-700 text-slate-300"}`}>
                 {c.citizen_visible ? <Eye size={13} /> : <EyeOff size={13} />}
-                {c.citizen_visible ? "Citizen can view" : "Hidden from citizen"}
+                {c.citizen_visible ? t("cases.citizenCanView") : t("cases.hiddenFromCitizen")}
               </button>
               {isLead(user) && c.status !== "closed" && <CloseButton caseId={caseId} onDone={loadCase} />}
             </div>
@@ -78,7 +89,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
         </div>
         {c.status === "closed" && c.verdict && (
           <div className="mt-3 rounded-lg bg-ink-900/50 p-3 text-xs">
-            <span className="font-semibold text-signal-green">Verdict:</span> <span className="text-slate-300">{c.verdict}</span>
+            <span className="font-semibold text-signal-green">{t("cases.verdict")}:</span> <span className="text-slate-300">{c.verdict}</span>
           </div>
         )}
         {/* citizen rating on closed case */}
@@ -87,10 +98,10 @@ export default function CaseWorkspace({ caseId, onBack }) {
 
       {/* tabs */}
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {TABS.filter((t) => staff || !t.staffOnly).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${tab === t.key ? "bg-accent-600 text-white" : "bg-ink-700 text-slate-300 hover:bg-ink-600"}`}>
-            <t.icon size={14} /> {t.label}
+        {TABS.filter((tb) => staff || !tb.staffOnly).map((tb) => (
+          <button key={tb.key} onClick={() => setTab(tb.key)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${tab === tb.key ? "bg-accent-600 text-white" : "bg-ink-700 text-slate-300 hover:bg-ink-600"}`}>
+            <tb.icon size={14} /> {t(tb.labelKey)}
           </button>
         ))}
       </div>
@@ -105,6 +116,7 @@ export default function CaseWorkspace({ caseId, onBack }) {
 }
 
 function EvidenceTab({ caseId, items, staff, reload }) {
+  const t = useT();
   const [f, setF] = useState({ kind: "note", caption: "", visibility: "team", ref: "" });
   const add = async () => { if (!f.caption.trim()) return; await API.addEvidence(caseId, f); setF({ ...f, caption: "", ref: "" }); reload(); };
   return (
@@ -113,26 +125,26 @@ function EvidenceTab({ caseId, items, staff, reload }) {
         <div className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
           <div className="grid grid-cols-2 gap-2">
             <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} className={inp}>
-              {["note", "frame", "video", "file", "report"].map((k) => <option key={k} value={k}>{k}</option>)}
+              {["note", "frame", "video", "file", "report"].map((k) => <option key={k} value={k}>{t(KIND_KEY[k])}</option>)}
             </select>
             <select value={f.visibility} onChange={(e) => setF({ ...f, visibility: e.target.value })} className={inp}>
-              {["team", "station", "department", "citizen"].map((v) => <option key={v} value={v}>visible: {v}</option>)}
+              {["team", "station", "department", "citizen"].map((v) => <option key={v} value={v}>{t("cases.visible")}: {t(VIS_KEY[v])}</option>)}
             </select>
           </div>
-          <input placeholder="Caption / description" value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} className={inp + " mt-2"} />
-          <input placeholder="Reference (optional: frame id, url, path)" value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} className={inp + " mt-2"} />
-          <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={13} /> Add evidence</button>
+          <input placeholder={t("cases.captionPh")} value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} className={inp + " mt-2"} />
+          <input placeholder={t("cases.refPh")} value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} className={inp + " mt-2"} />
+          <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={13} /> {t("cases.addEvidence")}</button>
         </div>
       )}
-      {items.length === 0 ? <p className="py-6 text-center text-xs text-slate-500">No evidence visible.</p> :
+      {items.length === 0 ? <p className="py-6 text-center text-xs text-slate-500">{t("cases.noEvidence")}</p> :
         items.map((e) => (
           <div key={e.id} className="rounded-lg border border-ink-600 bg-ink-800/50 p-3 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-200">{e.kind}{e.ref ? ` · ${e.ref}` : ""}</span>
-              <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-slate-400">{e.visibility}</span>
+              <span className="font-semibold text-slate-200">{KIND_KEY[e.kind] ? t(KIND_KEY[e.kind]) : e.kind}{e.ref ? ` · ${e.ref}` : ""}</span>
+              <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-slate-400">{VIS_KEY[e.visibility] ? t(VIS_KEY[e.visibility]) : e.visibility}</span>
             </div>
             <p className="mt-1 text-slate-400">{e.caption}</p>
-            {e.added_by_name && <p className="mt-0.5 text-[10px] text-slate-500">by {e.added_by_name} · {e.created_at}</p>}
+            {e.added_by_name && <p className="mt-0.5 text-[10px] text-slate-500">{t("cases.addedBy", { name: e.added_by_name })} · {e.created_at}</p>}
           </div>
         ))}
     </div>
@@ -140,6 +152,7 @@ function EvidenceTab({ caseId, items, staff, reload }) {
 }
 
 function DocumentsTab({ caseId, items, reload }) {
+  const t = useT();
   const [f, setF] = useState({ doc_type: "FIR", title: "", content: "" });
   const add = async () => { if (!f.title.trim()) return; await API.addDocument(caseId, f); setF({ doc_type: "FIR", title: "", content: "" }); reload(); };
   return (
@@ -147,17 +160,17 @@ function DocumentsTab({ caseId, items, reload }) {
       <div className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
         <div className="grid grid-cols-2 gap-2">
           <select value={f.doc_type} onChange={(e) => setF({ ...f, doc_type: e.target.value })} className={inp}>
-            {["FIR", "brief", "chargesheet", "other"].map((d) => <option key={d} value={d}>{d}</option>)}
+            {["FIR", "brief", "chargesheet", "other"].map((d) => <option key={d} value={d}>{DOC_KEY[d] ? t(DOC_KEY[d]) : d}</option>)}
           </select>
-          <input placeholder="Title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inp} />
+          <input placeholder={t("common.title")} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inp} />
         </div>
-        <textarea placeholder="Document content (paste an Arbiter FIR draft here)" rows={4} value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} className={inp + " mt-2 resize-y"} />
-        <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={13} /> Add document</button>
+        <textarea placeholder={t("cases.docContentPh")} rows={4} value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} className={inp + " mt-2 resize-y"} />
+        <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700"><Plus size={13} /> {t("cases.addDocument")}</button>
       </div>
       {items.map((d) => (
         <div key={d.id} className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-accent">{d.doc_type}: {d.title}</span>
+            <span className="font-semibold text-accent">{DOC_KEY[d.doc_type] ? t(DOC_KEY[d.doc_type]) : d.doc_type}: {d.title}</span>
             <span className="text-[10px] text-slate-500">{d.created_by_name}</span>
           </div>
           <pre className="mt-2 whitespace-pre-wrap text-[11px] text-slate-300">{d.content}</pre>
@@ -168,16 +181,17 @@ function DocumentsTab({ caseId, items, reload }) {
 }
 
 function MessagesTab({ caseId, items, user, reload }) {
+  const t = useT();
   const [body, setBody] = useState("");
   const [err, setErr] = useState(null);
   const send = async () => {
     if (!body.trim()) return;
     try { await API.postMessage(caseId, { body }); setBody(""); setErr(null); reload(); }
-    catch (e) { setErr(e?.response?.data?.detail || "Failed"); }
+    catch (e) { setErr(e?.response?.data?.detail || t("cases.failed")); }
   };
   return (
     <div className="space-y-2">
-      {items.length === 0 ? <p className="py-4 text-center text-xs text-slate-500">No messages.</p> :
+      {items.length === 0 ? <p className="py-4 text-center text-xs text-slate-500">{t("cases.noMessages")}</p> :
         items.map((m) => (
           <div key={m.id} className={`rounded-lg p-2.5 text-xs ${m.sender_role === "citizen" ? "bg-ink-700/40" : "bg-accent/10"}`}>
             <div className="font-semibold text-slate-200">{m.sender_name} <span className="text-[10px] font-normal text-slate-500">· {m.sender_role}</span></div>
@@ -186,7 +200,7 @@ function MessagesTab({ caseId, items, user, reload }) {
         ))}
       {err && <div className="text-[11px] text-signal-red">{err}</div>}
       <div className="flex gap-2">
-        <input value={body} onChange={(e) => setBody(e.target.value)} placeholder={user.role === "citizen" ? "One message allowed…" : "Message…"} className={inp} />
+        <input value={body} onChange={(e) => setBody(e.target.value)} placeholder={user.role === "citizen" ? t("cases.oneMessagePh") : t("cases.messagePh")} className={inp} />
         <button onClick={send} className="inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 text-xs font-semibold text-white hover:bg-accent-700"><Send size={13} /></button>
       </div>
     </div>
@@ -194,20 +208,21 @@ function MessagesTab({ caseId, items, user, reload }) {
 }
 
 function ScheduleTab({ caseId, items, user, reload }) {
+  const t = useT();
   const blank = { title: "", scheduled_at: "", duration_min: 60, location: "Ahmedabad Cyber Crime Branch", notes: "" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
   const add = async () => {
-    if (!f.title.trim() || !f.scheduled_at) { setErr("Add a title and a date/time."); return; }
+    if (!f.title.trim() || !f.scheduled_at) { setErr(t("cases.needTitleTime")); return; }
     setBusy(true); setErr(null);
     try { await API.createMeeting(caseId, f); setF(blank); reload(); }
-    catch (e) { setErr(e?.response?.data?.detail || "Failed to schedule"); }
+    catch (e) { setErr(e?.response?.data?.detail || t("cases.scheduleFailed")); }
     finally { setBusy(false); }
   };
   const cancel = async (m) => {
-    if (!confirm(`Cancel meeting "${m.title}"?`)) return;
+    if (!confirm(t("cases.confirmCancelMeeting", { title: m.title }))) return;
     await API.cancelMeeting(caseId, m.id).catch(() => {});
     reload();
   };
@@ -230,14 +245,14 @@ function ScheduleTab({ caseId, items, user, reload }) {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
             <span className="font-medium text-slate-300">{fmt(m.scheduled_at)}</span>
-            <span>· {m.duration_min} min</span>
+            <span>· {m.duration_min} {t("cases.min")}</span>
             <span className="inline-flex items-center gap-1"><MapPin size={11} /> {m.location}</span>
           </div>
           {m.notes && <p className="mt-1 text-xs text-slate-400">{m.notes}</p>}
-          <p className="mt-1 text-[10px] text-slate-500">organised by {m.created_by_name}</p>
+          <p className="mt-1 text-[10px] text-slate-500">{t("cases.organisedBy", { name: m.created_by_name })}</p>
         </div>
         {canManage(m) && (
-          <button onClick={() => cancel(m)} title="Cancel meeting"
+          <button onClick={() => cancel(m)} title={t("cases.cancelMeeting")}
             className="rounded-lg bg-ink-700 p-1.5 text-slate-400 hover:bg-signal-red/20 hover:text-signal-red">
             <Trash2 size={13} />
           </button>
@@ -250,40 +265,40 @@ function ScheduleTab({ caseId, items, user, reload }) {
     <div className="space-y-3">
       {/* booking form */}
       <div className="rounded-lg border border-ink-600 bg-ink-800/50 p-3">
-        <div className="mb-2 text-xs font-semibold text-slate-300">Book a meeting for this case</div>
-        <input placeholder="Meeting title (e.g. Evidence review)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inp} />
+        <div className="mb-2 text-xs font-semibold text-slate-300">{t("cases.bookMeeting")}</div>
+        <input placeholder={t("cases.meetingTitlePh")} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inp} />
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div>
-            <label className="mb-0.5 block text-[10px] text-slate-500">Date &amp; time</label>
+            <label className="mb-0.5 block text-[10px] text-slate-500">{t("cases.dateTime")}</label>
             <input type="datetime-local" value={f.scheduled_at} onChange={(e) => setF({ ...f, scheduled_at: e.target.value })} className={inp} />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] text-slate-500">Duration (min)</label>
+            <label className="mb-0.5 block text-[10px] text-slate-500">{t("cases.durationMin")}</label>
             <input type="number" min={5} max={600} step={5} value={f.duration_min} onChange={(e) => setF({ ...f, duration_min: Number(e.target.value) })} className={inp} />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] text-slate-500">Location</label>
+            <label className="mb-0.5 block text-[10px] text-slate-500">{t("cases.location")}</label>
             <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inp} />
           </div>
         </div>
-        <input placeholder="Notes / agenda (optional)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} className={inp + " mt-2"} />
+        <input placeholder={t("cases.notesPh")} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} className={inp + " mt-2"} />
         {err && <div className="mt-2 text-[11px] text-signal-red">{err}</div>}
         <button onClick={add} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-700 disabled:opacity-50">
-          {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Schedule meeting
+          {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {t("cases.scheduleMeeting")}
         </button>
-        <p className="mt-1.5 text-[10px] text-slate-500">All assigned case members get a notification so they know when to be at the station.</p>
+        <p className="mt-1.5 text-[10px] text-slate-500">{t("cases.notifyNote")}</p>
       </div>
 
-      {items.length === 0 && <p className="py-4 text-center text-xs text-slate-500">No meetings scheduled yet.</p>}
+      {items.length === 0 && <p className="py-4 text-center text-xs text-slate-500">{t("cases.noMeetings")}</p>}
       {upcoming.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Upcoming</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("cases.upcoming")}</div>
           {upcoming.map((m) => <Card key={m.id} m={m} />)}
         </div>
       )}
       {past.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Past</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("cases.past")}</div>
           {past.map((m) => <Card key={m.id} m={m} dim />)}
         </div>
       )}
@@ -292,15 +307,16 @@ function ScheduleTab({ caseId, items, user, reload }) {
 }
 
 function TimelineTab({ items }) {
+  const t = useT();
   return (
     <div className="space-y-1.5">
-      {items.length === 0 ? <p className="py-4 text-center text-xs text-slate-500">No activity.</p> :
+      {items.length === 0 ? <p className="py-4 text-center text-xs text-slate-500">{t("cases.noActivity")}</p> :
         items.map((a) => (
           <div key={a.id} className="flex items-center gap-2 rounded-lg border border-ink-700 bg-ink-800/40 p-2 text-[11px]">
             <History size={12} className="text-slate-500" />
             <span className="font-medium text-slate-300">{a.action}</span>
             {a.detail && <span className="text-slate-500">— {a.detail}</span>}
-            <span className="ml-auto text-slate-600">{a.actor_name || "system"} · {a.created_at}</span>
+            <span className="ml-auto text-slate-600">{a.actor_name || t("cases.system")} · {a.created_at}</span>
           </div>
         ))}
     </div>
@@ -308,30 +324,32 @@ function TimelineTab({ items }) {
 }
 
 function CloseButton({ caseId, onDone }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [verdict, setVerdict] = useState("");
   const [busy, setBusy] = useState(false);
   const close = async () => { if (!verdict.trim()) return; setBusy(true); try { await API.closeCase(caseId, { verdict }); setOpen(false); onDone(); } finally { setBusy(false); } };
-  if (!open) return <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-signal-red/20 hover:text-signal-red"><Lock size={13} /> Close case</button>;
+  if (!open) return <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-signal-red/20 hover:text-signal-red"><Lock size={13} /> {t("cases.closeCase")}</button>;
   return (
     <div className="rounded-lg border border-ink-600 bg-ink-900/60 p-2">
-      <textarea rows={2} value={verdict} onChange={(e) => setVerdict(e.target.value)} placeholder="Verdict / outcome…" className={inp + " resize-y"} />
+      <textarea rows={2} value={verdict} onChange={(e) => setVerdict(e.target.value)} placeholder={t("cases.verdictPh")} className={inp + " resize-y"} />
       <div className="mt-1 flex gap-2">
-        <button onClick={() => setOpen(false)} className="rounded bg-ink-700 px-2 py-1 text-[11px] text-slate-300">Cancel</button>
-        <button onClick={close} disabled={busy} className="inline-flex items-center gap-1 rounded bg-signal-red/80 px-2 py-1 text-[11px] font-semibold text-white"><CheckCircle2 size={12} /> Confirm close</button>
+        <button onClick={() => setOpen(false)} className="rounded bg-ink-700 px-2 py-1 text-[11px] text-slate-300">{t("common.cancel")}</button>
+        <button onClick={close} disabled={busy} className="inline-flex items-center gap-1 rounded bg-signal-red/80 px-2 py-1 text-[11px] font-semibold text-white"><CheckCircle2 size={12} /> {t("cases.confirmClose")}</button>
       </div>
     </div>
   );
 }
 
 function RateBox({ caseId }) {
+  const t = useT();
   const [stars, setStars] = useState(0);
   const [done, setDone] = useState(false);
   const submit = async (s) => { setStars(s); await API.rateCase(caseId, { stars: s, comment: "" }).catch(() => {}); setDone(true); };
-  if (done) return <div className="mt-3 text-xs text-signal-green">Thanks for rating ({stars}★).</div>;
+  if (done) return <div className="mt-3 text-xs text-signal-green">{t("cases.thanksRating", { stars })}</div>;
   return (
     <div className="mt-3 flex items-center gap-1 text-xs text-slate-400">
-      Rate your experience:
+      {t("cases.rateExperience")}
       {[1, 2, 3, 4, 5].map((s) => (
         <button key={s} onClick={() => submit(s)}><Star size={16} className="text-signal-amber hover:fill-signal-amber" /></button>
       ))}
