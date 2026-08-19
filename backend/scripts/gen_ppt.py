@@ -40,7 +40,8 @@ SANS = "Segoe UI"
 
 SW, SH = Inches(13.333), Inches(7.5)
 
-LIVE_URL = "visionscan.centralindia.cloudapp.azure.com"
+REPO_URL = "github.com/iampreetdave-max/Guardian-Angle"
+VIDEO_URL = "youtu.be/LE9iE1_mCrU"
 FOOT = "KANAD S.H.I.E.L.D. 2026  ·  Team VisionScan  ·  Preet Dave"
 
 prs = Presentation()
@@ -241,14 +242,17 @@ for k, v in rows:
     run(p, f"{k:<14}", 12.5, GOLD, bold=True)
     run(p, "   " + v, 13, WHITE)
 p = para(tf, space=0)
-run(p, "LIVE  ", 12, GREEN, bold=True)
-run(p, "https://" + LIVE_URL, 12, GOLD, bold=True)
+run(p, "CODE  ", 12, GREEN, bold=True)
+run(p, "https://" + REPO_URL, 12, GOLD, bold=True)
 
-s.shapes.add_picture(str(ASSETS / "qr_live.png"), Inches(0.7), Inches(5.72),
+s.shapes.add_picture(str(ASSETS / "qr_github.png"), Inches(0.7), Inches(5.72),
                      Inches(1.0), Inches(1.0))
-tf = tb(s, 1.85, 6.12, 3.6, 0.5)
-p = para(tf, first=True)
-run(p, "Scan to open the live platform", 11, SLATE)
+tf = tb(s, 1.85, 6.02, 4.9, 0.8)
+p = para(tf, first=True, space=2)
+run(p, "Scan for the full source + demo video", 11, SLATE)
+p = para(tf, space=0)
+run(p, "Runs offline on this laptop; a hosted instance can be started on request.",
+    9.5, MUTED)
 
 # right collage
 pic(s, "04_citymap_risk.png", 7.35, 1.30, 5.35)
@@ -256,7 +260,7 @@ pic(s, "07_livealerts.png", 6.85, 4.05, 3.6)
 pic(s, "11_crimegpt.png", 10.6, 4.42, 2.35)
 tf = tb(s, 7.35, 6.30, 5.4, 0.3)
 p = para(tf, first=True)
-run(p, "Running live today — predictive City Map, Live Alerts, CrimeGPT", 10.5, MUTED)
+run(p, "Running on a field laptop today — predictive City Map, Live Alerts, CrimeGPT", 10.5, MUTED)
 footer(s, 1)
 
 # ================================================================ SLIDE 2
@@ -282,6 +286,8 @@ card(s, 6.85, 1.75, 5.9, 2.6, "Why this matters", [
 tf = tb(s, 0.55, 4.52, 12.2, 0.3)
 p = para(tf, first=True)
 run(p, "Existing challenges", 13.5, GOLD, bold=True)
+run(p, "     Aligned with Gujarat Police Innovation Challenge 2026 (80,000+ CCTVs, 17 Aug) "
+       "and e-Zero FIR with I4C (27 Jul)", 10, SLATE)
 ch = [
     ("Proprietary & costly", "PredPol / Briefcam-class tools are licensed, closed and priced for large forces."),
     ("Cloud & GPU dependent", "footage leaves the premises; connectivity and hardware become blockers."),
@@ -413,7 +419,7 @@ stacks = [
         ("Frontend", "React · Vite · Tailwind CSS"),
         ("GIS", "Leaflet + OpenStreetMap · Recharts"),
         ("Packaging", "Docker Compose · one-command start"),
-        ("Testing", "pytest + httpx — 77-test suite"),
+        ("Testing", "pytest + httpx — 81-test suite"),
     ]),
     ("AI / ML models", [
         ("Vision", "OpenAI CLIP ViT-B/32 (zero-shot)"),
@@ -424,13 +430,13 @@ stacks = [
     ]),
     ("Hardware", [
         ("Runs on", "any CPU-only laptop / desktop"),
-        ("Demo host", "Azure B2as_v2 — 2 vCPU · 8 GB RAM"),
+        ("Reference host", "2 vCPU · 8 GB RAM VM — no GPU anywhere"),
         ("No GPU needed", "clip indexing ~30–90 s per clip"),
         ("Scale-up path", "single GPU → real-time RTSP feeds"),
         ("Field mode", "fully offline on a station laptop"),
     ]),
     ("Cloud & APIs", [
-        ("Hosting", "Microsoft Azure for Students (₹0 cost)"),
+        ("Hosting", "any commodity VM or a field laptop (₹0 cost)"),
         ("HTTPS", "Caddy auto-TLS · git-push deploys"),
         ("Optional", "Gemini — falls back to offline templates"),
         ("Map tiles", "OSM — cached, degrades gracefully"),
@@ -449,7 +455,7 @@ footer(s, 5)
 # ================================================================ SLIDE 6
 s = slide_new()
 header(s, "06", "DEMONSTRATION", "It runs live — try it during judging",
-       "Screenshots below were captured from the live Azure deployment (synthetic demo data, no real persons or cases).")
+       "Screenshots below were captured from the running platform (synthetic demo data, no real persons or cases).")
 
 pic(s, "07_livealerts.png", 0.55, 1.8, 3.72, caption="Live Alerts — fire/smoke/violence with confidence")
 pic(s, "09_visionscan_search.png", 4.42, 1.8, 3.72, caption='VisionScan — "flames engulfing a building" → ranked moments')
@@ -460,18 +466,18 @@ sx = 8.5
 stat(s, sx, 1.80, 2.03, 1.05, "0.790", "Hit-Rate@10", "90% CI 0.77–0.81")
 stat(s, sx + 2.13, 1.80, 2.03, 1.05, "2.37×", "PAI@10", "94% of 2.53× oracle")
 stat(s, sx, 2.98, 2.03, 1.05, "79%", "next-week crime", "in top-10 zones (⅓ of city)")
-stat(s, sx + 2.13, 2.98, 2.03, 1.05, "3 / 3", "planted surges", "caught in live top-10")
+stat(s, sx + 2.13, 2.98, 2.03, 1.05, "2 / 2", "planted surges", "caught in live top-10")
 tf = tb(s, sx, 4.12, 4.2, 0.5)
 p = para(tf, first=True)
-run(p, "Rolling-origin backtest vs frequency / prior / random baselines · 77 backend tests passing.",
+run(p, "Rolling-origin backtest vs frequency / prior / random baselines · 81 backend tests passing.",
     9.5, SLATE)
 
 box(s, sx, 4.66, 4.16, 2.06)
 tf = tb(s, sx + 0.16, 4.78, 3.9, 1.9)
 p = para(tf, first=True, space=3)
-run(p, "LIVE DEMO ACCESS", 11, GOLD, bold=True)
+run(p, "DEMO ACCESS", 11, GOLD, bold=True)
 p = para(tf, space=3)
-run(p, "https://" + LIVE_URL, 11, WHITE, bold=True)
+run(p, "docker compose up -d  ->  localhost:8080", 11, WHITE, bold=True)
 creds = [("Admin", "admin@city.gov / admin123"),
          ("Lead", "lead@city.gov / lead123"),
          ("Officer", "officer@city.gov / officer123"),
@@ -569,7 +575,7 @@ header(s, "09", "SCALABILITY & FUTURE SCOPE", "Pilot-ready today, district-scale
        "The demo is the deployment — the same containers move from a student VM to a station server unchanged.")
 
 card(s, 0.55, 1.78, 6.05, 2.35, "Deployment strategy", [
-    ("Today", "live on Azure (Docker Compose + Caddy auto-HTTPS, git-push deploys)."),
+    ("Today", "one-command Docker Compose deploy (Caddy auto-HTTPS); pilot ran on an Azure student VM until the credit lapsed."),
     ("Pilot", "one on-prem station server — data never leaves the premises (DPDP-friendly)."),
     ("One command", "start.ps1 / docker compose up -d brings up the full platform."),
     ("Real data", "ingest standard incident schemas under an MoU with the district."),
@@ -597,20 +603,19 @@ footer(s, 9)
 # ================================================================ SLIDE 10
 s = slide_new()
 header(s, "10", "SUPPORTING DOCUMENTS & RESOURCES", "Everything a judge needs, one scan away",
-       "QR codes open live resources; all PDFs are bundled with the submission.")
+       "Every QR is a permanent link; all PDFs are bundled with the submission.")
 
 res = [
-    ("qr_live.png", "Live application", "https://" + LIVE_URL, GREEN),
-    ("qr_video.png", "Demo video (2:46)", "youtu.be/LE9iE1_mCrU", RED),
-    ("qr_github.png", "Source code (GitHub)", "github.com/iampreetdave-max/Guardian-Angle", GOLD),
+    ("qr_video.png", "Demo video (2:46)", VIDEO_URL, RED),
+    ("qr_github.png", "Source code (GitHub)", REPO_URL, GOLD),
     ("qr_drive.png", "Test clips + demo logins", "Google Drive folder", VIOLET),
 ]
 for i, (qr, title, url, c) in enumerate(res):
-    x = 0.55 + i * 3.11
-    box(s, x, 1.78, 2.96, 2.75)
-    s.shapes.add_picture(str(ASSETS / qr), Inches(x + 0.83), Inches(1.98),
+    x = 0.55 + i * 4.13
+    box(s, x, 1.78, 3.98, 2.75)
+    s.shapes.add_picture(str(ASSETS / qr), Inches(x + 1.34), Inches(1.98),
                          Inches(1.3), Inches(1.3))
-    tf = tb(s, x + 0.15, 3.42, 2.66, 1.1)
+    tf = tb(s, x + 0.15, 3.42, 3.68, 1.1)
     p = para(tf, first=True, space=2)
     p.alignment = PP_ALIGN.CENTER
     run(p, title, 12, c, bold=True)
@@ -622,7 +627,7 @@ docs = [
     ("📄  Project report & 5 proposal PDFs", "branded, bundled in the submission ZIP"),
     ("🎥  Demo video", "captioned 2:46 walkthrough — youtu.be/LE9iE1_mCrU (QR above)"),
     ("📊  Dataset documentation", "docs/AHMEDABAD_CRIME_DATA.md — NCRB-derived synthetic data, full provenance"),
-    ("✅  Validation & security reports", "docs/VALIDATION.md · security testing report · 77-test suite"),
+    ("✅  Validation & security reports", "docs/VALIDATION.md · security testing report · 81-test suite"),
 ]
 for i, (t, b) in enumerate(docs):
     x = 0.55 + (i % 2) * 6.19
@@ -644,7 +649,7 @@ tf = tb(s, 0.7, 1.7, 7.6, 2.2)
 p = para(tf, first=True, space=6)
 run(p, "Thank you.", 44, WHITE, bold=True, font=SERIF)
 p = para(tf, space=0)
-run(p, "Questions & answers — everything shown today is running live, right now.",
+run(p, "Questions & answers — everything shown today runs on this laptop, offline.",
     15, SLATE)
 
 box(s, 0.7, 3.9, 6.6, 2.3)
@@ -660,15 +665,15 @@ run(p, "Built for the Cyber Crime Branch, Ahmedabad City Police — Kanad S.H.I.
     11.5, SLATE)
 
 box(s, 8.6, 2.4, 3.9, 3.8)
-s.shapes.add_picture(str(ASSETS / "qr_live.png"), Inches(9.55), Inches(2.75),
+s.shapes.add_picture(str(ASSETS / "qr_github.png"), Inches(9.55), Inches(2.75),
                      Inches(2.0), Inches(2.0))
-tf = tb(s, 8.8, 4.9, 3.5, 1.1)
+tf = tb(s, 8.8, 4.88, 3.5, 1.4)
 p = para(tf, first=True, space=2)
 p.alignment = PP_ALIGN.CENTER
-run(p, "Scan — try it yourself", 12, WHITE, bold=True)
+run(p, "Scan — run it yourself", 12, WHITE, bold=True)
 p = para(tf, space=0)
 p.alignment = PP_ALIGN.CENTER
-run(p, "https://" + LIVE_URL + "\nadmin@city.gov / admin123", 10.5, SLATE)
+run(p, REPO_URL + "\nDemo video: " + VIDEO_URL + "\nadmin@city.gov / admin123", 10.5, SLATE)
 footer(s, 11)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)

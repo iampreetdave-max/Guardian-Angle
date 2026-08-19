@@ -19,10 +19,10 @@ license: mit
 > a real closed loop, not five demos stitched for a slide. Runs fully offline on
 > a CPU.
 
-[![tests](https://img.shields.io/badge/backend%20tests-77%20passing-2ea44f)](backend/tests)
+[![tests](https://img.shields.io/badge/backend%20tests-81%20passing-2ea44f)](backend/tests)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
-[![Live demo](https://img.shields.io/badge/live%20demo-HTTPS-success)](https://visionscan.centralindia.cloudapp.azure.com)
-[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue)](https://huggingface.co/spaces/iampreetdave/visionscan)
+[![demo video](https://img.shields.io/badge/demo%20video-2%3A46-red)](https://youtu.be/LE9iE1_mCrU)
+[![real-footage recall](https://img.shields.io/badge/real%20footage%20macro%20recall-84.6%25-success)](#the-numbers)
 [![offline](https://img.shields.io/badge/runs-offline%20on%20CPU-0a1124)](#quick-start)
 
 **KANAD S.H.I.E.L.D. 2026 Cybersecurity Hackathon** · Cyber Crime Branch,
@@ -32,6 +32,24 @@ problem statements — see the [submissions table](#five-submissions-one-platfor
 ---
 
 ## The numbers
+
+### Measured on real footage first
+
+The strongest numbers here are **not** the synthetic ones. Search accuracy was scored on
+**16 hand-verified HD CCTV clips** with hand-labelled ground truth, offline on CPU:
+
+| Vision metric (real footage) | Result |
+|---|---|
+| **Macro recall** — natural-language search | **84.6%** |
+| **Top-1 accuracy** | **61.5%** |
+| **False positives** | **zero** |
+| **Suspect face re-identification** | source frame returns at **rank 1**, score 0.80 |
+| Scene analytics | 3,362 detections → 1,409 tracked objects |
+
+Per-camera tracking quality is graded by **measured fragmentation** and the bad grades are
+published too: market **0.13 (good)**, highway **0.39 (degraded)**, junction **0.45 (poor)**.
+
+### The predictive backtest (synthetic data)
 
 The predictive model is backtested with **rolling-origin (walk-forward) temporal
 cross-validation** over the synthetic Ahmedabad complaint stream. These figures
@@ -43,7 +61,7 @@ PYTHONPATH=. python scripts/predictive_backtest.py
 ```
 
 > **Hit-Rate@10: 0.79 | PAI@10: 2.4x (oracle ceiling 2.5x) | capture 79% of
-> next-week crime in 33% of the city (90% CI hit-rate@10 [0.76, 0.83], 8 weekly
+> next-week crime in 33% of the city (90% CI hit-rate@10 [0.767, 0.813], 8 weekly
 > folds) | detected both planted surges in the live top-10 during their surge
 > week**
 
@@ -58,8 +76,8 @@ PYTHONPATH=. python scripts/predictive_backtest.py
 top-k localities: top-5 (17% of the city) captures **52.1%**; **top-10 (33% of
 the city) captures 79.0%**; top-15 (50%) captures 90.1%.
 
-**Beats every baseline** at Hit-Rate@10 — model **0.790** vs. frequency 0.762,
-prior-only 0.634, random 0.382 (a **+40.8 pt** lift over the random floor).
+**Beats every baseline** at Hit-Rate@10 — model **0.790** vs. frequency 0.771,
+prior-only 0.647, random 0.352 (a **+43.8 pt** lift over the random floor).
 **Surge detection:** the model surfaced **both** planted, time-boxed surges into
 the live top-10 during the weeks they were active — Maninagar chain-snatching
 (rank 5) and the SG Highway + Satellite cyber-fraud ramp, where SG Highway climbs
@@ -90,7 +108,7 @@ file that implements it:
 
 | # | Evaluation criterion | How we meet it | Where in the code |
 |---|---|---|---|
-| 1 | Accuracy of hotspot detection & prediction | Recency-weighted risk + priors + anomaly boost; backtested HR@10 0.790 / PAI@10 2.37× via rolling-origin CV | `backend/app/platform/predictive.py`, `backend/app/platform/validation.py` |
+| 1 | Accuracy of hotspot detection & prediction | Recency-weighted risk + priors, backtested HR@10 0.790 / PAI@10 2.37× via rolling-origin CV. The **anomaly boost is deliberately excluded from the backtest** — it reflects *now*, and feeding it into a historical fold would be leakage ([ablation](docs/ABLATION.md)) | `backend/app/platform/predictive.py`, `backend/app/platform/validation.py` |
 | 2 | Effectiveness of patrol-route optimization | Nearest-neighbour + 2-opt over live top-risk hotspots, haversine ETAs, balanced unit assignment | `backend/app/platform/patrol.py` |
 | 3 | Integration of cyber + physical crime data | NCRP/1930-aligned cyber-fraud taxonomy + victim-location layer on the same GIS as physical crime | `backend/app/constants/cyber.py`, `backend/app/platform/seed_ahmedabad.py` |
 | 4 | Performance & scalability | FastAPI + SQLite, CPU-only, additive schema, exact + lazy models; one-command Docker | `backend/app/main.py`, `docker-compose.yml` |
@@ -182,16 +200,20 @@ its FIR and statutory documents (CrimeGPT/Arbiter), and surface relevant law
 
 ## Quick start
 
-### Option 0 — No install: the live demo
+### Option 0 — Watch it run: the demo video
 
-The full platform is deployed at **https://visionscan.centralindia.cloudapp.azure.com**
-(Azure, Central India, TLS) — open it and sign in with a [demo account](#demo-accounts).
+**[2:46 captioned walkthrough → youtu.be/LE9iE1_mCrU](https://youtu.be/LE9iE1_mCrU)**
+
+> **No public URL right now.** The pilot ran on an Azure-for-Students VM and that credit has
+> lapsed, so `visionscan.centralindia.cloudapp.azure.com` **no longer resolves** — we would
+> rather write that down than leave a link that 404s. A hosted instance can be stood up on
+> request; the product is offline-first, so Option A below is the real demo path.
 
 **Test the anomaly detector:** a folder of ready-to-upload CCTV clips (fire, smoke,
 accident, weapon, violence + a normal control, each with its expected detection
 documented) is here →
 [Google Drive](https://drive.google.com/drive/folders/1mHoekSVX4ytmBEBaCnFrutMljqKxfmiz).
-Upload one on the live site and watch Anomaly Watch raise the alert.
+Upload one after starting the stack and watch Anomaly Watch raise the alert.
 
 ### Option A — One command (recommended)
 
@@ -298,9 +320,25 @@ PYTHONPATH=. python scripts/gen_proposal.py     # writes 5 PDFs into docs/propos
   `GET /api/predict/validation`.
 - **Security:** [docs/SECURITY_TESTING_REPORT.md](docs/SECURITY_TESTING_REPORT.md)
   documents the OWASP coverage matrix, the 14 findings fixed during the build, and
-  the regression suite (**77 backend tests passing**) that pins each control.
+  the regression suite (**81 backend tests passing**) that pins each control.
 - **Demo-day script:** [docs/DEMO_DAY.md](docs/DEMO_DAY.md).
 - **Deployment (VPS/Caddy):** [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
+## Aligned with what Gujarat is actually building (2026)
+
+- **Gujarat Police Innovation Challenge 2026** — announced **17 Aug 2026**: a state-run
+  challenge to unify **80,000+ CCTV cameras** under one network with **AI video analytics**,
+  ₹37 lakh in prizes, opening **September 2026**. That is precisely VisionScan's vendor-neutral,
+  offline CLIP + YOLOv8 + ArcFace search and Anomaly Watch layer.
+- **e-Zero FIR** — launched **27 Jul 2026** in Gandhinagar with the **Indian Cyber Crime
+  Coordination Centre (I4C)**: a complaint on the **1930** helpline auto-generates a zero FIR
+  routed electronically to the jurisdictional police station. CityShield's NCRP/1930 cyber
+  intake and golden-hour escalation already model that flow.
+
+Citations for both (with dates and sources) are in
+[docs/AHMEDABAD_CRIME_DATA.md](docs/AHMEDABAD_CRIME_DATA.md) §7.
 
 ---
 

@@ -20,7 +20,7 @@ Compiled to power a realistic area-wise crime heatmap and demo seed data for Cit
 
 | # | Source | URL | What it gives us | Reliability |
 |---|--------|-----|------------------|-------------|
-| S1 | NCRB *Crime in India 2022* (official report) | https://www.ncrb.gov.in/uploads/nationalcrimerecordsbureau/custom/1701607577CrimeinIndia2022Book1.pdf | City-level crime totals & rates; Ahmedabad crime rate ~96.6 per 100k (5th among metros) | High (official, but city-level only, ~2-yr lag) |
+| S1 | NCRB *Crime in India 2022* (official report) | https://www.ncrb.gov.in/uploads/nationalcrimerecordsbureau/custom/1701607577CrimeinIndia2022Book1.pdf | City-level crime totals & rates (2022 baseline) | High (official, but city-level only, ~2-yr lag) |
 | S2 | Open Government Data (OGD) Platform — Crime in India 2022 | https://www.data.gov.in/catalog/crime-india-2022 | Machine-readable city crime tables | High (official) |
 | S3 | Gujarat Samachar (English) — "Ahmedabad Cyber Crimes surge 61% in 2024" | https://english.gujaratsamachar.com/news/gujarat/ahmedabad-cyber-crimes-surge-61-in-2024-amid-statewide-decline-ncrb-37168049478.html | 2024 cyber-crime breakdown (396 cases, category split, motives) | Medium-High (reputable daily citing NCRB) |
 | S4 | Gujarat Samachar — "NCRB report reveals safety concerns for seniors in Ahmedabad" | https://english.gujaratsamachar.com/news/gujarat/ncrb-report-reveals-safety-concerns-for-seniors-in-ahmedabad | 2023 elderly-victim burglary/fraud/intimidation counts | Medium-High |
@@ -34,6 +34,13 @@ Compiled to power a realistic area-wise crime heatmap and demo seed data for Cit
 | S12 | Urban Acres — "Ahmedabad's Annual Flooding Root Causes" | https://urbanacres.in/ahmedabads-annual-flooding-root-causes-unveiled/ | Named waterlogging-prone areas (Ghuma-Bopal, Kathwada, Jodhpur); drainage capacity gap | Medium |
 | S13 | Wikipedia — 2017 Gujarat flood | https://en.wikipedia.org/wiki/2017_Gujarat_flood | 2017 Sabarmati/Vasna Barrage flooding, 18 deaths in district, riverfront submerged | Medium |
 | S14 | indiastatdistrictcrime — Ahmedabad district crime tables | https://www.indiastatdistrictcrime.com/GUJARAT/Ahmedabad/crimeandlaw/incidencecrime | District IPC crime incidence (aggregated) | Medium (paywalled aggregator of official data) |
+| S15 | DeshGujarat — "Gujarat Recorded Over 6.15 Lakh Crimes in 2024, NCRB Flags Rise in Love Affair Murders" (8 May 2026) | https://deshgujarat.com/2026/05/08/gujarat-recorded-over-6-15-lakh-crimes-in-2024-ncrb-flags-rise-in-love-affair-murders/ | **NCRB *Crime in India 2024* city figures**: Ahmedabad 49,250 cases / 775.3 per lakh; Surat 63,166 / 1,377.7; Gujarat 6,15,407 cases / 847 per lakh (BNS+IPC and SLL) | Medium-High (reputable outlet reporting the official NCRB release) |
+| S16 | ORF — "Crime in India's largest cities: An analysis" | https://www.orfonline.org/expert-speak/crime-in-india-s-largest-cities-an-analysis | Independent analysis of the **same NCRB 2022** data: Ahmedabad **360.1 per lakh**, Surat 215.3, 19-metro average 544 | Medium-High (think-tank analysis of official data) |
+| S17 | Gujarat Samachar (English) — "Ahmedabad Deluged: Over 8 Inches Of Rain Exposes AMC's Multi-Crore Pre-Monsoon Claims As Posh Belts Submerge" (23 Jul 2026) | https://english.gujaratsamachar.com/news/ahmedabad/ahmedabad-deluged-over-8-inches-of-rain-exposes-amcs-multi-crore-pre-monsoon-claims-as-posh-belts-submerge-73506814338 | Ward-wise rainfall for 23 Jul 2026; **AMC's 148 identified waterlogging spots** (82 flooded, 66 clear); worst-hit western areas | Medium-High |
+| S18 | ANI — "Gujarat Police to host country's largest AI-based CCTV hackathon" (17 Aug 2026) | https://aninews.in/news/national/general-news/gujarat-police-to-host-countrys-largest-ai-based-cctv-hackathon20260817135250/ | **Gujarat Police Innovation Challenge 2026** — unify 80,000+ CCTVs, AI video analytics, Rs 37 lakh prizes, opens September | Medium-High (news agency) |
+| S19 | The Shillong Times / PTI — "Gujarat launches e-Zero FIR system for cyber fraud victims" (27 Jul 2026) | https://theshillongtimes.com/2026/07/27/no-police-station-visit-gujarat-launches-e-zero-fir-system-for-cyber-fraud-victims/ | **e-Zero FIR** built with **I4C**: a 1930 helpline complaint auto-generates a zero FIR routed to the jurisdictional police station | Medium-High |
+| S20 | Free Press Journal — "Gujarat Cities Ranked High In NCRB Crime Report, Opposition Targets Government" | https://www.freepressjournal.in/india/gujarat-cities-ranked-high-in-ncrb-crime-report-opposition-targets-government | **Origin of the retracted "96.6 / 5th among metros" claim** — a floor speech by a Congress MLA; the report never states the NCRB metric or year | **Low — do not cite as data** (unattributed metric, contradicted by S15/S16) |
+| S21 | Vibes of India — "Ahmedabad Underwater: 45% Of Annual Rainfall Pours Down In A Single Day" (24 Jul 2026) | https://www.vibesofindia.com/ahmedabad-heavy-rain-flooding-45-percent-rainfall-one-day-waterlogging/ | **300+ flooded locations in western Ahmedabad**, 150+ residential societies waterlogged | Medium |
 
 **Reliability legend:** *High* = official government data. *Medium-High* = reputable mainstream
 press directly citing official data. *Medium* = single press report / older or indirect data.
@@ -42,8 +49,19 @@ press directly citing official data. *Medium* = single press report / older or i
 
 ## 2. Headline figures (city-level, factual)
 
-- **Ahmedabad crime rate ~96.6 per 100,000** (NCRB 2022) — 5th among major metros, behind
-  Delhi (150.6), Chennai (101.6); ahead of Mumbai (73.3) and Surat (64.3). *(S1)*
+- **Ahmedabad, NCRB *Crime in India 2024* (released May 2026): 49,250 cognizable cases,
+  rate 775.3 per lakh** — *total cognizable, BNS + SLL*. For scale, **Surat recorded 63,166
+  cases at 1,377.7 per lakh** (roughly double Ahmedabad's rate), and Gujarat as a whole
+  6,15,407 cases at 847 per lakh against a national 418.9. *(S15)*
+- **No metro rank is claimed, and none should be.** An earlier version of this document
+  carried "~96.6 per 100,000 (NCRB 2022) — 5th among metros, ahead of Surat". That figure
+  traces to a Congress MLA's budget speech in the Gujarat Assembly as reported by FPJ
+  *(S20)*; the report never states which NCRB metric or which year it refers to. It is
+  contradicted twice over: ORF's analysis of **the same NCRB 2022** data puts Ahmedabad at
+  **360.1 per lakh** *(S16)*, and NCRB 2024 shows Surat **ahead of** Ahmedabad, not behind
+  *(S15)*. **The 96.6 figure and the metro rank are retracted.** A defensible rank position
+  is **unverified** — published metro orderings differ depending on which crime heads are
+  counted, so this document quotes **rates only**.
 - **Cyber crime 2024: 396 cases, +61% YoY** (from 246 in 2023) — a sharp rise even as
   Gujarat statewide cyber crime *fell* ~20%. *(S3)*
   - Cheating & forgery: **229 cases (~57%)** · Computer-related offences: 36 ·
@@ -154,20 +172,61 @@ and dates are approximate. Suitable as demo complaint/case seeds.
 
 ## 6. Flood / disaster-prone areas
 
-From S11/S12/S13 plus low-lying-belt inference. The 2024 monsoon affected **300+ spots**
-(AMC pre-identified 125); the 2017 Sabarmati event flooded riverfront/low zones after
-Dharoi/Dantiwada dam releases and Vasna Barrage opening.
+> **Correction (Aug 2026).** An earlier version of this list skewed **east / old-city**. The
+> most recent major event points firmly the other way, and the list below has been rebuilt
+> around what the sources actually name.
 
-**Named in sources:** Ghuma-Bopal, Kathwada, Jodhpur *(S12)*; Sabarmati riverfront / Vasna
-Barrage low zones *(S13)*.
+**23–24 July 2026 — a western event.** Ahmedabad took roughly **45% of its seasonal rainfall
+in a single day**, and the damage was overwhelmingly western: **300+ flooded locations in
+western Ahmedabad and 150+ residential societies** waterlogged *(S21)*. Ward rainfall was
+lopsided — **Bakrol 14.61 in · Sarkhej 14.13 in · Bopal 12.72 in** in the west, against
+**Odhav 5.16 in · Vastral 3.98 in · Nikol 3.66 in**, among the *lowest* readings in the city
+*(S17)*. Worst-hit named localities: **Sterling City (Bopal), Shela, Jodhpur, Vejalpur,
+Makarba** *(S17)*.
 
-**Demo flood-prone list (named + low-lying inference):** Bopal, Vasna, Behrampura, Jamalpur,
-Sabarmati (riverfront), Paldi (river-adjacent), Vatva, Isanpur, Maninagar, Naroda, Odhav,
-Ranip, Chandkheda. *(Items beyond the source-named ones are low-lying/old-city inferences for demo use.)*
+**AMC now works from 148 identified waterlogging spots**, up from the 125 quoted for the 2024
+monsoon *(S11)*. In the 23 July 2026 event **82 of the 148 flooded and 66 held** *(S17)*.
+
+**Earlier events still relevant:** the 2024 monsoon affected **300+ spots** against 125
+pre-identified *(S11)*; the 2017 Sabarmati event flooded riverfront/low zones after
+Dharoi/Dantiwada dam releases and the Vasna Barrage opening *(S13)*.
+
+**Named in sources:** Bopal / Ghuma / Shela / Bakrol belt, Sarkhej, Vejalpur, Makarba,
+Jodhpur *(S17, S12, S21)*; Kathwada *(S12)*; Sabarmati riverfront / Vasna Barrage low zones
+*(S13)*.
+
+**Demo flood-prone list (source-named first, west-weighted):** Bopal, Vejalpur, SG Highway /
+Sarkhej corridor, Satellite and Vastrapur low points *(west — S17/S21/S12)*; then the
+riverfront and low-lying belt: Vasna, Sabarmati (riverfront), Paldi, Behrampura, Jamalpur
+*(S13 + low-lying inference)*.
+
+**Removed:** Odhav, Vastral, Nikol, Vatva, Isanpur, Maninagar, Naroda, Ranip and Chandkheda.
+Their earlier inclusion was an **east-skewed inference, not a sourced one**, and Odhav,
+Vastral and Nikol recorded among the *lowest* rainfall in the July 2026 event *(S17)*.
+Anything in this list beyond the source-named entries remains a low-lying inference for demo
+use only.
 
 ---
 
-## 7. Disclaimer (repeat for downstream display)
+## 7. Alignment with 2026 Gujarat government initiatives
+
+Two state-level programmes announced in 2026 target exactly the gap this platform is built
+for. Both are cited from primary news reporting; neither is an endorsement of this project.
+
+- **Gujarat Police Innovation Challenge 2026** (announced **17 Aug 2026**) — a state-run
+  innovation challenge to integrate **80,000+ CCTV cameras** across Gujarat into one network
+  with **AI-based video analytics**, open to students, startups and companies, ₹37 lakh in
+  prizes, expected to open in **September 2026** via the Sentinel Gujarat portal. *(S18)*
+  → Directly matches VisionScan's offline CLIP/YOLO/ArcFace search and Anomaly Watch layer.
+- **e-Zero FIR for cyber financial fraud** (launched **27 Jul 2026**, Gandhinagar, built with
+  the **Indian Cyber Crime Coordination Centre, I4C**) — a complaint on the **1930** helpline
+  automatically generates a zero FIR that is forwarded electronically to the jurisdictional
+  police station, removing the police-station visit and the golden-hour delay. *(S19)*
+  → Matches this platform's NCRP/1930 cyber-intake and golden-hour escalation flow.
+
+---
+
+## 8. Disclaimer (repeat for downstream display)
 
 > This dataset is an **approximation compiled from public sources (NCRB reports, Gujarat
 > Police/press coverage, and municipal flood reporting) strictly for a civic-tech
