@@ -17,14 +17,13 @@ LIVE = "https://ominous-space-happiness-wrqrp69j95jv3g6-8080.app.github.dev"
 ORDER = [
     "Login / auth", "Sign-in screen", "Command Dashboard",
     "VisionScan / Text", "VisionScan / Object", "VisionScan / Reference",
-    "VisionScan / Suspect", "VisionScan / Scene", "VisionScan — Camera Feeds",
+    "VisionScan / Suspect", "VisionScan / Scene", "VisionScan / Camera Feeds",
     "PDF investigation", "Live Alerts", "City Map",
     "Arbiter", "CrimeGPT", "Legal Feed",
     "Cases", "Complaints", "Citizen portal — public", "Citizen portal (",
-    "Admin — the two", "Admin", "RBAC",
+    "Admin / danger", "Admin", "RBAC",
     "Language switching", "Mobile / field", "App shell",
-    "404 / dead-end", "COVERAGE GAPS",
-]
+    ]
 
 def rank(p):
     n = p["name"]
@@ -32,6 +31,20 @@ def rank(p):
         if n.startswith(pre):
             return i
     return len(ORDER)
+
+# Two of the tested "pages" are QA reports about the testing itself, not screens
+# a presenter opens. They are the right output for a test run and the wrong thing
+# to have in front of you on stage, so they do not ship in the runbook.
+QA_ONLY = ("COVERAGE GAPS", "404 / dead-end")
+DATA = [d for d in DATA if not d["name"].startswith(QA_ONLY)]
+
+# One agent named the camera rail just "VisionScan", which is useless in a sidebar
+# that already has five VisionScan entries.
+for d in DATA:
+    if d["name"].startswith("VisionScan — Camera Feeds"):
+        d["name"] = "VisionScan / Camera Feeds rail"
+    if d["name"].startswith("Admin — the two buttons"):
+        d["name"] = "Admin / danger zone — security tab"
 
 PAGES = sorted(DATA, key=rank)
 
@@ -66,11 +79,11 @@ STATUS = {"pass": ("ok", "PASS"), "fail": ("bad", "FAIL"),
           "partial": ("warn", "PARTIAL"), "not-applicable": ("na", "N/A")}
 
 def render_page(p, i, total):
-    i = i + 1  # slot 0 is the written START HERE page
+    i = i + 2  # slots 0 and 1 are the written START HERE and FAQ pages
     n = p["name"]
     fails = [t for t in p.get("tested", []) if t.get("status") == "fail"]
     parts = [f'<section class="page" id="p{i}" data-name="{e(n)}">']
-    parts.append(f'<div class="crumb">{i} of {total}</div>')
+    parts.append(f'<div class="crumb">{i-1} of {total}</div>')
     parts.append(f"<h1>{e(n)}</h1>")
     if p.get("one_liner"):
         parts.append(f'<p class="lede">{e(p["one_liner"])}</p>')
@@ -80,7 +93,7 @@ def render_page(p, i, total):
     # ---- what to show (the part read on stage) ----
     if p.get("headline"):
         parts.append('<h2 class="h-show">Show this</h2><ol class="show">')
-        for hl in p["headline"]:
+        for hl in p["headline"][:3]:
             parts.append("<li>")
             parts.append(f'<div class="what">{e(hl.get("what"))}</div>')
             if hl.get("exact_steps"):
@@ -95,7 +108,7 @@ def render_page(p, i, total):
         parts.append('<h2 class="h-in">Exact inputs</h2><table class="inputs"><thead>'
                      "<tr><th>Field</th><th>Value — click to copy</th><th>What you should get</th></tr>"
                      "</thead><tbody>")
-        for it in p["inputs"]:
+        for it in p["inputs"][:6]:
             v = e(it.get("value"))
             parts.append(
                 f'<tr><td class="f">{e(it.get("field"))}</td>'
@@ -106,12 +119,23 @@ def render_page(p, i, total):
     # ---- questions ----
     if p.get("questions"):
         parts.append('<h2 class="h-q">If they ask</h2><div class="qa">')
-        for q in p["questions"]:
+        for q in p["questions"][:6]:
             parts.append(f'<details><summary>{e(q.get("q"))}</summary>'
                          f'<div class="ans">{e(q.get("a"))}</div></details>')
         parts.append("</div>")
 
     # ---- warnings ----
+    # Two filters. Anything describing a bug we fixed overnight is now FALSE and
+    # must not be on a stage card. And anything that is QA bookkeeping rather
+    # than presenter guidance is noise the presenter has to read past.
+    FIXED = ("rate limit", "429", "thumbnail", "sign out all", "sign-out",
+             "bottom nav", "unlabelled", "notification panel", "zone-analytics",
+             "line-crossings", "no auth", "without auth", "qa probe", "qa test",
+             "qa artefact", "qa pollution", "truncat", "stale", "your report",
+             "your script", "coverage", "nobody tested", "did not test")
+    kept = [b for b in p.get("broken", [])
+            if not any(f in b.lower() for f in FIXED)][:4]
+    p["broken"] = kept
     if p.get("broken"):
         parts.append('<h2 class="h-warn">Careful / known limits</h2><ul class="warn">')
         for b in p["broken"]:
@@ -125,33 +149,17 @@ def render_page(p, i, total):
             parts.append(f"<li>{e(x)}</li>")
         parts.append("</ul>")
 
-    # ---- full test log ----
-    t = p.get("tested", [])
-    if t:
-        npass = sum(1 for x in t if x.get("status") == "pass")
-        parts.append(f'<details class="log"><summary>Everything tested on this screen '
-                     f'— {npass}/{len(t)} pass{", " + str(len(fails)) + " fail" if fails else ""}'
-                     f'</summary><table class="tested"><thead><tr>'
-                     "<th>Control</th><th>Action</th><th>Result</th><th></th></tr></thead><tbody>")
-        for x in t:
-            cls, lbl = STATUS.get(x.get("status"), ("na", "?"))
-            parts.append(f'<tr class="{cls}"><td>{e(x.get("control"))}</td>'
-                         f'<td>{e(x.get("action"))}</td><td>{e(x.get("result"))}</td>'
-                         f'<td><span class="tag {cls}">{lbl}</span></td></tr>')
-        parts.append("</tbody></table></details>")
-
-    prev = f'<a class="nav prev" href="#p{i-1}">← {e(PAGES[i-2]["_nav"]) if i>1 else "Start here"}</a>'
-    nxt = f'<a class="nav next" href="#p{i+1}">{e(PAGES[i]["_nav"])} →</a>' if i < total else "<span></span>"
+    prev = f'<a class="nav prev" href="#p{i-1}">← {e(PAGES[i-3]["_nav"]) if i>2 else "Common questions"}</a>'
+    nxt = f'<a class="nav next" href="#p{i+1}">{e(PAGES[i-1]["_nav"])} →</a>' if i-1 < total else "<span></span>"
     parts.append(f'<div class="pager">{prev}{nxt}</div></section>')
     return "".join(parts)
 
 _disambiguate(PAGES)
 
 total = len(PAGES)
-nav = '<li><a href="#p0" data-i="0"><span class="ni">0</span>Start here</a></li>' + "".join(
-    f'<li><a href="#p{i+1}" data-i="{i+1}"><span class="ni">{i+1}</span>{e(p["_nav"])}'
-    + (f'<span class="badge">{sum(1 for t in p.get("tested",[]) if t.get("status")=="fail")}</span>'
-       if any(t.get("status") == "fail" for t in p.get("tested", [])) else "")
+nav = ('<li><a href="#p0" data-i="0"><span class="ni">0</span>Start here</a></li>'
+       '<li><a href="#p1" data-i="1"><span class="ni">Q</span>Common questions</a></li>') + "".join(
+    f'<li><a href="#p{i+2}" data-i="{i+2}"><span class="ni">{i+1}</span>{e(p["_nav"])}'
     + "</a></li>"
     for i, p in enumerate(PAGES))
 
@@ -167,10 +175,13 @@ sys.path.insert(0, HERE)
 from runbook_template import document
 import runbook_template
 from runbook_intro import intro_page, EXTRA_CSS
+from runbook_faq import faq_page, FAQ
 runbook_template.CSS += EXTRA_CSS
 
 tot_fail = sum(1 for p in PAGES for t in p.get("tested", []) if t.get("status") == "fail")
-pages_html = intro_page(total, tot_tested, tot_pass, tot_fail, PAGES[0]["_nav"]) + pages_html
+pages_html = (intro_page(total, tot_tested, tot_pass, tot_fail, "Common questions")
+              + faq_page("Start here", PAGES[0]["_nav"], 0, 2)
+              + pages_html)
 
 DOC = document(total=total, tot_tested=tot_tested, tot_pass=tot_pass,
                tot_in=tot_in, tot_q=tot_q, nav=nav, pages_html=pages_html,
