@@ -6,7 +6,7 @@ list of things that end a demo.
 """
 
 LOCAL = "http://localhost:8080"
-LIVE = "https://laughing-space-zebra-p7vww544qx37j6-8080.app.github.dev"
+LIVE = "https://ominous-space-happiness-wrqrp69j95jv3g6-8080.app.github.dev"
 
 
 def intro_page(total, tot_tested, tot_pass, tot_fail, first_nav):

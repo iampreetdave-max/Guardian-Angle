@@ -1,0 +1,31 @@
+rank,area,lat,lng,risk_score,risk_band,predicted_score,trend,n_reports_used,top_contributions
+1,Bapunagar,23.0345,72.6358,100.0,high,34.9,falling,215,assault 48; body_offences 38; theft 10
+2,Naroda,23.0708,72.6593,98.5,high,70.5,falling,230,assault 43; body_offences 36; vehicle_theft 8
+3,Vatva,22.9586,72.6332,90.8,high,84.5,stable,263,assault 42; body_offences 29; theft 8
+4,SG Highway,23.0443,72.5023,66.0,elevated,91.5,rising,188,cyber_fraud 44; vehicle_theft 15; prior 4
+5,Maninagar,22.9962,72.6027,58.3,elevated,51.5,stable,222,chain_snatching 38; theft 9; vehicle_theft 7
+6,Bopal,23.0333,72.4642,50.5,elevated,17.6,falling,111,cyber_fraud 27; vehicle_theft 16; burglary 8
+7,Gota,23.1007,72.5316,32.8,guarded,13.7,falling,65,vehicle_theft 18; cyber_fraud 8; burglary 8
+8,Satellite,23.0301,72.5108,28.8,guarded,57.6,rising,59,cyber_fraud 15; chain_snatching 12; prior 1
+9,Odhav,23.0211,72.6708,28.0,guarded,27.4,stable,73,assault 17; body_offences 7; vehicle_theft 2
+10,Jamalpur,23.0118,72.5862,26.0,guarded,11.9,falling,61,assault 15; theft 6; chain_snatching 4
+11,Gomtipur,23.0153,72.6166,20.9,low,41.8,rising,121,murder 13; prior 4; assault 3
+12,Behrampura,22.9939,72.5824,20.3,low,39.1,rising,52,body_offences 11; assault 5; theft 3
+13,Ghatlodia,23.071,72.5421,11.6,low,8.8,falling,35,chain_snatching 9; theft 1; prior 1
+14,Nikol,23.049,72.6646,11.1,low,8.5,falling,51,vehicle_theft 4; theft 4; assault 2
+15,Navrangpura,23.0366,72.5611,10.5,low,21.0,rising,19,cyber_fraud 7; chain_snatching 1; prior 1
+16,Vastrapur,23.0395,72.5293,10.4,low,8.7,stable,39,cyber_fraud 6; chain_snatching 2; theft 1
+17,Chandkheda,23.1126,72.5814,6.9,low,13.8,rising,25,vehicle_theft 4; burglary 1; theft 1
+18,Asarwa,23.0455,72.6065,4.2,low,4.2,stable,54,assault 2; prior 1; theft 1
+19,Thaltej,23.0509,72.506,3.7,low,3.9,stable,12,burglary 3; vehicle_theft 1; cyber_fraud 0
+20,Paldi,23.0117,72.5624,3.3,low,6.6,rising,6,chain_snatching 4; theft 0; burglary 0
+21,Isanpur,22.975,72.6111,3.3,low,6.6,rising,8,assault 4; theft 0; vehicle_theft 0
+22,Ellisbridge,23.0258,72.568,2.2,low,0.4,falling,12,cyber_fraud 2; chain_snatching 1; theft 1
+23,Shahibaug,23.0556,72.5946,1.8,low,1.8,stable,14,cyber_fraud 1; assault 1; theft 0
+24,Kankaria,23.0063,72.6024,1.7,low,0.7,falling,20,chain_snatching 2; theft 0; assault 0
+25,Ranip,23.081,72.5662,1.5,low,0.5,falling,8,vehicle_theft 2; assault 0; theft 0
+26,Vasna,23.003,72.553,1.0,low,0.3,falling,11,theft 1; disaster_flood 1; vehicle_theft 1
+27,Vejalpur,23.0019,72.5226,1.0,low,2.0,rising,6,vehicle_theft 2; cyber_fraud 0; prior -1
+28,Bodakdev,23.0479,72.5085,0.7,low,0.2,falling,4,cyber_fraud 2; vehicle_theft 0; prior -1
+29,Sabarmati,23.0823,72.5806,0.2,low,0.2,stable,13,assault 1; vehicle_theft 0; theft 0
+30,Memnagar,23.0541,72.538,0.0,low,0.0,stable,4,chain_snatching 1; cyber_fraud 0
